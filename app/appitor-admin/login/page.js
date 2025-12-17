@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Shield, Mail, Lock, ArrowRight } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { isSuperAdmin } from "@/lib/superAdminService";
+import { isSuperAdmin } from "@/lib/admin/superAdminService";
 import { useRouter } from "next/navigation";
 
 export default function AdminLogin() {
@@ -28,7 +28,7 @@ export default function AdminLogin() {
         return;
       }
 
-      router.replace("/appitor-admin/dashboard");
+      router.replace("/appitor-admin/");
     } catch {
       setError("Invalid email or password");
     } finally {
@@ -43,7 +43,7 @@ export default function AdminLogin() {
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)]">
-            <Shield className="h-6 w-6 text-[var(--primary)]" />
+            <Shield className="h-6 w-6 text-(--primary)" />
           </div>
 
           <h1 className="text-2xl font-semibold">Appitor Admin</h1>
@@ -88,7 +88,7 @@ export default function AdminLogin() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 rounded-md border border-[var(--danger)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">
+          <div className="mb-4 rounded-md border border-(--danger) bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] px-3 py-2 text-sm text-[var(--danger)]">
             {error}
           </div>
         )}

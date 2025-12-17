@@ -3,9 +3,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { fetchSuperAdmin } from "@/lib/superAdminService";
+import { fetchSuperAdmin } from "@/lib/admin/superAdminService";
 
-const SuperAdminContext = createContext();
+const SuperAdminContext = createContext(null);
 
 export function SuperAdminProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -14,6 +14,8 @@ export function SuperAdminProvider({ children }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+
       if (!firebaseUser) {
         setUser(null);
         setAdmin(null);
@@ -21,14 +23,20 @@ export function SuperAdminProvider({ children }) {
         return;
       }
 
-      const adminData = await fetchSuperAdmin(firebaseUser.uid);
+      try {
+        const adminData = await fetchSuperAdmin(firebaseUser.uid);
 
-      if (!adminData) {
+        if (adminData) {
+          setUser(firebaseUser);
+          setAdmin(adminData);
+        } else {
+          setUser(null);
+          setAdmin(null);
+        }
+      } catch (err) {
+        console.error("Admin fetch failed:", err);
         setUser(null);
         setAdmin(null);
-      } else {
-        setUser(firebaseUser);
-        setAdmin(adminData);
       }
 
       setLoading(false);
@@ -39,7 +47,12 @@ export function SuperAdminProvider({ children }) {
 
   return (
     <SuperAdminContext.Provider
-      value={{ user, admin, loading, isAuthenticated: !!admin }}
+      value={{
+        user,
+        admin,
+        loading,
+        isAuthenticated: !!admin,
+      }}
     >
       {children}
     </SuperAdminContext.Provider>
@@ -47,5 +60,9 @@ export function SuperAdminProvider({ children }) {
 }
 
 export function useSuperAdmin() {
-  return useContext(SuperAdminContext);
+  const ctx = useContext(SuperAdminContext);
+  if (!ctx) {
+    throw new Error("useSuperAdmin must be used inside SuperAdminProvider");
+  }
+  return ctx;
 }

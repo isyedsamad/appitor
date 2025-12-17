@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { adminNav } from "@/lib/nav/adminNav";
+import { adminNav } from "@/lib/admin/adminNav";
 import SidebarItem from "./SidebarItem";
 
 export default function MobileSidebar({ open, onClose }) {

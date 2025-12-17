@@ -98,7 +98,7 @@
            px-4 py-2
            sm:px-5
            rounded-md
-           hover:bg-[var(--primary)]/90
+           hover:bg-[var(--primary)]/80
            active:scale-[0.98];
   }
 

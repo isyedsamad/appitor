@@ -1,5 +1,6 @@
 import { SuperAdminProvider } from "@/context/SuperAdminContext";
 import "../globals.css";
+import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata = {
   title: "Admin - Appitor",
@@ -9,7 +10,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <SuperAdminProvider>
-      {children}
+      <AdminShell>
+        {children}
+      </AdminShell>
     </SuperAdminProvider>
   );
 }

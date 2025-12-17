@@ -1,12 +1,12 @@
-import { adminNav } from "@/lib/nav/adminNav";
+import { adminNav } from "@/lib/admin/adminNav";
 import SidebarItem from "./SidebarItem";
 
 export default function Sidebar() {
   return (
-    <aside className="hidden lg:flex lg:flex-col w-64 border-r border-[var(--border)] bg-[var(--bg-card)]">
+    <aside className="hidden lg:flex lg:flex-col w-64 border-r border-(--border) bg-(--bg-card)">
       
       {/* Brand */}
-      <div className="h-14 flex items-center px-4 font-semibold border-b border-[var(--border)]">
+      <div className="h-14 flex items-center px-4 font-semibold border-b border-(--border)">
         Appitor
       </div>
 
