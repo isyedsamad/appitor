@@ -41,13 +41,13 @@ export default function AdminShell({ children }) {
   }
 
   return (
-    <div className="flex h-screen max-w-screen overflow-auto">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <MobileSidebar open={open} onClose={() => setOpen(false)} />
 
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-w-0">
         <Navbar onMenuClick={() => setOpen(true)} />
-        <main className="flex-1 overflow-auto py-4 px-6 bg-(--bg)">
+        <main className="flex-1 overflow-y-auto py-4 px-6 bg-(--bg)">
           {children}
         </main>
       </div>

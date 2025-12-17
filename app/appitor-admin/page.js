@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { fetchDashboardStats } from "@/lib/admin/dashboardService";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -71,9 +72,9 @@ export default function AdminDashboard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card">
           <h2 className="font-medium mb-3">Quick Actions</h2>
-          <ActionItem label="Add New School" />
-          <ActionItem label="Create Role" />
-          <ActionItem label="Invite User" />
+          <Link href={'/appitor-admin/schools'}><ActionItem label="Add New School" /></Link>
+          <Link href={'/appitor-admin/roles'}><ActionItem label="Create Role" /></Link>
+          <Link href={'/appitor-admin/users'}><ActionItem label="Invite User" /></Link>
         </div>
 
         <div className="card lg:col-span-2">

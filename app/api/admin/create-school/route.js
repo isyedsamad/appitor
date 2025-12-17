@@ -39,8 +39,11 @@ export async function POST(req) {
     batch.set(userRef, {
       uid: user.uid,
       schoolId: schoolRef.id,
+      schoolCode: body.school.code,
       role: "Admin",
+      roleId: roleRef.id,
       email: email,
+      status: "active",
       username: body.admin.username,
       createdAt: new Date(),
     });

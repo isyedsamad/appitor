@@ -47,6 +47,9 @@
   --danger: #ef4444;
 }
 
+html, body {
+  overflow-x: hidden;
+}
 
 @layer base {
   body {
