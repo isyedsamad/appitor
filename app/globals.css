@@ -1,1 +1,243 @@
 @import "tailwindcss";
+
+:root {
+  /* Backgrounds */
+  --bg: #f9fafb;
+  --bg-card: #ffffff;
+
+  /* Text */
+  --text: #0f172a;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border: #e5e7eb;
+
+  /* Brand */
+  --primary: #e45011;
+  --primary-hover: #c2410c;
+  --primary-soft: #fff1e8;
+
+  /* Accent / Status */
+  --accent: #16a34a;      /* success */
+  --warning: #f59e0b;
+  --danger: #dc2626;
+}
+
+/* -------- DARK MODE -------- */
+.dark {
+  /* Backgrounds */
+  --bg: #0b0f14;
+  --bg-card: #111827;
+
+  /* Text */
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+
+  /* Borders */
+  --border: #1f2933;
+
+  /* Brand */
+  --primary: #e45011;
+  --primary-hover: #f97316;
+  --primary-soft: #2a140a;
+
+  /* Accent / Status */
+  --accent: #22c55e;
+  --warning: #fbbf24;
+  --danger: #ef4444;
+}
+
+
+@layer base {
+  body {
+    @apply bg-[var(--bg)] text-[var(--text)]
+           antialiased text-sm md:text-base;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply w-full
+           bg-[var(--bg-card)]
+           border-[1.5px] border-[var(--border)]
+           rounded-md
+           px-3 py-2
+           text-sm md:text-base
+           outline-none
+           transition-colors duration-200
+           focus:border-[var(--primary)]
+           focus:ring-1 focus:ring-[var(--primary)];
+  }
+
+  button {
+    @apply inline-flex items-center justify-center
+           gap-2
+           rounded-md
+           cursor-pointer
+           text-sm md:text-base
+           transition-all duration-200
+           disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+}
+
+@layer components {
+  /* Card */
+  .card {
+    @apply bg-[var(--bg-card)]
+           border border-[var(--border)]
+           rounded-xl
+           px-6 py-5
+           sm:px-5
+           lg:px-7;
+  }
+
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-[var(--primary)] text-white
+           px-4 py-2
+           sm:px-5
+           rounded-md
+           hover:bg-[var(--primary)]/90
+           active:scale-[0.98];
+  }
+
+  /* Outline Button */
+  .btn-outline {
+    @apply border border-[var(--border)]
+           px-4 py-2
+           sm:px-5
+           rounded-md
+           hover:bg-[var(--primary-soft)]
+           active:scale-[0.98];
+  }
+
+  /* Muted Text */
+  .text-muted {
+    @apply text-[var(--text-muted)];
+  }
+
+  /* Primary Badge */
+  .badge-primary {
+    @apply inline-flex items-center
+           bg-[var(--primary-soft)]
+           text-[var(--primary)]
+           px-2.5 py-1
+           rounded-md
+           text-xs
+           font-medium;
+  }
+}
+
+
+
+
+
+
+.poppins-thin {
+  font-family: "Poppins", sans-serif;
+  font-weight: 100;
+  font-style: normal;
+}
+
+.poppins-extralight {
+  font-family: "Poppins", sans-serif;
+  font-weight: 200;
+  font-style: normal;
+}
+
+.poppins-light {
+  font-family: "Poppins", sans-serif;
+  font-weight: 300;
+  font-style: normal;
+}
+
+.poppins-regular {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.poppins-medium {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.poppins-semibold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-style: normal;
+}
+
+.poppins-bold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.poppins-extrabold {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.poppins-black {
+  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.poppins-thin-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 100;
+  font-style: italic;
+}
+
+.poppins-extralight-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 200;
+  font-style: italic;
+}
+
+.poppins-light-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 300;
+  font-style: italic;
+}
+
+.poppins-regular-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.poppins-medium-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.poppins-semibold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-style: italic;
+}
+
+.poppins-bold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.poppins-extrabold-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+  font-style: italic;
+}
+
+.poppins-black-italic {
+  font-family: "Poppins", sans-serif;
+  font-weight: 900;
+  font-style: italic;
+}
