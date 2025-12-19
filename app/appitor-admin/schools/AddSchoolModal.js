@@ -159,8 +159,8 @@ export default function AddSchoolModal({ open, onClose, orgList }) {
                 value={form.school.plan}
                 onChange={(e) => updateSchool("plan", e.target.value)}
               >
-                <option value="free">Free</option>
                 <option value="trial">Trial</option>
+                <option value="free">Free</option>
                 <option value="paid">Paid</option>
               </Select>
 

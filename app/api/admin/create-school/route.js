@@ -20,6 +20,7 @@ export async function POST(req) {
     //   password: body.admin.tempPassword,
     //   displayName: body.admin.name,
     // });
+    // creating school doc here!
     const batch = adminDb.batch();
     const schoolRef = adminDb.collection("schools").doc();
     batch.set(schoolRef, {
