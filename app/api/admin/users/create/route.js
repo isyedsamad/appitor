@@ -2,9 +2,11 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { verifyAppCheck } from "@/lib/verifyAppCheck";
 
 export async function POST(req) {
   try {
+    await verifyAppCheck(req);
     const { username, roleId, role, schoolId } = await req.json();
 
     if (!username || !roleId || !schoolId) {
@@ -23,7 +25,7 @@ export async function POST(req) {
       email,
       password: "Temp@123",
     });
-    await adminDb.collection("schoolUsers").add({
+    await adminDb.collection("schoolUsers").doc(user.uid).set({
       uid: user.uid,
       username,
       email,

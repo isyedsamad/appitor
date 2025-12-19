@@ -51,6 +51,44 @@ html, body {
   overflow-x: hidden;
 }
 
+.loading {
+    width: 60px;
+    height: 60px;
+    border: 8px solid #cccccc;
+    border-top: 8px solid var(--primary);
+    border-radius: 100%;
+    display: inline-block;
+    animation: 1.5s ease-in 0s infinite both loading;
+}
+
+@keyframes loading {
+    from {
+        rotate: 0deg;
+    }
+    to {
+        rotate: 360deg;
+    }
+}
+
+select option {
+  background-color: var(--card);
+  color: var(--text);
+}
+
+
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+
 @layer base {
   body {
     @apply bg-[var(--bg)] text-[var(--text)]

@@ -1,3 +1,4 @@
+import { ToastContainer } from "react-toastify";
 import "./globals.css";
 import Providers from "./providers";
 export const metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
+        <ToastContainer position="top-right" />
       </body>
     </html>
   );

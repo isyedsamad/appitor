@@ -1,5 +1,4 @@
 import { SuperAdminProvider } from "@/context/SuperAdminContext";
-import "../globals.css";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const metadata = {

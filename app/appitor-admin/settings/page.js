@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchSystemSettings } from "@/lib/admin/settingsService";
 import { DEFAULT_SYSTEM_SETTINGS } from "@/lib/admin/defaultSystemSettings";
+import secureAxios from "@/lib/secureAxios";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState(null);
@@ -41,7 +42,7 @@ export default function SettingsPage() {
 
   async function save() {
     setSaving(true);
-    await axios.post("/api/admin/settings/update", settings);
+    await secureAxios.post("/api/admin/settings/update", settings);
     setSaving(false);
   }
 

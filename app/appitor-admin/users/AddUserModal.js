@@ -5,14 +5,18 @@ import axios from "axios";
 import { X, Save } from "lucide-react";
 import { fetchRoles } from "@/lib/admin/roleService";
 import { fetchSchools } from "@/lib/admin/schoolService";
+import secureAxios from "@/lib/secureAxios";
+import { fetchBranches } from "@/lib/admin/branchService";
 
 export default function AddUserModal({ open, onClose }) {
   const [roles, setRoles] = useState([]);
   const [schools, setSchools] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [form, setForm] = useState({
     username: "",
     roleId: "",
     role: "",
+    branchIds: [],
     schoolId: "",
   });
 
@@ -21,10 +25,18 @@ export default function AddUserModal({ open, onClose }) {
     fetchSchools().then(setSchools);
   }, []);
 
+  useEffect(() => {
+    if (form.schoolId) {
+      fetchBranches().then((all) =>
+        setBranches(all.filter(b => b.schoolId === form.schoolId))
+      );
+    }
+  }, [form.schoolId]);
+
   if (!open) return null;
 
   async function save() {
-    await axios.post("/api/admin/users/create", form);
+    await secureAxios.post("/api/admin/users/create", form);
     onClose();
   }
 
@@ -39,7 +51,6 @@ export default function AddUserModal({ open, onClose }) {
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-6 py-4 space-y-4">
           <Input
             label="Username"
@@ -61,6 +72,50 @@ export default function AddUserModal({ open, onClose }) {
               </option>
             ))}
           </Select>
+
+          <div className="space-y-2">
+            <label className="text-xs text-muted">Branch Access</label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="w-4 h-3 ml-1 accent-(--primary)"
+                checked={form.branchIds.includes("*")}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    branchIds: e.target.checked ? ["*"] : [],
+                  })
+                }
+              />
+              All Branches
+            </label>
+
+            {!form.branchIds.includes("*") && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {branches.map((b) => (
+                  <label
+                    key={b.id}
+                    className="flex items-center gap-2 p-2 border rounded-md"
+                  >
+                    <input
+                      type="checkbox"
+                      className="w-4 h-3 ml-1 accent-(--primary)"
+                      checked={form.branchIds.includes(b.id)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...form.branchIds, b.id]
+                          : form.branchIds.filter(id => id !== b.id);
+
+                        setForm({ ...form, branchIds: next });
+                      }}
+                    />
+                    <span className="text-sm flex-1">{b.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
 
           <Select
             label="Role"

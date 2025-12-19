@@ -2,8 +2,13 @@
 
 import { LogOut, Menu } from "lucide-react";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function Navbar({ onMenuClick }) {
+  const logout = () => {
+    signOut(auth);
+  }
   return (
     <header className="h-14 border-b border-(--border) bg-(--bg-card)">
       <div className="flex items-center justify-between h-full px-6">
@@ -25,7 +30,7 @@ export default function Navbar({ onMenuClick }) {
         {/* Right */}
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <button
+          <button onClick={logout}
             className="p-2 border border-(--border) rounded-md bg-(--bg-card) hover:text-(--danger)"
           >
             <LogOut size={18} />

@@ -2,9 +2,11 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { verifyAppCheck } from "@/lib/verifyAppCheck";
 
 export async function POST(req) {
   try {
+    await verifyAppCheck(req);
     const data = await req.json();
     if (!data?.appName || !data?.supportEmail) {
       return NextResponse.json(

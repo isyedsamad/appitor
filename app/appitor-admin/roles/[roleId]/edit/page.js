@@ -6,6 +6,7 @@ import axios from "axios";
 import { ShieldCheck, Save, ArrowLeft } from "lucide-react";
 import { fetchRoleById } from "@/lib/admin/roleService";
 import { PERMISSIONS } from "@/lib/admin/permissions";
+import secureAxios from "@/lib/secureAxios";
 
 export default function EditRolePage() {
   const { roleId } = useParams();
@@ -36,7 +37,7 @@ export default function EditRolePage() {
 
   async function save() {
     setSaving(true);
-    await axios.post("/api/admin/roles/update", {
+    await secureAxios.post("/api/admin/roles/update", {
       roleId,
       permissions: Object.keys(selected).filter((p) => selected[p]),
     });

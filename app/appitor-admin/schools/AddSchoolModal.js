@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
+import secureAxios from "@/lib/secureAxios";
+import { fetchOrganizations } from "@/lib/admin/organizationService";
+import { toast } from "react-toastify";
+import Loading from "@/components/ui/Loading";
 
 const modulesList = [
   { key: "students", label: "Students" },
@@ -15,10 +19,9 @@ const modulesList = [
   { key: "accounts", label: "Accounts" },
 ];
 
-export default function AddSchoolModal({ open, onClose }) {
+export default function AddSchoolModal({ open, onClose, orgList }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-
   const [form, setForm] = useState({
     school: {
       name: "",
@@ -27,54 +30,50 @@ export default function AddSchoolModal({ open, onClose }) {
       state: "",
       phone: "",
       email: "",
+      orgId: "",
+      orgName: "",
       plan: "trial",
       expiryDate: null,
-      studentLimit: 200,
+      studentLimit: 500,
       modules: {},
-    },
-    admin: {
-      name: "",
-      username: "",
-      phone: "",
-      tempPassword: Math.random().toString(36).slice(-8),
-    },
+    }
   });
-
   if (!open) return null;
-
   const updateSchool = (key, value) =>
     setForm((p) => ({
       ...p,
       school: { ...p.school, [key]: value },
     }));
-
-  const updateAdmin = (key, value) =>
-    setForm((p) => ({
-      ...p,
-      admin: { ...p.admin, [key]: value },
-    }));
-
+  
   async function handleSubmit() {
     try {
+      if (!form.school.orgId || !form.school.name || !form.school.code) {
+        toast.error('please enter all the required fields', {
+          theme: 'colored'
+        })
+        return;
+      }
       setLoading(true);
-      await axios.post("/api/admin/create-school", form);
+      await secureAxios.post("/api/admin/create-school", form);
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Failed to create school, error: " + err);
+      toast.error('Error: ' + err, {
+        theme: 'colored'
+      })
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="card w-full max-w-xl p-0 overflow-hidden">
         
         <div className="flex items-center justify-between bg-(--bg) px-6 py-4 border-b border-(--border)">
           <div>
             <h2 className="font-semibold">Add New School</h2>
-            <p className="text-xs text-muted">Step {step} of 4</p>
+            <p className="text-xs text-muted">Step {step} of 3</p>
           </div>
           <button onClick={onClose} className="hover:text-red-400">
             <X size={18} />
@@ -86,6 +85,21 @@ export default function AddSchoolModal({ open, onClose }) {
           {step === 1 && (
             <>
               <SectionTitle title="School Information" />
+              <Select
+                label="Organization"
+                required
+                onChange={(e) => {
+                  updateSchool("orgId", e.target.value)
+                  updateSchool("orgName", e.target.options[e.target.selectedIndex].text)
+                }}
+              >
+                <option value="">Select Organization</option>
+                {orgList.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </Select>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Input label="School Name" className="flex-1" onChange={(e) => updateSchool("name", e.target.value)} />
                 <Input label="School Code" onChange={(e) => updateSchool("code", e.target.value)} />
@@ -94,22 +108,24 @@ export default function AddSchoolModal({ open, onClose }) {
                 <Input label="City" onChange={(e) => updateSchool("city", e.target.value)} />
                 <Input label="State" onChange={(e) => updateSchool("state", e.target.value)} />
               </div>
-              <Input label="Phone" onChange={(e) => updateSchool("phone", e.target.value)} />
-              <Input label="Email" onChange={(e) => updateSchool("email", e.target.value)} />
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Input label="Phone" onChange={(e) => updateSchool("phone", e.target.value)} />
+                <Input label="Email" onChange={(e) => updateSchool("email", e.target.value)} />
+              </div>
             </>
           )}
 
-          {step === 2 && (
+          {/* {step === 2 && (
             <>
               <SectionTitle title="Admin Setup" />
               <Input label="Admin Name" onChange={(e) => updateAdmin("name", e.target.value)} />
               <Input label="Admin Username" onChange={(e) => updateAdmin("username", e.target.value)} />
               <Input label="Admin Phone" onChange={(e) => updateAdmin("phone", e.target.value)} />
-              <Input label="Temporary Password" value={form.admin.tempPassword} disabled />
+              <Input label="Temporary Password" value={form.admin.tempPassword} />
             </>
-          )}
+          )} */}
 
-          {step === 3 && (
+          {step === 2 && (
             <>
               <SectionTitle title="Module Access" />
               <div className="grid sm:grid-cols-2 gap-3">
@@ -135,7 +151,7 @@ export default function AddSchoolModal({ open, onClose }) {
             </>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <>
               <SectionTitle title="Plan & Limits" />
               <Select
@@ -158,7 +174,7 @@ export default function AddSchoolModal({ open, onClose }) {
           )}
         </div>
 
-        <div className="flex justify-between items-center px-6 py-4 border-t border-(--border)">
+        <div className="flex justify-between items-center px-6 mt-2 py-4 border-t border-(--border)">
           <button
             className="btn-outline"
             disabled={step === 1}
@@ -167,7 +183,7 @@ export default function AddSchoolModal({ open, onClose }) {
             Back
           </button>
 
-          {step < 4 ? (
+          {step < 3 ? (
             <button className="btn-primary" onClick={() => setStep(step + 1)}>
               Next
             </button>

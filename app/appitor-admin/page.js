@@ -42,8 +42,6 @@ export default function AdminDashboard() {
           Overview of Appitor admin system
         </p>
       </div>
-
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Schools"
@@ -67,8 +65,6 @@ export default function AdminDashboard() {
           highlight
         />
       </div>
-
-      {/* Lower Section */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="card">
           <h2 className="font-medium mb-3">Quick Actions</h2>
@@ -76,7 +72,6 @@ export default function AdminDashboard() {
           <Link href={'/appitor-admin/roles'}><ActionItem label="Create Role" /></Link>
           <Link href={'/appitor-admin/users'}><ActionItem label="Invite User" /></Link>
         </div>
-
         <div className="card lg:col-span-2">
           <h2 className="font-medium mb-3">System Overview</h2>
           <p className="text-sm text-muted">

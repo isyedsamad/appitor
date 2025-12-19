@@ -16,7 +16,6 @@ export default function AdminShell({ children }) {
 
   useEffect(() => {
     if (loading) return;
-    console.log(pathname);
     if (showAdminUI && !isAuthenticated) {
       router.replace("/appitor-admin/login");
     }

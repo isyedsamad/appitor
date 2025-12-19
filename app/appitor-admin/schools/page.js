@@ -6,16 +6,20 @@ import { Plus, Eye, Pencil } from "lucide-react";
 import AddSchoolModal from "./AddSchoolModal";
 import { useTheme } from "next-themes";
 import Link from "next/link";
+import { fetchOrganizations } from "@/lib/admin/organizationService";
 
 export default function SchoolsPage() {
   const [schools, setSchools] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [orgs, setOrgs] = useState([]);
 
   useEffect(() => {
     async function load() {
       const data = await fetchSchools();
       setSchools(data);
+      const orgsList = await fetchOrganizations();
+      setOrgs(orgsList);
       setLoading(false);
     }
     load();
@@ -40,6 +44,7 @@ export default function SchoolsPage() {
           <table className="w-full text-sm">
             <thead className="bg-(--bg) sticky top-0 z-10">
               <tr className="text-left text-muted border-b border-[var(--border)]">
+                <th className="px-4 py-3">Organization</th>
                 <th className="px-4 py-3 font-medium">School</th>
                 <th className="px-4 py-3 font-medium">Code</th>
                 <th className="px-4 py-3 font-medium">Location</th>
@@ -72,6 +77,9 @@ export default function SchoolsPage() {
                   key={s.id}
                   className="border-b border-(--border) last:border-0 hover:bg-(--bg) transition"
                 >
+                  <td className="px-4 py-3 text-sm">
+                    {s.orgName || "—"}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium">{s.name}</div>
                     <div className="text-xs text-muted">{s.email}</div>
@@ -106,7 +114,7 @@ export default function SchoolsPage() {
         </div>
       </div>
 
-      <AddSchoolModal open={open} onClose={() => setOpen(false)} />
+      <AddSchoolModal open={open} onClose={() => setOpen(false)} orgList={orgs} />
     </div>
   );
 }

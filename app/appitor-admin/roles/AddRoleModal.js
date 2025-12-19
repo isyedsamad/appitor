@@ -4,6 +4,7 @@ import { useState } from "react";
 import axios from "axios";
 import { X, Save } from "lucide-react";
 import { PERMISSIONS } from "@/lib/admin/permissions";
+import secureAxios from "@/lib/secureAxios";
 
 export default function AddRoleModal({ open, onClose }) {
   const [name, setName] = useState("");
@@ -14,7 +15,7 @@ export default function AddRoleModal({ open, onClose }) {
 
   async function save() {
     setSaving(true);
-    await axios.post("/api/admin/roles/create", {
+    await secureAxios.post("/api/admin/roles/create", {
       name,
       permissions: Object.keys(permissions).filter((p) => permissions[p]),
     });

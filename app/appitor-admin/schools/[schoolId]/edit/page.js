@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { Settings, Save, Layers } from "lucide-react";
 import { fetchSchoolById } from "@/lib/admin/schoolService";
+import secureAxios from "@/lib/secureAxios";
 
 const MODULES = [
   "students","attendance","fees","timetable",
@@ -25,7 +26,7 @@ export default function EditSchoolPage() {
 
   async function save() {
     setSaving(true);
-    await axios.post("/api/admin/edit-school", {
+    await secureAxios.post("/api/admin/edit-school", {
       schoolId,
       updates: {
         plan: school.plan,

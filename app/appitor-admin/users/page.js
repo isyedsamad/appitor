@@ -39,6 +39,7 @@ export default function UsersPage() {
               <tr className="text-muted text-left">
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">School</th>
+                <th className="px-4 py-3">Branches</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
@@ -60,6 +61,12 @@ export default function UsersPage() {
 
                   <td className="px-4 py-3 font-semibold">
                     {u.schoolCode}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm">
+                    {u.branchIds?.includes("*")
+                      ? "All Branches"
+                      : u.branchNames?.join(", ") || "—"}
                   </td>
 
                   <td className="px-4 py-3">
