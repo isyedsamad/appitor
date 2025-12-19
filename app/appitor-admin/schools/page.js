@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchSchools } from "@/lib/admin/schoolService";
-import { Plus, Eye, Pencil } from "lucide-react";
+import { Plus, Eye, Pencil, Lock, LockOpen } from "lucide-react";
 import AddSchoolModal from "./AddSchoolModal";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -13,7 +13,9 @@ export default function SchoolsPage() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [orgs, setOrgs] = useState([]);
+  const disableSchool = async () => {
 
+  }
   useEffect(() => {
     async function load() {
       const data = await fetchSchools();
@@ -77,7 +79,7 @@ export default function SchoolsPage() {
                   key={s.id}
                   className="border-b border-(--border) last:border-0 hover:bg-(--bg) transition"
                 >
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-4 py-3 text-sm font-semibold">
                     {s.orgName || "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -103,6 +105,11 @@ export default function SchoolsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {s.status == 'active' ? (
+                        <button className="action-btn" onClick={() => {disableSchool(s.id, true)}}><Lock size={16} /></button>
+                      ) : (
+                        <button className="action-btn" onClick={() => {disableSchool(s.id, false)}}><LockOpen size={16} /></button>
+                      )}
                       <Link href={`/appitor-admin/schools/${s.id}`}><ActionButton icon={Eye} /></Link>
                       <Link href={`/appitor-admin/schools/${s.id}/edit`}><ActionButton icon={Pencil} /></Link>
                     </div>
@@ -114,7 +121,13 @@ export default function SchoolsPage() {
         </div>
       </div>
 
-      <AddSchoolModal open={open} onClose={() => setOpen(false)} orgList={orgs} />
+      <AddSchoolModal open={open} onClose={async () => {
+        setOpen(false);
+        setLoading(true);
+        const data = await fetchSchools();
+        setSchools(data);
+        setLoading(false);
+      }} orgList={orgs} />
     </div>
   );
 }

@@ -16,9 +16,7 @@ export default function AdminGuard({ children }) {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        Checking access...
-      </div>
+      <Loading />
     );
   }
 

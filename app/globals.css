@@ -123,17 +123,19 @@ select option {
 }
 
 @layer components {
-  /* Card */
   .card {
-    @apply bg-[var(--bg-card)]
+    @apply bg-(--bg-card)
            border border-[var(--border)]
            rounded-xl
            px-6 py-5
            sm:px-5
            lg:px-7;
   }
-
-  /* Primary Button */
+  .action-btn {
+    @apply p-2 rounded-md border border-(--border)
+            hover:bg-(--primary-soft)
+            transition;
+  }
   .btn-primary {
     @apply bg-[var(--primary)] text-white
            px-4 py-2
@@ -142,8 +144,6 @@ select option {
            hover:bg-[var(--primary)]/80
            active:scale-[0.98];
   }
-
-  /* Outline Button */
   .btn-outline {
     @apply border border-[var(--border)]
            px-4 py-2
@@ -152,13 +152,9 @@ select option {
            hover:bg-[var(--primary-soft)]
            active:scale-[0.98];
   }
-
-  /* Muted Text */
   .text-muted {
     @apply text-[var(--text-muted)];
   }
-
-  /* Primary Badge */
   .badge-primary {
     @apply inline-flex items-center
            bg-[var(--primary-soft)]

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, GitBranch } from "lucide-react";
+import { Plus, GitBranch, Pencil } from "lucide-react";
 import { fetchBranches } from "@/lib/admin/branchService";
 import AddBranchModal from "./AddBranchModal";
+import Link from "next/link";
 
 export default function BranchesPage() {
   const [branches, setBranches] = useState([]);
@@ -42,6 +43,7 @@ export default function BranchesPage() {
                 <th className="px-4 py-3">Location</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
 
@@ -54,15 +56,12 @@ export default function BranchesPage() {
                   <td className="px-4 py-3 font-medium">
                     {b.name}
                   </td>
-
-                  <td className="px-4 py-3 font-mono text-xs">
+                  <td className="px-4 py-3 font-semibold">
                     {b.branchCode}
                   </td>
-
                   <td className="px-4 py-3">
                     {b.city}, {b.state}
                   </td>
-
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-md text-xs ${
@@ -74,9 +73,13 @@ export default function BranchesPage() {
                       {b.status}
                     </span>
                   </td>
-
                   <td className="px-4 py-3 text-muted">
                     {b.createdAt?.toDate?.().toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-2">
+                      <Link href={`/appitor-admin/schools/${b.id}/edit`}><ActionButton icon={Pencil} /></Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -98,5 +101,18 @@ export default function BranchesPage() {
 
       <AddBranchModal open={open} onClose={() => setOpen(false)} />
     </div>
+  );
+}
+
+
+function ActionButton({ icon: Icon }) {
+  return (
+    <button
+      className="p-2 rounded-md border border-(--border)
+                 hover:bg-(--primary-soft)
+                 transition"
+    >
+      <Icon size={16} />
+    </button>
   );
 }

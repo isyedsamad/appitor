@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import MobileSidebar from "./MobileSidebar";
 import { isAdminRoute, isSuperAdmin } from "@/lib//admin/superAdminService";
 import { useSuperAdmin } from "@/context/SuperAdminContext";
+import Loading from "../ui/Loading";
 
 export default function AdminShell({ children }) {
   const pathname = usePathname();
@@ -29,9 +30,7 @@ export default function AdminShell({ children }) {
 
   if (loading && showAdminUI) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        Checking access...
-      </div>
+      <Loading />
     );
   }
 

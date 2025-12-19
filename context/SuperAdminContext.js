@@ -15,17 +15,14 @@ export function SuperAdminProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
-
       if (!firebaseUser) {
         setUser(null);
         setAdmin(null);
         setLoading(false);
         return;
       }
-
       try {
         const adminData = await fetchSuperAdmin(firebaseUser.uid);
-
         if (adminData) {
           setUser(firebaseUser);
           setAdmin(adminData);
@@ -38,10 +35,8 @@ export function SuperAdminProvider({ children }) {
         setUser(null);
         setAdmin(null);
       }
-
       setLoading(false);
     });
-
     return () => unsub();
   }, []);
 
@@ -51,6 +46,7 @@ export function SuperAdminProvider({ children }) {
         user,
         admin,
         loading,
+        setLoading,
         isAuthenticated: !!admin,
       }}
     >

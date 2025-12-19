@@ -15,7 +15,6 @@ export default function AddOrganizationModal({ open, onClose }) {
 
   async function save() {
     if (!form.name.trim()) return;
-
     setSaving(true);
     await secureAxios.post("/api/admin/organizations/create", form);
     setSaving(false);
@@ -23,7 +22,7 @@ export default function AddOrganizationModal({ open, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="card w-full max-w-md p-0">
         <div className="flex justify-between items-center px-6 py-4 border-b border-(--border) bg-(--bg)">
           <h2 className="font-semibold">Add Organization</h2>
@@ -34,7 +33,7 @@ export default function AddOrganizationModal({ open, onClose }) {
         <div className="px-6 py-4 space-y-4">
           <Input
             label="Organization Name"
-            placeholder="DAV Group"
+            placeholder="i.e. ISM Group"
             value={form.name}
             onChange={(e) =>
               setForm({ ...form, name: e.target.value })
@@ -43,7 +42,7 @@ export default function AddOrganizationModal({ open, onClose }) {
 
           <Input
             label="Owner / Trust (optional)"
-            placeholder="DAV Trust"
+            placeholder="i.e. NISA Trust"
             value={form.ownerNote}
             onChange={(e) =>
               setForm({ ...form, ownerNote: e.target.value })

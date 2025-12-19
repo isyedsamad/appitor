@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { X } from "lucide-react";
 import secureAxios from "@/lib/secureAxios";
-import { fetchOrganizations } from "@/lib/admin/organizationService";
 import { toast } from "react-toastify";
-import Loading from "@/components/ui/Loading";
 
 const modulesList = [
   { key: "students", label: "Students" },
@@ -67,7 +64,7 @@ export default function AddSchoolModal({ open, onClose, orgList }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="card w-full max-w-xl p-0 overflow-hidden">
         
         <div className="flex items-center justify-between bg-(--bg) px-6 py-4 border-b border-(--border)">
@@ -94,7 +91,8 @@ export default function AddSchoolModal({ open, onClose, orgList }) {
                 }}
               >
                 <option value="">Select Organization</option>
-                {orgList.map((o) => (
+                {orgList.map((o) => 
+                  o.status == 'active' && (
                   <option key={o.id} value={o.id}>
                     {o.name}
                   </option>

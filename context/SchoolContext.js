@@ -61,7 +61,7 @@ export function SchoolProvider({ schoolId, children }) {
   }, [schoolId]);
 
   return (
-    <SchoolContext.Provider value={{ schoolUser, loading }}>
+    <SchoolContext.Provider value={{ schoolUser, loading, setLoading }}>
       {loading ? <Loading /> : children}
     </SchoolContext.Provider>
   );

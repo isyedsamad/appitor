@@ -80,7 +80,7 @@ export default function AddBranchModal({ open, onClose }) {
 
           <Input
             label="Branch Name"
-            placeholder="DAV Siwan"
+            placeholder="ABC Siwan"
             onChange={(e) =>
               setForm({ ...form, name: e.target.value })
             }
@@ -88,7 +88,7 @@ export default function AddBranchModal({ open, onClose }) {
 
           <Input
             label="Branch Code"
-            placeholder="DAV-SIW"
+            placeholder="ABC-SIW"
             onChange={(e) =>
               setForm({ ...form, branchCode: e.target.value })
             }
