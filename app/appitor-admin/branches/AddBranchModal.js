@@ -5,6 +5,7 @@ import secureAxios from "@/lib/secureAxios";
 import { X, Save } from "lucide-react";
 import { fetchOrganizations } from "@/lib/admin/organizationService";
 import { fetchSchools } from "@/lib/admin/schoolService";
+import { toast } from "react-toastify";
 
 export default function AddBranchModal({ open, onClose }) {
   const [orgs, setOrgs] = useState([]);
@@ -18,35 +19,36 @@ export default function AddBranchModal({ open, onClose }) {
     state: "",
   });
   const [saving, setSaving] = useState(false);
-
   useEffect(() => {
     fetchOrganizations().then(setOrgs);
     fetchSchools().then(setSchools);
   }, []);
-
   if (!open) return null;
-
   async function save() {
     if (!form.orgId || !form.schoolId || !form.name) return;
-
     setSaving(true);
-    await secureAxios.post("/api/admin/branches/create", form);
-    setSaving(false);
-    onClose();
+    try {
+      await secureAxios.post("/api/admin/branches/create", form);
+      setSaving(false);
+      toast.success('Branch added successfully!', {
+        theme: 'colored'
+      })
+      onClose();
+    } catch(error) {
+      toast.error('Error: ' + error, {
+        theme: 'colored'
+      })
+    }
   }
-
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="card w-full max-w-lg p-0">
-        {/* Header */}
-        <div className="flex justify-between items-center px-6 py-4 border-b border-(--border)">
+        <div className="flex justify-between items-center bg-(--bg) px-6 py-4 border-b border-(--border)">
           <h2 className="font-semibold">Add Branch</h2>
           <button onClick={onClose}>
             <X size={18} />
           </button>
         </div>
-
-        {/* Body */}
         <div className="px-6 py-4 space-y-4">
           <Select
             label="Organization"
@@ -55,7 +57,8 @@ export default function AddBranchModal({ open, onClose }) {
             }
           >
             <option value="">Select organization</option>
-            {orgs.map((o) => (
+            {orgs.map((o) => 
+              o.status == 'active' && (
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
@@ -71,7 +74,8 @@ export default function AddBranchModal({ open, onClose }) {
             <option value="">Select school</option>
             {schools
               .filter((s) => s.orgId === form.orgId)
-              .map((s) => (
+              .map((s) => 
+                s.status == 'active' && (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -85,7 +89,6 @@ export default function AddBranchModal({ open, onClose }) {
               setForm({ ...form, name: e.target.value })
             }
           />
-
           <Input
             label="Branch Code"
             placeholder="ABC-SIW"
@@ -93,7 +96,6 @@ export default function AddBranchModal({ open, onClose }) {
               setForm({ ...form, branchCode: e.target.value })
             }
           />
-
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="City"
@@ -109,8 +111,6 @@ export default function AddBranchModal({ open, onClose }) {
             />
           </div>
         </div>
-
-        {/* Footer */}
         <div className="flex justify-end px-6 py-4 border-t mt-2 border-(--border)">
           <button
             className="btn-primary"

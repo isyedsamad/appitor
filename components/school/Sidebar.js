@@ -14,17 +14,17 @@ export default function Sidebar() {
   if (!schoolUser) return null;
   return (
     <aside
-      className={`h-screen border-r border-(--border) bg-(--card)]
+      className={`h-[100dvh] border-r border-(--border) bg-(--bg-card)]
       transition-all duration-300
       ${collapsed ? "w-15" : "w-55"}`}
     >
-      <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--primary)/20">
+      <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--bg-card)">
         {!collapsed && (
           <div className="flex flex-row justify-start items-center gap-2">
-            <UserCheck size={17} />
+            {/* <UserCheck size={17} /> */}
             <p className="flex flex-col">
-              <span className="text-sm font-semibold text-(--text)">{schoolUser.username}</span>
-              {/* <span className="text-[8px] uppercase font-medium">{schoolUser.roleName}</span> */}
+              <span className="text-sm font-semibold text-(--text) capitalize">{schoolUser.name}</span>
+              <span className="text-xs font-medium">@{schoolUser.username}</span>
             </p>
           </div>
         )}
@@ -37,7 +37,7 @@ export default function Sidebar() {
       </div>
       <nav className="p-2 space-y-3">
         {MENU.map((item) => {
-          if (!hasPermission(schoolUser, item.permission)) {
+          if (!hasPermission(schoolUser, item.permission, item.isForAll ? item.isForAll : false)) {
             return null;
           }
 

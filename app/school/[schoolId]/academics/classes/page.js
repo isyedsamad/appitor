@@ -9,39 +9,65 @@ import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import ClassModal from "@/lib/school/academics/ClassModal";
 import SectionModal from "@/lib/school/academics/SectionModal";
+import { toast } from "react-toastify";
+import secureAxios from "@/lib/secureAxios";
 
 export default function ClassesPage() {
-    const { user, loading } = useSchool();
-    const { branch } = useBranch();
+  const { schoolUser, loading, setLoading, isLoaded } = useSchool();
+  const { branch } = useBranch();
   const [classes, setClasses] = useState([]);
   const [openClassModal, setOpenClassModal] = useState(false);
   const [openSectionModal, setOpenSectionModal] = useState(null);
   const [schoolId, setSchoolId] = useState('');
   const [branchId, setBranchId] = useState('');
-
+  const [classData, setClassData] = useState(null);
+  const [sectionData, setSectionData] = useState(null);
   useEffect(() => {
-    if(!loading && user && branch) {
-        setSchoolId(user.schoolId);
+    if(schoolUser && branch) {
+        setSchoolId(schoolUser.schoolId);
         setBranchId(branch);
-        fetchClasses();
+        setLoading(true);
+        fetchClasses(schoolUser.schoolId, branch)
     }
-  }, [user, loading, branch]);
-
-  async function fetchClasses() {
+  }, [schoolUser, branch]);
+  async function fetchClasses(currentSchoolId, currentBranch) {
     const ref = collection(
       db,
       "schools",
-      schoolId,
+      currentSchoolId,
       "branches",
-      branchId,
+      currentBranch,
       "classes"
     );
     const snap = await getDocs(ref);
+    setLoading(false);
+    if(snap.docs.length == 0) {
+      setClasses([]);
+      return;
+    }
     setClasses(
       snap.docs.map(d => ({ id: d.id, ...d.data() }))
     );
   }
-
+  const deleteSection = async (secId, classId) => {
+    const sure = confirm('do you really want to delete?');
+    if(!sure) return;
+    setLoading(true);
+    try {
+      await secureAxios.delete('/api/school/academics/sections', {
+        params: {
+          classId, secId, branch
+        }
+      });
+      await fetchClasses(schoolId, branch);
+    } catch (error) {
+      toast.error('Error: ' + error, {
+        theme: 'colored'
+      })
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <RequirePermission permission="academics.manage">
       <div className="space-y-4">
@@ -59,32 +85,54 @@ export default function ClassesPage() {
 
         <div className="grid md:grid-cols-2 gap-4">
           {classes.map(cls => (
-            <div key={cls.id} className="card space-y-2">
-              <div className="flex justify-between">
-                <h2 className="font-medium">{cls.name}</h2>
-                <div className="flex gap-2">
-                  <Pencil size={16} />
-                  <Trash2 size={16} className="text-danger" />
+            <div key={cls.id} className="space-y-2 bg-(--bg-card) px-5 py-4 rounded-lg">
+              <div className="flex justify-between items-center">
+                <h2 className="font-semibold">
+                  {cls.name.toLowerCase().includes('class') ? '' : 'Class: '}{cls.name}
+                  </h2>
+                <div className="flex gap-1">
+                  <div onClick={() => {
+                    setClassData(cls);
+                    setOpenClassModal(true);
+                  }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                    <Pencil size={16} />
+                  </div>
+                  <div className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                    <Trash2 size={16} />
+                  </div>
                 </div>
               </div>
-
               {cls.sections?.map(sec => (
                 <div
                   key={sec.id}
-                  className="flex justify-between text-sm bg-muted p-2 rounded"
+                  className="flex justify-between items-center text-sm bg-(--bg)/50 px-3 py-2 rounded"
                 >
-                  <span>
-                    Section {sec.name} • {sec.capacity}
+                  <div className="flex flex-col">
+                  <span className="font-semibold">
+                    Section: {sec.name}
                   </span>
-                  <div className="flex gap-2">
+                  <span className="text-(--text-muted) text-xs font-medium">
+                    Capacity - {sec.capacity}
+                  </span>
+                  </div>
+                  <div className="flex gap-1">
+                  <div onClick={() => {
+                    setSectionData(sec);
+                    setOpenSectionModal(cls);
+                  }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
                     <Pencil size={14} />
+                  </div>
+                  <div onClick={() => {
+                    deleteSection(sec.id, cls.id);
+                  }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
                     <Trash2 size={14} />
+                  </div>
                   </div>
                 </div>
               ))}
 
               <button
-                className="text-sm text-primary"
+                className="text-sm hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)"
                 onClick={() => setOpenSectionModal(cls)}
               >
                 + Add Section
@@ -95,14 +143,33 @@ export default function ClassesPage() {
 
         <ClassModal
           open={openClassModal}
-          onClose={() => setOpenClassModal(false)}
-          onSuccess={fetchClasses}
+          data={classData}
+          onClose={() => {
+            setClassData(null);
+            setOpenClassModal(false)
+          }}
+          onSuccess={() => {
+            setLoading(true);
+            fetchClasses(schoolId, branch);
+            setClassData(null);
+            setLoading(false);
+          }}
         />
 
         <SectionModal
+          open={openSectionModal}
           classData={openSectionModal}
-          onClose={() => setOpenSectionModal(null)}
-          onSuccess={fetchClasses}
+          sectionData={sectionData}
+          onClose={() => {
+            setSectionData(null);
+            setOpenSectionModal(null)
+          }}
+          onSuccess={() => {
+            setLoading(true);
+            fetchClasses(schoolId, branch);
+            setSectionData(null);
+            setLoading(false);
+          }}
         />
       </div>
     </RequirePermission>

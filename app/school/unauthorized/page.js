@@ -2,7 +2,7 @@
 
 export default function UnauthorizedPage() {
   return (
-    <div className="h-screen flex flex-col items-center justify-center text-center">
+    <div className="h-[100dvh] flex flex-col items-center justify-center text-center">
       <h1 className="text-2xl font-semibold text-(--danger)">
         Access Denied
       </h1>

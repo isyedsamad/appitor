@@ -24,7 +24,7 @@ export default function RequirePermission({ permission, children }) {
     }
   }, [loading, schoolUser, permission]);
 
-  if (loading) return <Loading />;
+  if (loading) return null;
 
   if (!schoolUser || !hasPermission(schoolUser, permission)) {
     return null;

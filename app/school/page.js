@@ -1,9 +1,9 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { School, Mail, Lock, LogIn, Shield } from "lucide-react";
 import Loading from "@/components/ui/Loading";
 import { fetchSchools, loginSchoolUser } from "@/lib/school/authSchool";
+import { toast } from "react-toastify";
 
 export default function SchoolLoginPage() {
   const [schools, setSchools] = useState([]);
@@ -27,6 +27,9 @@ export default function SchoolLoginPage() {
       await loginSchoolUser({ schoolId, email: newMail, password });
     } catch (err) {
       setError(err.message);
+      toast.error('Error: ' + error, {
+        theme: 'colored'
+      })
     } finally {
       setLoading(false);
     }
@@ -35,8 +38,7 @@ export default function SchoolLoginPage() {
   return (
     <>
       {loading && <Loading />}
-
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-5">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--bg)] p-5">
         <div className="w-full max-w-md bg-[var(--bg-card)] rounded-2xl shadow-xl border border-[var(--border)] p-6 sm:p-8">
           
           <div className="mb-5 text-center">
@@ -49,14 +51,11 @@ export default function SchoolLoginPage() {
                 Secure access for schools & staff
             </p>
             </div>
-            
           <form onSubmit={handleLogin} className="space-y-4">
-
-            {/* School Select */}
             <div>
-              <label className="text-sm text-[var(--text-muted)]">School</label>
+              <label className="text-sm text-(--text-muted)">School</label>
               <div className="relative">
-                <School className="absolute left-3 top-3 h-4 w-4 text-[var(--text-muted)]" />
+                <School className="absolute left-3 top-3 h-4 w-4 text-(--text-muted)" />
                 <select
                   required
                   value={schoolId}
@@ -64,7 +63,7 @@ export default function SchoolLoginPage() {
                     setSchoolId(e.target.value);
                     setSchoolCode(e.target.value != '' ? e.target.options[e.target.selectedIndex].text.split(' (')[1].replace(')', '') : '')
                   }}
-                  className="w-full pl-10 pr-3 py-2 rounded-lg bg-transparent border border-[var(--border)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  className="w-full pl-10 pr-3 py-2 rounded-lg border border-(--border) focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 >
                   <option value="">Select School</option>
                   {schools.map((s) => (

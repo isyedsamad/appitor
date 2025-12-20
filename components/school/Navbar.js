@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Menu } from "lucide-react";
 import ThemeToggle from "../ui/ThemeToggle";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
-import { fetchBranches } from "@/lib/admin/branchService";
+import { fetchBranches, fetchSchoolBranches } from "@/lib/admin/branchService";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
-export default function TopNavbar() {
+export default function Navbar({ onMenu }) {
   const { schoolUser } = useSchool();
   const { branch, changeBranch } = useBranch();
   const [branches, setBranches] = useState([]);
@@ -24,7 +24,7 @@ export default function TopNavbar() {
   useEffect(() => {
     async function loadBranches() {
       if (isAdmin) {
-        const list = await fetchBranches(schoolUser.schoolId);
+        const list = await fetchSchoolBranches(schoolUser.schoolId);
         if(list) changeBranch(list[0].id)
         setBranches(list);
       } else {
@@ -42,19 +42,25 @@ export default function TopNavbar() {
       className="
         h-14 flex items-center justify-between
         px-4
-        bg-linear-to-r from-(--primary)/20 to-transparent
+        bg-linear-to-r from-(--bg-card) via-35% via-(--bg-card) to-(--primary)/50
         border-b border-(--border)
       "
     >
-
-      <div className="flex">
+      <div className="flex items-center gap-2">
+        <button
+            onClick={onMenu}
+            className="md:hidden p-2 rounded-md border border-(--border) flex items-center font-semibold"
+          >
+            <p><Menu size={18} /></p>
+            <p>Menu</p>
+        </button>
         {branches.length > 0 && (
           <select
             value={branch || ""}
             onChange={(e) => changeBranch(e.target.value)}
             className="
-              text-md font-semibold px-2 py-1 rounded-lg
-              bg-transparent border-none
+              text-md font-semibold pl-2 pr-10 py-1 rounded-lg
+              bg-(--bg-card) border-none hidden md:block
               text-(--text)
             "
           >
@@ -66,10 +72,9 @@ export default function TopNavbar() {
           </select>
         )}
       </div>
-      <div className="flex-1 flex items-center justify-end gap-3">
+      <div className="flex-1 flex items-center justify-end gap-1 sm:gap-3">
         <ThemeToggle />
-
-        <button className="p-2 rounded hover:bg-[var(--primary-soft)]">
+        <button className="p-2 border border-(--border) rounded-md bg-(--bg-card) hover:text-(--danger)">
           <Bell size={18} />
         </button>
         <button onClick={logout}

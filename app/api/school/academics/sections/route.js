@@ -5,26 +5,22 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academics.manage");
+    const user = await verifyUser(req, "academic.manage");
     const body = await req.json();
-
-    const { classId, sectionId, name, capacity } = body;
-
+    const { branch, classId, sectionId, name, capacity } = body;
     if (!classId || !name) {
       return NextResponse.json(
-        { message: "classId and section name required" },
+        { message: "class selection and section name is required!" },
         { status: 400 }
       );
     }
-
     const classRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
-      .doc(user.branchId)
+      .doc(branch)
       .collection("classes")
       .doc(classId);
-
     const classSnap = await classRef.get();
     if (!classSnap.exists) {
       return NextResponse.json(
@@ -49,12 +45,10 @@ export async function POST(req) {
           : sec
       );
     }
-
     await classRef.update({
       sections,
       updatedAt: FieldValue.serverTimestamp(),
     });
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("SECTION API ERROR:", err);
@@ -69,25 +63,22 @@ export async function DELETE(req) {
   try {
     const user = await verifyUser(req, "academics.manage");
     const { searchParams } = new URL(req.url);
-
     const classId = searchParams.get("classId");
-    const sectionId = searchParams.get("sectionId");
-
-    if (!classId || !sectionId) {
+    const sectionId = searchParams.get("secId");
+    const branch = searchParams.get("branch");
+    if (!classId || !sectionId || !branch) {
       return NextResponse.json(
-        { message: "classId & sectionId required" },
+        { message: "class & section is required" },
         { status: 400 }
       );
     }
-
     const classRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
-      .doc(user.branchId)
+      .doc(branch)
       .collection("classes")
       .doc(classId);
-
     const snap = await classRef.get();
     if (!snap.exists) {
       return NextResponse.json(
@@ -95,16 +86,13 @@ export async function DELETE(req) {
         { status: 404 }
       );
     }
-
     const sections = (snap.data().sections || []).filter(
       sec => sec.id !== sectionId
     );
-
     await classRef.update({
       sections,
       updatedAt: FieldValue.serverTimestamp(),
     });
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE SECTION ERROR:", err);

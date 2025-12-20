@@ -7,24 +7,16 @@ import { verifyAppCheck } from "@/lib/verifyAppCheck";
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
-
-    const {
-      orgId,
-      schoolId,
-      name,
-      branchCode,
-      city,
-      state,
-    } = await req.json();
-
+    const {orgId, schoolId, name, branchCode, city, state} = await req.json();
     if (!orgId || !schoolId || !name) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
-
-    await adminDb.collection("branches").add({
+    const batch = adminDb.batch();
+    const branchRef = adminDb.collection("branches").doc();
+    batch.set(branchRef, {
       orgId,
       schoolId,
       name,
@@ -34,7 +26,19 @@ export async function POST(req) {
       status: "active",
       createdAt: new Date(),
     });
-
+    const schoolBranchRef = adminDb.collection('schools').doc(schoolId)
+      .collection('branches').doc(branchRef.id);
+    batch.set(schoolBranchRef, {
+      orgId,
+      schoolId,
+      name,
+      branchCode: branchCode || "",
+      city: city || "",
+      state: state || "",
+      status: "active",
+      createdAt: new Date(),
+    })
+    await batch.commit();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("create branch error:", err);

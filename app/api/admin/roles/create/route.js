@@ -15,8 +15,8 @@ export async function POST(req) {
 
     await adminDb.collection("roles").add({
       name,
-      permissions,
-      system: false,
+      permissions: Object.keys(permissions).length > 0 ? permissions : ['*'],
+      system: Object.keys(permissions).length > 0 ? false : true,
       createdAt: new Date(),
     });
 

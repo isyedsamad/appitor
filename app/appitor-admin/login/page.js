@@ -37,7 +37,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-[100dvh] flex items-center justify-center px-4">
       <div className="w-full max-w-md card">
 
         <div className="mb-8 text-center">

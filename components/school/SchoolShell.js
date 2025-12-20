@@ -13,8 +13,8 @@ export default function SchoolShell({ children }) {
   if (!schoolUser) return null;
 
   return (
-    <div className="flex min-h-screen bg-(--bg)">
-      <Sidebar />
+    <div className="flex min-h-[100dvh] bg-(--bg)">
+      <div className="hidden md:block"><Sidebar /></div>
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <div className="flex-1">

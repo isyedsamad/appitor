@@ -7,36 +7,33 @@ import { verifyAppCheck } from "@/lib/verifyAppCheck";
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
-    const { username, roleId, role, schoolId } = await req.json();
+    const { name, username, password, roleId, role, schoolId, schoolCode, branchIds, branchNames } = await req.json();
 
-    if (!username || !roleId || !schoolId) {
+    if (!name || !username || !password || !roleId || !schoolId || branchIds.length == 0) {
       return NextResponse.json(
         { error: "Invalid payload" },
         { status: 400 }
       );
     }
-    const schoolSnap = await adminDb
-      .collection("schools")
-      .doc(schoolId)
-      .get();
-    const school = schoolSnap.data();
-    const email = `${username}@${school.code}.appitor`;
+    const email = `${username.toLowerCase()}@${schoolCode.toLowerCase()}.appitor`;
     const user = await adminAuth.createUser({
       email,
-      password: "Temp@123",
+      password
     });
     await adminDb.collection("schoolUsers").doc(user.uid).set({
       uid: user.uid,
+      name,
       username,
       email,
       schoolId,
-      schoolCode: school.code,
+      schoolCode,
+      branchIds,
+      branchNames,
       roleId,
       role,
       status: "active",
       createdAt: new Date(),
     });
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("create user error:", err);

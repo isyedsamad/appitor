@@ -13,26 +13,37 @@ export function SchoolProvider({ schoolId, children }) {
   const router = useRouter();
   const [schoolUser, setSchoolUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      setLoading(true);
+      setIsLoaded(false);
       if (!fbUser) {
         setSchoolUser(null);
         setLoading(false);
-        router.replace('/school/')
+        setIsLoaded(true);
+        router.replace("/school/");
         return;
       }
-      const userSnap = await getDoc(doc(db, "schoolUsers", fbUser.uid));
+      const userSnap = await getDoc(
+        doc(db, "schoolUsers", fbUser.uid)
+      );
       if (!userSnap.exists()) {
         setSchoolUser(null);
         setLoading(false);
+        setIsLoaded(true);
         signOut(auth);
         return;
       }
       const userData = userSnap.data();
-      if (userData.schoolId !== schoolId || userData.status !== "active") {
+      if (
+        userData.schoolId !== schoolId ||
+        userData.status !== "active"
+      ) {
         setSchoolUser(null);
         setLoading(false);
+        setIsLoaded(true);
         return;
       }
       const roleSnap = await getDoc(
@@ -42,6 +53,7 @@ export function SchoolProvider({ schoolId, children }) {
         console.error("Role not found");
         setSchoolUser(null);
         setLoading(false);
+        setIsLoaded(true);
         return;
       }
       const roleData = roleSnap.data();
@@ -55,14 +67,23 @@ export function SchoolProvider({ schoolId, children }) {
         linkedId: userData.linkedId || null,
       });
       setLoading(false);
+      setIsLoaded(true);
     });
 
     return () => unsub();
-  }, [schoolId]);
+  }, [schoolId, router]);
 
   return (
-    <SchoolContext.Provider value={{ schoolUser, loading, setLoading }}>
-      {loading ? <Loading /> : children}
+    <SchoolContext.Provider
+      value={{
+        schoolUser,
+        loading,
+        isLoaded,
+        setLoading,
+      }}
+    >
+      {loading && <Loading />}
+      {children}
     </SchoolContext.Provider>
   );
 }

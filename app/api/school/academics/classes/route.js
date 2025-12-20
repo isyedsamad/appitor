@@ -5,7 +5,7 @@ import { verifyUser } from "@/lib/verifyUser";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academics.manage");
+    const user = await verifyUser(req, "academic.manage");
     const body = await req.json();
     const { branch, classId, name, order } = body;
     if (!name) {
@@ -61,7 +61,6 @@ export async function DELETE(req) {
         { status: 400 }
       );
     }
-
     await adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -70,7 +69,6 @@ export async function DELETE(req) {
       .collection("classes")
       .doc(classId)
       .delete();
-
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE CLASS ERROR:", err);

@@ -7,14 +7,32 @@ import AddSchoolModal from "./AddSchoolModal";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { fetchOrganizations } from "@/lib/admin/organizationService";
+import { toast } from "react-toastify";
+import secureAxios from "@/lib/secureAxios";
+import { useSuperAdmin } from "@/context/SuperAdminContext";
 
 export default function SchoolsPage() {
+  const { setLoading } = useSuperAdmin();
   const [schools, setSchools] = useState([]);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingSchool, setLoadingSchool] = useState(true);
   const [orgs, setOrgs] = useState([]);
-  const disableSchool = async () => {
-
+  const changeStatus = async (schoolId, isActive) => {
+    setLoading(true);
+    try {
+      await secureAxios.post('/api/admin/school/lock_unlock', {schoolId, isActive});
+      toast.success('School updated!', {
+        theme: 'colored'
+      })
+      const data = await fetchSchools();
+      setSchools(data);
+    } catch (error) {
+      toast.error('Error: ' + error, {
+        theme: 'colored'
+      })
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
     async function load() {
@@ -22,7 +40,7 @@ export default function SchoolsPage() {
       setSchools(data);
       const orgsList = await fetchOrganizations();
       setOrgs(orgsList);
-      setLoading(false);
+      setLoadingSchool(false);
     }
     load();
   }, []);
@@ -58,7 +76,7 @@ export default function SchoolsPage() {
             </thead>
 
             <tbody>
-              {loading && (
+              {loadingSchool && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-muted">
                     Loading schools...
@@ -66,7 +84,7 @@ export default function SchoolsPage() {
                 </tr>
               )}
 
-              {!loading && schools.length === 0 && (
+              {!loadingSchool && schools.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-muted">
                     No schools found
@@ -93,7 +111,7 @@ export default function SchoolsPage() {
                     {s.city}, {s.state}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="badge-primary capitalize">
+                    <span className="badge-primary uppercase">
                       {s.plan}
                     </span>
                   </td>
@@ -106,9 +124,9 @@ export default function SchoolsPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       {s.status == 'active' ? (
-                        <button className="action-btn" onClick={() => {disableSchool(s.id, true)}}><Lock size={16} /></button>
+                        <button className="action-btn hover:text-red-600" onClick={() => {changeStatus(s.id, true)}}><Lock size={16} /></button>
                       ) : (
-                        <button className="action-btn" onClick={() => {disableSchool(s.id, false)}}><LockOpen size={16} /></button>
+                        <button className="action-btn hover:text-green-600" onClick={() => {changeStatus(s.id, false)}}><LockOpen size={16} /></button>
                       )}
                       <Link href={`/appitor-admin/schools/${s.id}`}><ActionButton icon={Eye} /></Link>
                       <Link href={`/appitor-admin/schools/${s.id}/edit`}><ActionButton icon={Pencil} /></Link>
@@ -148,7 +166,7 @@ function StatusBadge({ status }) {
     const { theme, setTheme } = useTheme();
   return (
     <span
-      className={`px-2.5 py-1 rounded-md text-xs font-medium capitalize ${status == 'active' ? `${theme == 'dark' ? 'bg-green-950 text-green-600' : 'bg-green-100 text-green-600'}` : `${theme == 'dark' ? 'bg-red-950 text-red-600' : 'bg-red-100 text-red-600'}`}`}
+      className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase ${status == 'active' ? `${theme == 'dark' ? 'bg-green-950 text-green-600' : 'bg-green-100 text-green-600'}` : `${theme == 'dark' ? 'bg-red-950 text-red-600' : 'bg-red-100 text-red-600'}`}`}
     >
       {status}
     </span>

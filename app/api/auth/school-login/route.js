@@ -10,20 +10,20 @@ export async function POST(req) {
 
   if (!userSnap.exists) {
     return NextResponse.json(
-      { message: "Access denied" },
+      { message: "Invalid Credentials" },
       { status: 403 }
     );
   }
   const user = userSnap.data();
   if (user.schoolId !== schoolId) {
     return NextResponse.json(
-      { message: "Invalid school selection" },
+      { message: "Invalid Credentials" },
       { status: 403 }
     );
   }
   if (user.status !== "active") {
     return NextResponse.json(
-      { message: "Account disabled" },
+      { message: "Your Account is disabled! Please contact Admin" },
       { status: 403 }
     );
   }

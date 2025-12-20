@@ -13,7 +13,6 @@ export default function Navbar({ onMenuClick }) {
     <header className="h-14 border-b border-(--border) bg-(--bg-card)">
       <div className="flex items-center justify-between h-full px-6">
         
-        {/* Left */}
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuClick}
@@ -21,7 +20,6 @@ export default function Navbar({ onMenuClick }) {
           >
             <Menu size={18} />
           </button>
-
           <span className="font-semibold tracking-tight">
             Admin Panel
           </span>
