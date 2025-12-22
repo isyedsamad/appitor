@@ -7,7 +7,7 @@ import { verifyAppCheck } from "@/lib/verifyAppCheck";
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
-    const { name, username, password, roleId, role, schoolId, schoolCode, branchIds, branchNames } = await req.json();
+    const { name, username, password, roleId, role, schoolId, schoolCode, branchIds, branchNames, currentBranch } = await req.json();
 
     if (!name || !username || !password || !roleId || !schoolId || branchIds.length == 0) {
       return NextResponse.json(
@@ -29,6 +29,7 @@ export async function POST(req) {
       schoolCode,
       branchIds,
       branchNames,
+      currentBranch,
       roleId,
       role,
       status: "active",

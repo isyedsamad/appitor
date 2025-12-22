@@ -61,7 +61,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academics.manage");
+    const user = await verifyUser(req, "academic.manage");
     const { searchParams } = new URL(req.url);
     const classId = searchParams.get("classId");
     const sectionId = searchParams.get("secId");

@@ -15,6 +15,7 @@ export default function AddUserModal({ open, onClose }) {
   const [roles, setRoles] = useState([]);
   const [schools, setSchools] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [firstBranch, setFirstBranch] = useState('');
   const [form, setForm] = useState({
     name: "",
     username: "",
@@ -25,6 +26,7 @@ export default function AddUserModal({ open, onClose }) {
     branchNames: [],
     schoolId: "",
     schoolCode: "",
+    currentBranch: "",
   });
   useEffect(() => {
     fetchRoles().then(setRoles);
@@ -41,6 +43,11 @@ export default function AddUserModal({ open, onClose }) {
   async function save() {
     setLoading(true);
     try {
+      if(form.branchIds[0] != '*') {
+        form.currentBranch = form.branchIds[0];
+      }else {
+        form.currentBranch = firstBranch;
+      }
       await secureAxios.post("/api/admin/users/create", form);
       toast.success('User added successfully!', {
         theme: 'colored'
@@ -57,7 +64,7 @@ export default function AddUserModal({ open, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="card w-full max-w-lg p-0">
-        <div className="flex justify-between bg-(--bg) items-center px-6 py-4 border-b border-(--border)">
+        <div className="flex justify-between bg-(--bg) rounded-t-xl items-center px-6 py-4 border-b border-(--border)">
           <h2 className="font-semibold">Add User</h2>
           <button onClick={onClose}>
             <X size={18} />
@@ -125,12 +132,13 @@ export default function AddUserModal({ open, onClose }) {
                       className="w-4 h-3 ml-1 accent-(--primary)"
                       checked={form.branchIds.includes(b.id)}
                       onChange={(e) => {
+                        setFirstBranch(b.id);
                         const next = e.target.checked
                           ? [...form.branchIds, b.id]
                           : form.branchIds.filter(id => id !== b.id);
                         const nextName = e.target.checked
                           ? [...form.branchNames, b.name]
-                          : form.branchIds.filter(name => name !== b.name);
+                          : form.branchNames.filter(name => name !== b.name);
                         setForm({ ...form, branchIds: next, branchNames: nextName });
                       }}
                     />

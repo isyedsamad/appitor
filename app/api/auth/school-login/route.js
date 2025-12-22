@@ -7,7 +7,6 @@ export async function POST(req) {
     .collection("schoolUsers")
     .doc(uid)
     .get();
-
   if (!userSnap.exists) {
     return NextResponse.json(
       { message: "Invalid Credentials" },
@@ -23,7 +22,7 @@ export async function POST(req) {
   }
   if (user.status !== "active") {
     return NextResponse.json(
-      { message: "Your Account is disabled! Please contact Admin" },
+      { message: "Account is disabled! Please contact Admin" },
       { status: 403 }
     );
   }

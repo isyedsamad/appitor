@@ -4,8 +4,10 @@ import { School, Mail, Lock, LogIn, Shield } from "lucide-react";
 import Loading from "@/components/ui/Loading";
 import { fetchSchools, loginSchoolUser } from "@/lib/school/authSchool";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 export default function SchoolLoginPage() {
+  const router = useRouter();
   const [schools, setSchools] = useState([]);
   const [schoolId, setSchoolId] = useState("");
   const [schoolCode, setSchoolCode] = useState("")
@@ -24,7 +26,10 @@ export default function SchoolLoginPage() {
     setLoading(true);
     const newMail = email.trim() + "@" + schoolCode.toLowerCase() + ".appitor";
     try {
-      await loginSchoolUser({ schoolId, email: newMail, password });
+      const data = await loginSchoolUser({ schoolId, email: newMail, password });
+      if(data.success) {
+        router.replace(`/school/${data.schoolId}/dashboard`);
+      }
     } catch (err) {
       setError(err.message);
       toast.error('Error: ' + error, {

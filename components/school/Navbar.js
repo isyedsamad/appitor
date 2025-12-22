@@ -7,35 +7,22 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { fetchBranches, fetchSchoolBranches } from "@/lib/admin/branchService";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDoc, getDocs, query, where } from "firebase/firestore";
 
 export default function Navbar({ onMenu }) {
-  const { schoolUser } = useSchool();
+  const { isLoaded, schoolUser, branches, currentBranch } = useSchool();
   const { branch, changeBranch } = useBranch();
-  const [branches, setBranches] = useState([]);
-
+  const [branchesList, setBranchesList] = useState([]);
   const logout = () => {
-      signOut(auth);
-    }
-
-  const isAdmin =
-    schoolUser.permissions?.includes("*");
-
+    signOut(auth);
+  }
   useEffect(() => {
-    async function loadBranches() {
-      if (isAdmin) {
-        const list = await fetchSchoolBranches(schoolUser.schoolId);
-        if(list) changeBranch(list[0].id)
-        setBranches(list);
-      } else {
-        if (schoolUser.assignedBranch) {
-          setBranches([schoolUser.assignedBranch]);
-          changeBranch(schoolUser.assignedBranch.id);
-        }
-      }
+    if(isLoaded && schoolUser) {
+      setBranchesList(branches)
+      changeBranch(currentBranch);
     }
-    loadBranches();
-  }, [isAdmin, schoolUser]);
+  }, [isLoaded, schoolUser]);
 
   return (
     <header
@@ -54,7 +41,7 @@ export default function Navbar({ onMenu }) {
             <p><Menu size={18} /></p>
             <p>Menu</p>
         </button>
-        {branches.length > 0 && (
+        {branchesList.length > 0 && (
           <select
             value={branch || ""}
             onChange={(e) => changeBranch(e.target.value)}
@@ -64,7 +51,7 @@ export default function Navbar({ onMenu }) {
               text-(--text)
             "
           >
-            {branches.map((b) => (
+            {branchesList.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
@@ -72,7 +59,7 @@ export default function Navbar({ onMenu }) {
           </select>
         )}
       </div>
-      <div className="flex-1 flex items-center justify-end gap-1 sm:gap-3">
+      <div className="flex-1 flex items-center justify-end gap-1 sm:gap-2">
         <ThemeToggle />
         <button className="p-2 border border-(--border) rounded-md bg-(--bg-card) hover:text-(--danger)">
           <Bell size={18} />

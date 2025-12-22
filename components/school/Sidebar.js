@@ -14,7 +14,7 @@ export default function Sidebar() {
   if (!schoolUser) return null;
   return (
     <aside
-      className={`h-[100dvh] border-r border-(--border) bg-(--bg-card)]
+      className={`h-dvh border-r border-(--border) bg-(--bg-card)]
       transition-all duration-300
       ${collapsed ? "w-15" : "w-55"}`}
     >
@@ -45,6 +45,7 @@ export default function Sidebar() {
           const isOpen = openMenu === item.label;
 
           return (
+            // <Link  href={item.href ? `/school/${schoolUser.schoolId}/${item.href}` : ``}>
             <div key={item.label}>
               <button
                 onClick={() =>
@@ -77,7 +78,7 @@ export default function Sidebar() {
                     return (
                       <Link
                         key={sub.href}
-                        href={sub.href}
+                        href={`/school/${schoolUser.schoolId}/${sub.href}`}
                         className="block px-3 py-1.5 rounded
                         text-sm font-semibold text-(--text-muted)
                         hover:bg-(--primary-soft)"

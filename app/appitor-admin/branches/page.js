@@ -72,7 +72,7 @@ export default function BranchesPage() {
                   className="border-b border-(--border) last:border-0 hover:bg-(--bg)"
                 >
                   <td className="px-4 py-3 font-medium">
-                    {b.name}
+                    {b.appitorCode} - {b.name}
                   </td>
                   <td className="px-4 py-3 font-semibold">
                     {b.branchCode}

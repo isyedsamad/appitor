@@ -15,6 +15,7 @@ export default function AddBranchModal({ open, onClose }) {
     schoolId: "",
     name: "",
     branchCode: "",
+    appitorCode: 'A',
     city: "",
     state: "",
   });
@@ -81,21 +82,37 @@ export default function AddBranchModal({ open, onClose }) {
                 </option>
               ))}
           </Select>
-
           <Input
             label="Branch Name"
-            placeholder="ABC Siwan"
+            placeholder="i.e. ABC Siwan"
             onChange={(e) =>
               setForm({ ...form, name: e.target.value })
             }
           />
-          <Input
-            label="Branch Code"
-            placeholder="ABC-SIW"
-            onChange={(e) =>
-              setForm({ ...form, branchCode: e.target.value })
-            }
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Branch Code"
+              placeholder="i.e. ABC-SIW"
+              onChange={(e) =>
+                setForm({ ...form, branchCode: e.target.value })
+              }
+            />
+            <Select
+              label="Appitor Code"
+              onChange={(e) =>
+                setForm({ ...form, appitorCode: e.target.value })
+              }
+            >
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
+              <option value="F">F</option>
+              <option value="G">G</option>
+              <option value="H">H</option>
+            </Select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="City"

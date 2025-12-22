@@ -9,31 +9,17 @@ import { useBranch } from "@/context/BranchContext";
 import { fetchSchoolBranches } from "@/lib/admin/branchService";
 
 export default function MobileSidebar({ open, onClose }) {
-  const { schoolUser } = useSchool();
+  const { isLoaded, schoolUser, branches, currentBranch } = useSchool();
   const { branch, changeBranch } = useBranch();
-  const [branches, setBranches] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
-  const isAdmin =
-    schoolUser.permissions?.includes("*");
   useEffect(() => {
-    if(isAdmin && schoolUser) {
-      async function loadBranches() {
-        if (isAdmin) {
-          const list = await fetchSchoolBranches(schoolUser.schoolId);
-          if(list) changeBranch(list[0].id)
-          setBranches(list);
-        } else {
-          if (schoolUser.assignedBranch) {
-            setBranches([schoolUser.assignedBranch]);
-            changeBranch(schoolUser.assignedBranch.id);
-          }
-        }
-      }
-      loadBranches();
+    if(isLoaded && schoolUser) {
+      setBranchesList(branches)
+      changeBranch(currentBranch);
     }
-  }, [isAdmin, schoolUser]);
-  if (!schoolUser) return null;
+  }, [isLoaded, schoolUser]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -44,7 +30,7 @@ export default function MobileSidebar({ open, onClose }) {
       <aside className="absolute overflow-y-auto left-0 top-0 h-full w-64 bg-(--bg) border-r border-(--border)">
         <div className="h-14 flex items-center justify-between px-4 border-b border-(--border)">
           <div>
-          {branches.length > 0 && (
+          {branchesList.length > 0 && (
             <select
               value={branch || ""}
               onChange={(e) => changeBranch(e.target.value)}
@@ -54,7 +40,7 @@ export default function MobileSidebar({ open, onClose }) {
                 text-(--text)
               "
             >
-              {branches.map((b) => (
+              {branchesList.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>

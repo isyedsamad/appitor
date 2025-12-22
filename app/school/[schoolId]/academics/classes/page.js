@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Layers, Plus, Pencil, Trash2 } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
@@ -23,22 +23,22 @@ export default function ClassesPage() {
   const [classData, setClassData] = useState(null);
   const [sectionData, setSectionData] = useState(null);
   useEffect(() => {
-    if(schoolUser && branch) {
+    if(isLoaded && schoolUser && branch) {
         setSchoolId(schoolUser.schoolId);
         setBranchId(branch);
         setLoading(true);
         fetchClasses(schoolUser.schoolId, branch)
     }
-  }, [schoolUser, branch]);
+  }, [schoolUser, isLoaded, branch]);
   async function fetchClasses(currentSchoolId, currentBranch) {
-    const ref = collection(
+    const ref = query(collection(
       db,
       "schools",
       currentSchoolId,
       "branches",
       currentBranch,
       "classes"
-    );
+    ), orderBy('order', 'asc'));
     const snap = await getDocs(ref);
     setLoading(false);
     if(snap.docs.length == 0) {
@@ -50,7 +50,7 @@ export default function ClassesPage() {
     );
   }
   const deleteSection = async (secId, classId) => {
-    const sure = confirm('do you really want to delete?');
+    const sure = confirm('do you really want to delete the section?');
     if(!sure) return;
     setLoading(true);
     try {
@@ -68,8 +68,27 @@ export default function ClassesPage() {
       setLoading(false);
     }
   }
+  const deleteClass = async (classId) => {
+    const sure = confirm('do you really want to delete the class?');
+    if(!sure) return;
+    setLoading(true);
+    try {
+      await secureAxios.delete('/api/school/academics/classes', {
+        params: {
+          classId, branch
+        }
+      });
+      await fetchClasses(schoolId, branch);
+    } catch (error) {
+      toast.error('Error: ' + error, {
+        theme: 'colored'
+      })
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
-    <RequirePermission permission="academics.manage">
+    <RequirePermission permission="academic.manage">
       <div className="space-y-4">
         <header className="flex justify-between items-center">
           <h1 className="text-xl font-semibold flex items-center gap-3">
@@ -82,7 +101,9 @@ export default function ClassesPage() {
             <Plus size={16} /> Add Class
           </button>
         </header>
-
+        {(isLoaded && !loading && classes.length == 0) && (
+          <p className="text-(--text-muted)">No classes found!</p>
+        )}
         <div className="grid md:grid-cols-2 gap-4">
           {classes.map(cls => (
             <div key={cls.id} className="space-y-2 bg-(--bg-card) px-5 py-4 rounded-lg">
@@ -97,7 +118,9 @@ export default function ClassesPage() {
                   }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
                     <Pencil size={16} />
                   </div>
-                  <div className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                  <div onClick={() => {
+                    deleteClass(cls.id);
+                  }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
                     <Trash2 size={16} />
                   </div>
                 </div>
@@ -132,7 +155,7 @@ export default function ClassesPage() {
               ))}
 
               <button
-                className="text-sm hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)"
+                className="text-sm font-medium hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)"
                 onClick={() => setOpenSectionModal(cls)}
               >
                 + Add Section

@@ -7,7 +7,7 @@ import { verifyAppCheck } from "@/lib/verifyAppCheck";
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
-    const {orgId, schoolId, name, branchCode, city, state} = await req.json();
+    const {orgId, schoolId, name, branchCode, appitorCode, city, state} = await req.json();
     if (!orgId || !schoolId || !name) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -20,6 +20,7 @@ export async function POST(req) {
       orgId,
       schoolId,
       name,
+      appitorCode,
       branchCode: branchCode || "",
       city: city || "",
       state: state || "",
@@ -32,6 +33,7 @@ export async function POST(req) {
       orgId,
       schoolId,
       name,
+      appitorCode,
       branchCode: branchCode || "",
       city: city || "",
       state: state || "",

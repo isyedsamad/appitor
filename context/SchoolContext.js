@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Loading from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
+import { useBranch } from "./BranchContext";
 
 const SchoolContext = createContext(null);
 
@@ -14,7 +15,8 @@ export function SchoolProvider({ schoolId, children }) {
   const [schoolUser, setSchoolUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
-
+  const [branches, setBranches] = useState([]);
+  const [currentBranch, setCurrentBranch] = useState('');
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setLoading(true);
@@ -36,11 +38,10 @@ export function SchoolProvider({ schoolId, children }) {
         signOut(auth);
         return;
       }
+      const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+      const schoolData = schoolSnap.data();
       const userData = userSnap.data();
-      if (
-        userData.schoolId !== schoolId ||
-        userData.status !== "active"
-      ) {
+      if (userData.schoolId !== schoolId || userData.status !== "active" || schoolData.status != "active") {
         setSchoolUser(null);
         setLoading(false);
         setIsLoaded(true);
@@ -61,11 +62,36 @@ export function SchoolProvider({ schoolId, children }) {
         ...userData,
         uid: fbUser.uid,
         schoolId,
+        schoolCode: schoolData.code,
         roleId: userData.roleId,
         roleName: roleData.name,
         permissions: roleData.permissions || [],
         linkedId: userData.linkedId || null,
       });
+      if (userData) {
+        const currentBranchUser = userData.currentBranch;
+        if(userData.branchIds.length > 1) {
+          const combined = userData.branchIds.map((id, index) => ({
+            id,
+            name: userData.branchNames[index]
+          }));
+          setBranches(combined);
+          setCurrentBranch(currentBranchUser);
+        }else {
+          if(userData.branchIds[0] == "*") {
+            const branchRef = query(
+              collection(db, 'branches'),
+              where('schoolId', '==', userData.schoolId)
+            )
+            const branchSnap = await getDocs(branchRef);
+            setBranches(branchSnap.docs.map((d) => ({id: d.id, ...d.data()})));
+            setCurrentBranch(userData.currentBranch);
+          }else {
+            setBranches([{id: 1, name: userData.branchNames[0]}]);
+            setCurrentBranch(userData.branchIds[0]);
+          }
+        }
+      }
       setLoading(false);
       setIsLoaded(true);
     });
@@ -80,6 +106,8 @@ export function SchoolProvider({ schoolId, children }) {
         loading,
         isLoaded,
         setLoading,
+        branches,
+        currentBranch
       }}
     >
       {loading && <Loading />}
