@@ -10,16 +10,8 @@ import { fetchSchoolBranches } from "@/lib/admin/branchService";
 
 export default function MobileSidebar({ open, onClose }) {
   const { isLoaded, schoolUser, branches, currentBranch } = useSchool();
-  const { branch, changeBranch } = useBranch();
-  const [branchesList, setBranchesList] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
-  useEffect(() => {
-    if(isLoaded && schoolUser) {
-      setBranchesList(branches)
-      changeBranch(currentBranch);
-    }
-  }, [isLoaded, schoolUser]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -30,23 +22,7 @@ export default function MobileSidebar({ open, onClose }) {
       <aside className="absolute overflow-y-auto left-0 top-0 h-full w-64 bg-(--bg) border-r border-(--border)">
         <div className="h-14 flex items-center justify-between px-4 border-b border-(--border)">
           <div>
-          {branchesList.length > 0 && (
-            <select
-              value={branch || ""}
-              onChange={(e) => changeBranch(e.target.value)}
-              className="
-                text-md font-semibold pl-2 pr-10 py-1 rounded-lg
-                bg-(--bg) border-none
-                text-(--text)
-              "
-            >
-              {branchesList.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          )}
+          
           </div>
           <button onClick={onClose}>
             <X size={18} />

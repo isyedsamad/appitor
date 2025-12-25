@@ -13,9 +13,12 @@ const SchoolContext = createContext(null);
 export function SchoolProvider({ schoolId, children }) {
   const router = useRouter();
   const [schoolUser, setSchoolUser] = useState(null);
+  const [classData, setClassData] = useState(null);
+  const [currentSession, setCurrentSession] = useState('');
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('');
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -58,6 +61,9 @@ export function SchoolProvider({ schoolId, children }) {
         return;
       }
       const roleData = roleSnap.data();
+      const allRolesSnap = await getDocs(collection(db, 'roles'));
+      const allRolesData = allRolesSnap.docs;
+      setRoles(allRolesData.map((d) => ({id: d.id, ...d.data()})));
       setSchoolUser({
         ...userData,
         uid: fbUser.uid,
@@ -107,7 +113,13 @@ export function SchoolProvider({ schoolId, children }) {
         isLoaded,
         setLoading,
         branches,
-        currentBranch
+        currentBranch,
+        setCurrentBranch,
+        roles,
+        classData,
+        setClassData,
+        currentSession,
+        setCurrentSession
       }}
     >
       {loading && <Loading />}

@@ -14,8 +14,6 @@ export default function RequirePermission({ permission, children }) {
     if (!loading && !schoolUser) {
       router.replace("/login");
     }
-    console.log(permission);
-    
     if (
       !loading &&
       schoolUser &&

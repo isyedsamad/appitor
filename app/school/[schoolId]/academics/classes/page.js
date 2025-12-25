@@ -90,7 +90,7 @@ export default function ClassesPage() {
   return (
     <RequirePermission permission="academic.manage">
       <div className="space-y-4">
-        <header className="flex justify-between items-center">
+        <header className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
           <h1 className="text-xl font-semibold flex items-center gap-3">
             <Layers /> Classes & Sections
           </h1>

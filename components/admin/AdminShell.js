@@ -39,7 +39,7 @@ export default function AdminShell({ children }) {
   }
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden">
+    <div className="flex h-dvh overflow-hidden">
       <Sidebar />
       <MobileSidebar open={open} onClose={() => setOpen(false)} />
 

@@ -72,7 +72,7 @@ export default function UsersPage() {
               {users.map((u) => (
                 <tr
                   key={u.id}
-                  className="border-b border-(--border) last:border-0 hover:bg-[var(--bg)]"
+                  className="border-b border-(--border) last:border-0 hover:bg-(--bg)"
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">{u.name}</div>

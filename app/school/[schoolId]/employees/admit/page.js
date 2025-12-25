@@ -7,6 +7,7 @@ import {
   Briefcase,
   Shield,
   Hash,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
@@ -15,24 +16,27 @@ import { useSchool } from "@/context/SchoolContext";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function AdmitEmployeePage() {
-  const { branchInfo } = useBranch();
-  const { schoolUser, setLoading } = useSchool();
-
+  const { branch, branchInfo } = useBranch();
+  const { schoolUser, setLoading, roles } = useSchool();
   const [employeeId, setEmployeeId] = useState("");
-
+  const [rolesList, setRolesList] = useState([]);
+  function generateTempPassword() {
+    return Math.random().toString(36).slice(-8);
+  }
   const [form, setForm] = useState({
     name: "",
     mobile: "",
     email: "",
     gender: "",
     roleId: "",
-    salary: ""
+    role: "",
+    salary: "",
+    password: generateTempPassword(),
   });
-
   useEffect(() => {
     if (!branchInfo || !schoolUser) return;
-
     const next = branchInfo.employeeCounter + 1;
+    setRolesList(roles);
     setEmployeeId(
       `${schoolUser.schoolCode}-${branchInfo.appitorCode}E${next}`
     );
@@ -53,7 +57,8 @@ export default function AdmitEmployeePage() {
       await secureAxios.post("/api/school/employees/admit", {
         ...form,
         employeeId,
-        branchId: branchInfo.id,
+        branchIds: [branch],
+        branchNames: [branchInfo.name]
       });
       toast.success("Employee admitted successfully", {
         theme: 'colored'
@@ -64,7 +69,9 @@ export default function AdmitEmployeePage() {
         email: "",
         gender: "",
         roleId: "",
+        role: "",
         salary: "",
+        password: generateTempPassword(),
       });
     } catch (err) {
       toast.error(
@@ -171,14 +178,16 @@ export default function AdmitEmployeePage() {
                 <select
                   className="input"
                   value={form.roleId}
-                  onChange={e =>
+                  onChange={e => {
                     update("roleId", e.target.value)
-                  }
+                    update("role", e.target.options[e.target.selectedIndex].text)
+                  }}
                 >
                   <option value="">Select role</option>
-                  <option value="teacher">Teacher</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
+                  {rolesList.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))
+                  }
                 </select>
               </div>
               <div className="space-y-1">
@@ -211,6 +220,17 @@ export default function AdmitEmployeePage() {
                   <Hash size={14} className="text-(--text-muted)" />
                   <span>
                     {employeeId || "Generating…"}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-(--text-muted)">
+                  Temporary Password
+                </label>
+                <div className="input flex items-center gap-2 cursor-not-allowed font-medium">
+                  <ShieldCheck size={14} className="text-(--text-muted)" />
+                  <span>
+                    {form.password || "Generating…"}
                   </span>
                 </div>
               </div>
