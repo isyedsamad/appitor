@@ -96,6 +96,8 @@ export default function PromoteDemotePage() {
     }
   }
   async function handleSessionPromotion(toSession) {
+    const sure = confirm('Promote ALL students to next class? Cannot be undone!');
+    if(!sure) return;
     setLoading(true);
     try {
       await secureAxios.put(
@@ -116,7 +118,7 @@ export default function PromoteDemotePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-start md:justify-between items-center">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <Users className="text-(--primary) mt-1" />
         <div>
           <h1 className="text-lg font-semibold text-(--text)">
@@ -205,7 +207,7 @@ export default function PromoteDemotePage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-center font-medium">
-                    {s.admissionId}
+                    {s.appId}
                   </td>
                   <td className="text-center px-4 py-3 font-semibold">{s.name}</td>
                 </tr>

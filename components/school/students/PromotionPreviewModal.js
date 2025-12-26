@@ -51,9 +51,9 @@ export default function PromotionPreviewModal({open, onClose, onConfirm}) {
   }
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-      <div className="w-full max-w-xl bg-(--bg) rounded-xl border border-(--border)">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-(--border)">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="w-full max-w-xl bg-(--bg-card) rounded-xl border border-(--border)">
+        <div className="flex items-center justify-between px-5 py-4 border-b bg-(--bg) rounded-t-xl border-(--border)">
           <h2 className="font-semibold text-lg">
             Promotion Preview
           </h2>

@@ -21,6 +21,30 @@
   --accent: #16a34a;      /* success */
   --warning: #f59e0b;
   --danger: #dc2626;
+
+  --status-p-bg: #dcfce7;
+  --status-p-text: #166534;
+  --status-p-border: #86efac;
+
+  --status-a-bg: #fee2e2;
+  --status-a-text: #991b1b;
+  --status-a-border: #fca5a5;
+
+  --status-l-bg: #fef3c7;
+  --status-l-text: #92400e;
+  --status-l-border: #fcd34d;
+
+  --status-m-bg: #dbeafe;
+  --status-m-text: #1e40af;
+  --status-m-border: #93c5fd;
+
+  --status-h-bg: #ccfbf1;
+  --status-h-text: #065f46;
+  --status-h-border: #5eead4;
+
+  --status-o-bg: #ede9fe;
+  --status-o-text: #5b21b6;
+  --status-o-border: #c4b5fd;
 }
 
 /* -------- DARK MODE -------- */
@@ -45,6 +69,30 @@
   --accent: #22c55e;
   --warning: #fbbf24;
   --danger: #ef4444;
+
+  --status-p-bg: #052e16;
+  --status-p-text: #4ade80;
+  --status-p-border: #166534;
+
+  --status-a-bg: #450a0a;
+  --status-a-text: #f87171;
+  --status-a-border: #7f1d1d;
+
+  --status-l-bg: #422006;
+  --status-l-text: #facc15;
+  --status-l-border: #854d0e;
+
+  --status-m-bg: #172554;
+  --status-m-text: #60a5fa;
+  --status-m-border: #1e3a8a;
+
+  --status-h-bg: #042f2e;
+  --status-h-text: #2dd4bf;
+  --status-h-border: #134e4a;
+
+  --status-o-bg: #2e1065;
+  --status-o-text: #c4b5fd;
+  --status-o-border: #4c1d95;
 }
 
 html, body {

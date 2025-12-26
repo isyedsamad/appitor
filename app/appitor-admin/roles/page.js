@@ -21,7 +21,7 @@ export default function RolesPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Roles</h1>
+          <h1 className="text-lg font-semibold">Roles</h1>
           <p className="text-sm text-muted">
             Manage access control and permissions
           </p>

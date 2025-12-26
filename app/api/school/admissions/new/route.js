@@ -6,8 +6,8 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "admission.create");
-    const {admissionId, name, gender, dob, className, section, branch, currentSession} = await req.json();
-    if (!admissionId || !name || !dob || !className || !section || !branch || !currentSession) {
+    const {admissionId, name, gender, dob, className, section, branch, currentSession, branchCode, autoRoll} = await req.json();
+    if (!admissionId || !name || !dob || !className || !section || !branch || !currentSession || !branchCode) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -19,7 +19,8 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const email = `${admissionId}@${user.schoolCode.toLowerCase()}.appitor`;
+    const appId = branchCode.toUpperCase() + admissionId;
+    const email = `${appId}@${user.schoolCode.toLowerCase()}.appitor`;
     const [year, month, day] = dob.split("-");
     const password = `${day}${month}${year}`;
     const authUser = await adminAuth.createUser({
@@ -29,10 +30,31 @@ export async function POST(req) {
       disabled: false,
     });
     const uid = authUser.uid;
+    let nextRoll = 1;
+    if(!autoRoll || autoRoll == false) {
+      nextRoll = null;
+    } else {
+      const studentsSnap = await adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection("students")
+        .where("className", "==", className)
+        .where("section", "==", section)
+        .where("currentSession", "==", user.currentSession)
+        .orderBy("rollNo", "desc")
+        .limit(1)
+        .get();
+      if (!studentsSnap.empty) {
+        const lastRoll = studentsSnap.docs[0].data().rollNo;
+        if (lastRoll) nextRoll = lastRoll + 1;
+      }
+    }
     const studentData = {
       uid,
       admissionId,
-      studentId: admissionId,
+      appId,
       name,
       gender,
       dob,
@@ -42,6 +64,9 @@ export async function POST(req) {
       schoolId: user.schoolId,
       branchId: branch,
       status: "active",
+      rollNo: nextRoll,
+      rollAssignedAt: nextRoll ? FieldValue.serverTimestamp() : null,
+      rollAssignedBy: nextRoll ? user.uid : null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: user.uid,

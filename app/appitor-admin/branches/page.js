@@ -39,7 +39,7 @@ export default function BranchesPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-3">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 className="text-lg font-semibold flex items-center gap-2">
             <GitBranch size={20} />
             Branches
           </h1>

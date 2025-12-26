@@ -11,7 +11,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 
 export default function Navbar({ onMenu }) {
-  const { isLoaded, schoolUser, branches, currentBranch, classData, setClassData } = useSchool();
+  const { isLoaded, schoolUser, branches, currentBranch, classData, setClassData, loadClasses } = useSchool();
   const { branch, changeBranch, setBranchInfo } = useBranch();
   const [branchesList, setBranchesList] = useState([]);
   const logout = () => {
@@ -23,16 +23,16 @@ export default function Navbar({ onMenu }) {
       changeBranch(currentBranch);
     }
   }, [isLoaded, schoolUser]);
-  const loadClasses = async () => {
-    const branchSnap = await getDocs(
-      query(collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes'),
-        orderBy('order', 'asc')));
-    const branchData = branchSnap.docs;
-    setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
-  }
+  // const loadClasses = async () => {
+  //   const branchSnap = await getDocs(
+  //     query(collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes'),
+  //       orderBy('order', 'asc')));
+  //   const branchData = branchSnap.docs;
+  //   setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
+  // }
   useEffect(() => {
     if(branch && schoolUser) {
-      loadClasses();
+      loadClasses(branch);
     }
   }, [branch])
   

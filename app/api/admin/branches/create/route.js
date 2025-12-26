@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req) {
       city: city || "",
       state: state || "",
       status: "active",
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     const schoolBranchRef = adminDb.collection('schools').doc(schoolId)
       .collection('branches').doc(branchRef.id);
@@ -40,7 +41,7 @@ export async function POST(req) {
       city: city || "",
       state: state || "",
       status: "active",
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
     })
     await batch.commit();
     return NextResponse.json({ success: true });

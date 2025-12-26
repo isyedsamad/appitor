@@ -71,7 +71,7 @@ export default function ClassesPage() {
     <RequirePermission permission="academic.manage">
       <div className="space-y-4">
         <header className="flex justify-between items-center">
-          <h1 className="text-xl font-semibold flex items-center gap-3">
+          <h1 className="text-lg font-semibold flex items-center gap-3">
             <Layers /> Subjects
           </h1>
           <button

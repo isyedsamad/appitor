@@ -10,6 +10,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
 import { useBranch } from "@/context/BranchContext";
+import { formatInputDate, toInputDate } from "@/lib/dateUtils";
 
 export default function StudentProfilePage() {
   const { uid } = useParams();
@@ -129,7 +130,7 @@ export default function StudentProfilePage() {
             <User size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-(--text)">
+            <h1 className="text-lg font-semibold text-(--text)">
               {student.name}
             </h1>
             <p className="text-sm text-(--text-muted) font-medium">
@@ -189,10 +190,11 @@ export default function StudentProfilePage() {
                 <input
                   type="date"
                   className="input"
-                  value={form.dob || ""}
-                  onChange={e =>
-                    update("dob", e.target.value)
-                  }
+                  value={toInputDate(form.dob) || ""}
+                  onChange={e => {
+                    if(e.target.value == '') update("dob", '');
+                    else update("dob", formatInputDate(e.target.value))
+                  }}
                 />
               </div>
             </div>
@@ -281,9 +283,9 @@ export default function StudentProfilePage() {
             <div className="text-sm space-y-2">
               <div className="flex justify-between">
                 <span className="text-(--text-muted)">
-                  Student ID
+                  App ID
                 </span>
-                <span className="font-semibold">{student.admissionId}</span>
+                <span className="font-semibold">{student.appId}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-(--text-muted)">

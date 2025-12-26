@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
@@ -29,7 +30,7 @@ export async function POST(req) {
       orgName: body.school.orgName,
       status: "active",
       setup_pending: true,
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     // const roleRef = adminDb.collection("roles").doc();
     // batch.set(roleRef, {

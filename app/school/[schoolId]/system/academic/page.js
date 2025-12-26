@@ -12,6 +12,7 @@ import { useSchool } from "@/context/SchoolContext";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
+import { formatInputDate, toInputDate } from "@/lib/dateUtils";
 
 export default function AcademicSessionSettingsPage() {
   const { currentSession, setCurrentSession, setLoading } = useSchool();
@@ -88,7 +89,7 @@ export default function AcademicSessionSettingsPage() {
         <div className="flex items-start gap-3">
           <Calendar className="text-(--primary) mt-1" />
           <div>
-            <h1 className="text-xl font-semibold text-(--text)">
+            <h1 className="text-lg font-semibold text-(--text)">
               Academic Session Settings
             </h1>
             <p className="text-sm text-(--text-muted)">
@@ -184,24 +185,38 @@ export default function AcademicSessionSettingsPage() {
             <input
               type="date"
               className="input"
-              value={newSession.startDate}
-              onChange={e =>
-                setNewSession(p => ({
-                  ...p,
-                  startDate: e.target.value,
-                }))
-              }
+              value={toInputDate(newSession.startDate)}
+              onChange={e => {
+                if(e.target.value == '') {
+                  setNewSession(p => ({
+                    ...p,
+                    startDate: '',
+                  }))
+                }else {
+                  setNewSession(p => ({
+                    ...p,
+                    startDate: formatInputDate(e.target.value),
+                  }))
+                }
+              }}
             />
             <input
               type="date"
               className="input"
-              value={newSession.endDate}
-              onChange={e =>
-                setNewSession(p => ({
-                  ...p,
-                  endDate: e.target.value,
-                }))
-              }
+              value={toInputDate(newSession.endDate)}
+              onChange={e => {
+                if(e.target.value == '') {
+                  setNewSession(p => ({
+                    ...p,
+                    endDate: '',
+                  }))
+                }else {
+                  setNewSession(p => ({
+                    ...p,
+                    endDate: formatInputDate(e.target.value),
+                  }))
+                }
+              }}
             />
             <button
               onClick={addSession}

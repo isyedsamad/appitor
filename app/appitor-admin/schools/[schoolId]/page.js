@@ -34,7 +34,7 @@ export default function ViewSchoolPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold flex items-center gap-2">
+        <h1 className="text-lg font-semibold flex items-center gap-2">
           <School size={20} />
           {school.name}
         </h1>

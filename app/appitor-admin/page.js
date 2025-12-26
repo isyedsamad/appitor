@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <h1 className="text-lg font-semibold">Dashboard</h1>
         <p className="text-muted">
           Overview of Appitor admin system
         </p>

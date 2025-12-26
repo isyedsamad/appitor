@@ -13,41 +13,44 @@ import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
 
 export default function ClassesPage() {
-  const { schoolUser, loading, setLoading, isLoaded } = useSchool();
+  const { schoolUser, loading, setLoading, isLoaded, loadClasses, classData } = useSchool();
   const { branch } = useBranch();
   const [classes, setClasses] = useState([]);
   const [openClassModal, setOpenClassModal] = useState(false);
   const [openSectionModal, setOpenSectionModal] = useState(null);
   const [schoolId, setSchoolId] = useState('');
   const [branchId, setBranchId] = useState('');
-  const [classData, setClassData] = useState(null);
+  const [classDataPage, setClassDataPage] = useState(null);
   const [sectionData, setSectionData] = useState(null);
   useEffect(() => {
     if(isLoaded && schoolUser && branch) {
         setSchoolId(schoolUser.schoolId);
         setBranchId(branch);
-        setLoading(true);
-        fetchClasses(schoolUser.schoolId, branch)
+        // fetchClasses(schoolUser.schoolId, branch)
     }
   }, [schoolUser, isLoaded, branch]);
+  useEffect(() => {
+    if(classData) setClasses(classData)
+  }, [classData])
   async function fetchClasses(currentSchoolId, currentBranch) {
-    const ref = query(collection(
-      db,
-      "schools",
-      currentSchoolId,
-      "branches",
-      currentBranch,
-      "classes"
-    ), orderBy('order', 'asc'));
-    const snap = await getDocs(ref);
-    setLoading(false);
-    if(snap.docs.length == 0) {
-      setClasses([]);
-      return;
-    }
-    setClasses(
-      snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    );
+    await loadClasses(currentBranch);
+    // const ref = query(collection(
+    //   db,
+    //   "schools",
+    //   currentSchoolId,
+    //   "branches",
+    //   currentBranch,
+    //   "classes"
+    // ), orderBy('order', 'asc'));
+    // const snap = await getDocs(ref);
+    // setLoading(false);
+    // if(snap.docs.length == 0) {
+    //   setClasses([]);
+    //   return;
+    // }
+    // setClasses(
+    //   snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    // );
   }
   const deleteSection = async (secId, classId) => {
     const sure = confirm('do you really want to delete the section?');
@@ -91,7 +94,7 @@ export default function ClassesPage() {
     <RequirePermission permission="academic.manage">
       <div className="space-y-4">
         <header className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-          <h1 className="text-xl font-semibold flex items-center gap-3">
+          <h1 className="text-lg font-semibold flex items-center gap-3">
             <Layers /> Classes & Sections
           </h1>
           <button
@@ -113,7 +116,7 @@ export default function ClassesPage() {
                   </h2>
                 <div className="flex gap-1">
                   <div onClick={() => {
-                    setClassData(cls);
+                    setClassDataPage(cls);
                     setOpenClassModal(true);
                   }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
                     <Pencil size={16} />
@@ -166,22 +169,22 @@ export default function ClassesPage() {
 
         <ClassModal
           open={openClassModal}
-          data={classData}
+          data={classDataPage}
           onClose={() => {
-            setClassData(null);
+            setClassDataPage(null);
             setOpenClassModal(false)
           }}
           onSuccess={() => {
             setLoading(true);
             fetchClasses(schoolId, branch);
-            setClassData(null);
+            setClassDataPage(null);
             setLoading(false);
           }}
         />
 
         <SectionModal
           open={openSectionModal}
-          classData={openSectionModal}
+          classDataPage={openSectionModal}
           sectionData={sectionData}
           onClose={() => {
             setSectionData(null);

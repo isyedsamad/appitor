@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req) {
             smsEnabled: !!data.communication?.smsEnabled,
           },
 
-          updatedAt: new Date(),
+          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );

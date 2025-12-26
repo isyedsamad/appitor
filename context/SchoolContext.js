@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Loading from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,16 @@ export function SchoolProvider({ schoolId, children }) {
   const [branches, setBranches] = useState([]);
   const [roles, setRoles] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('');
+  const loadClasses = async (branch) => {
+    if(!branch) return;
+    setLoading(true);
+    const branchSnap = await getDocs(
+      query(collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes'),
+      orderBy('order', 'asc')));
+    const branchData = branchSnap.docs;
+    setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
+    setLoading(false);
+  }
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setLoading(true);
@@ -69,6 +79,7 @@ export function SchoolProvider({ schoolId, children }) {
         ...userData,
         uid: fbUser.uid,
         schoolId,
+        currentSession: schoolData.currentSession,
         schoolCode: schoolData.code,
         roleId: userData.roleId,
         roleName: roleData.name,
@@ -120,7 +131,8 @@ export function SchoolProvider({ schoolId, children }) {
         classData,
         setClassData,
         currentSession,
-        setCurrentSession
+        setCurrentSession,
+        loadClasses
       }}
     >
       {loading && <Loading />}

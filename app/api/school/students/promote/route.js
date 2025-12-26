@@ -51,6 +51,9 @@ export async function PUT(req) {
         className: toClass,
         section: toSection,
         currentSession,
+        rollNo: null,
+        rollAssignedAt: null,
+        rollAssignedBy: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
       batch.update(branchRef, {
@@ -58,6 +61,9 @@ export async function PUT(req) {
         className: toClass,
         section: toSection,
         currentSession,
+        rollNo: null,
+        rollAssignedAt: null,
+        rollAssignedBy: null,
         updatedAt: FieldValue.serverTimestamp(),
       });
     }

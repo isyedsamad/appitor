@@ -9,7 +9,7 @@ export default function DashboardPage() {
   return (
     <RequirePermission permission={null}>
     <div>
-      <h1 className="text-xl font-semibold">
+      <h1 className="text-lg font-semibold">
         Welcome ({schoolUser.role})
       </h1>
     </div>

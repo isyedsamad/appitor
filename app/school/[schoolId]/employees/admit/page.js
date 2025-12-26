@@ -91,7 +91,7 @@ export default function AdmitEmployeePage() {
         <div className="flex items-center gap-3 mb-6">
           <UserPlus className="text-primary" />
           <div>
-            <h1 className="text-xl font-semibold text-text">
+            <h1 className="text-lg font-semibold text-text">
               Admit Employee
             </h1>
             <p className="text-sm text-(--text-muted)">

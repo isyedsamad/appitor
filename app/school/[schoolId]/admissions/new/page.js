@@ -6,10 +6,13 @@ import { useSchool } from "@/context/SchoolContext";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
 import { useBranch } from "@/context/BranchContext";
+import { formatInputDate } from "@/lib/dateUtils";
 
 export default function NewAdmissionPage() {
   const { schoolUser, classData, setLoading, currentSession } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const [branchCode, setBranchCode] = useState('');
+  const [autoRoll, setAutoRoll] = useState(true);
   const [form, setForm] = useState({
     admissionId: "",
     name: "",
@@ -35,6 +38,10 @@ export default function NewAdmissionPage() {
   function update(key, value) {
     setForm(prev => ({ ...prev, [key]: value }));
   }
+  useEffect(() => {
+    if(branchInfo) setBranchCode(branchInfo.appitorCode);
+  }, [branchInfo])
+  
   async function handleSubmit() {
     if (
       !form.admissionId ||
@@ -51,6 +58,8 @@ export default function NewAdmissionPage() {
       await secureAxios.post("/api/school/admissions/new", {
         ...form,
         branch,
+        branchCode,
+        autoRoll,
         currentSession
       });
       toast.success("Admission completed successfully");
@@ -78,7 +87,7 @@ export default function NewAdmissionPage() {
       <div className="flex items-center gap-3">
         <UserPlus className="text-(--primary)" />
         <div>
-          <h1 className="text-xl font-semibold text-(--text)">
+          <h1 className="text-lg font-semibold text-(--text)">
             New Admission
           </h1>
           <p className="text-sm text-(--text-muted)">
@@ -197,15 +206,31 @@ export default function NewAdmissionPage() {
           </div>
           <div>
             <label className="text-sm text-(--text-muted)">
+              Auto Assign Roll No.
+            </label>
+            <select
+              className="input"
+              value={autoRoll}
+              onChange={e =>
+                setAutoRoll(e.target.value)
+              }
+            >
+              <option value={true}>Yes</option>
+              <option value={false}>No</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-sm text-(--text-muted)">
               Date of Birth <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
               className="input"
               value={form.dob}
-              onChange={e =>
-                update("dob", e.target.value)
-              }
+              onChange={e => {
+                if(e.target.value == '') update("dob", '');
+                else update("dob", formatInputDate(e.target.value))
+              }}
             />
           </div>
         </div>
@@ -218,10 +243,10 @@ export default function NewAdmissionPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm text-(--text-muted)">
-              Student ID
+              Student App ID
             </label>
             <div className="input font-semibold">
-              {form.admissionId || "—"}
+              {form.admissionId ? branchCode + '' + form.admissionId : '-'}
             </div>
           </div>
           <div>

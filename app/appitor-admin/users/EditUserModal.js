@@ -82,7 +82,7 @@ export default function EditUserModal({ open, onClose, user }) {
         </div>
         <div className="px-6 py-4 space-y-4">
           <div className="flex flex-col justify-center items-center">
-            <p className="font-semibold text-xl">{form.name}</p>
+            <p className="font-semibold text-lg">{form.name}</p>
             <p className="font-semibold text-sm text-muted">{form.username}@{form.schoolCode.toLowerCase()}.appitor</p>
           </div>
           <Select

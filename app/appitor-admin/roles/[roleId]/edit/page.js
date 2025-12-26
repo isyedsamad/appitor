@@ -57,7 +57,7 @@ export default function EditRolePage() {
         </button>
 
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 className="text-lg font-semibold flex items-center gap-2">
             <ShieldCheck size={20} />
             Edit Role
           </h1>

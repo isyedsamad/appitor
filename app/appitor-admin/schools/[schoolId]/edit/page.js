@@ -42,7 +42,7 @@ export default function EditSchoolPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold flex items-center gap-2">
+        <h1 className="text-lg font-semibold flex items-center gap-2">
           <Settings size={20} /> Edit School
         </h1>
         <p className="text-sm text-muted">

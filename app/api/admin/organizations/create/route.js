@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
@@ -18,7 +19,7 @@ export async function POST(req) {
       name,
       ownerNote: ownerNote || "",
       status: "active",
-      createdAt: new Date(),
+      createdAt: FieldValue.serverTimestamp(),
     });
     return NextResponse.json({ success: true });
   } catch (err) {

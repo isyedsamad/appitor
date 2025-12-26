@@ -68,7 +68,7 @@ export default function StudentsListPage() {
       <div className="flex items-center gap-3">
         <Users className="text-(--primary) mt-1" />
         <div>
-          <h1 className="text-xl font-semibold text-(--text)">
+          <h1 className="text-lg font-semibold text-(--text)">
             Students
           </h1>
           <p className="text-sm text-(--text-muted)">
@@ -164,7 +164,7 @@ export default function StudentsListPage() {
                   className="border-t border-(--border) hover:bg-(--bg-soft)"
                 >
                   <td className="px-4 py-3 font-semibold">
-                    {s.admissionId}
+                    {s.appId}
                   </td>
                   <td className="px-4 py-3 font-semibold">{s.name}</td>
                   <td className="px-4 py-3">{s.className}</td>

@@ -44,7 +44,7 @@ export default function UsersPage() {
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Users</h1>
+          <h1 className="text-lg font-semibold">Users</h1>
           <p className="text-sm text-muted">
             Manage system users and access control
           </p>
