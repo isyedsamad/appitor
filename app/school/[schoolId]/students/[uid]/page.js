@@ -21,13 +21,15 @@ export default function StudentProfilePage() {
   const [newBranch, setNewBranch] = useState("");
   const [saving, setSaving] = useState(false);
   useEffect(() => {
-    fetchStudent();
-  }, []);
+    if(schoolUser && branch) fetchStudent();
+  }, [schoolUser, branch]);
   async function fetchStudent() {
-    const snap = await getDoc(doc(db, "schoolUsers", uid));
+    setLoading(true);
+    const snap = await getDoc(doc(db, "schools", schoolUser.schoolId, 'branches', branch, 'students', uid));
     if (!snap.exists()) return;
     setStudent(snap.data());
     setForm(snap.data());
+    setLoading(false);
   }
   const update = (k, v) =>
     setForm(p => ({ ...p, [k]: v }));
@@ -199,42 +201,76 @@ export default function StudentProfilePage() {
             <h2 className="text-sm font-semibold uppercase text-(--text-muted) flex items-center gap-2">
               <GraduationCap size={14} /> Academic Details
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm text-(--text-muted)">
-                  Class
-                </label>
-                <select
-                  className="input"
-                  value={form.className || ""}
-                  onChange={e =>
-                    update("className", e.target.value)
-                  }
-                >
-                  {classData.map(c => (
-                    <option key={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="text-sm text-(--text-muted)">Session</label>
+                <div className="input bg-(--bg-soft) cursor-not-allowed">
+                  {student.currentSession}
+                </div>
               </div>
+
               <div>
-                <label className="text-sm text-(--text-muted)">
-                  Section
-                </label>
-                <select
-                  className="input"
-                  value={form.section || ""}
-                  onChange={e =>
-                    update("section", e.target.value)
-                  }
-                >
-                  {selectedClass?.sections.map(sec => (
-                    <option key={sec.id} value={sec.id}>{sec.name}</option>
-                  ))}
-                </select>
+                <label className="text-sm text-(--text-muted)">Class</label>
+                <div className="input bg-(--bg-soft) cursor-not-allowed">
+                  {student.className}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-(--text-muted)">Section</label>
+                <div className="input bg-(--bg-soft) cursor-not-allowed">
+                  {student.section}
+                </div>
               </div>
             </div>
+          </section>
+          <section className="border border-(--border) rounded-lg p-5 space-y-4">
+            <h2 className="text-sm font-semibold uppercase text-(--text-muted) flex items-center gap-2">
+              <Calendar size={14} /> Academic History
+            </h2>
+            {student.academicHistory?.length ? (
+              <div className="space-y-4">
+                {student.academicHistory
+                  .slice()
+                  .reverse()
+                  .map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-4 items-start"
+                    >
+                      <div className="flex flex-col items-center">
+                        <div className="w-3 h-3 rounded-full bg-(--primary) mt-2" />
+                        <div className="w-px h-6 bg-(--border)" />
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className="flex flex-wrap justify-between items-center gap-2">
+                          <span className="font-semibold text-(--text)">
+                            {h.session}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded border-2 border-(--border) text-white">
+                            {h.action}
+                          </span>
+                        </div>
+                        <p className="text-sm text-(--text-muted)">
+                          {h.className} – Section {h.section}
+                        </p>
+                        {h.at && (
+                          <p className="text-xs text-(--text-muted) mt-1">
+                            {new Date(
+                              h.at.seconds * 1000
+                            ).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <p className="text-sm text-(--text-muted)">
+                No academic history available
+              </p>
+            )}
           </section>
         </div>
         <div className="space-y-6">

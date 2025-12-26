@@ -43,6 +43,7 @@ export function SchoolProvider({ schoolId, children }) {
       }
       const schoolSnap = await getDoc(doc(db, "schools", schoolId));
       const schoolData = schoolSnap.data();
+      setCurrentSession(schoolData.currentSession);
       const userData = userSnap.data();
       if (userData.schoolId !== schoolId || userData.status !== "active" || schoolData.status != "active") {
         setSchoolUser(null);

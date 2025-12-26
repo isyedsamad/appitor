@@ -8,7 +8,7 @@ import secureAxios from "@/lib/secureAxios";
 import { useBranch } from "@/context/BranchContext";
 
 export default function NewAdmissionPage() {
-  const { schoolUser, classData, setLoading } = useSchool();
+  const { schoolUser, classData, setLoading, currentSession } = useSchool();
   const { branch } = useBranch();
   const [form, setForm] = useState({
     admissionId: "",
@@ -50,7 +50,8 @@ export default function NewAdmissionPage() {
     try {
       await secureAxios.post("/api/school/admissions/new", {
         ...form,
-        branch
+        branch,
+        currentSession
       });
       toast.success("Admission completed successfully");
       setForm({
@@ -188,7 +189,7 @@ export default function NewAdmissionPage() {
             >
               <option value="">Select section</option>
               {selectedClass?.sections.map(sec => (
-                <option key={sec.id} value={sec.id}>
+                <option key={sec.id} value={sec.name}>
                   {sec.name}
                 </option>
               ))}

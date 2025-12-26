@@ -19,6 +19,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
+import PromotionPreviewModal from "@/components/school/students/PromotionPreviewModal";
 
 export default function PromoteDemotePage() {
   const { classData, setLoading } = useSchool();
@@ -29,6 +30,7 @@ export default function PromoteDemotePage() {
   const [selected, setSelected] = useState([]);
   const [toClass, setToClass] = useState("");
   const [toSection, setToSection] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
   const sourceClass = classData?.find(c => c.name === fromClass);
   const targetClass = classData?.find(c => c.name === toClass);
   async function loadStudents() {
@@ -36,6 +38,7 @@ export default function PromoteDemotePage() {
       toast.error("Select class and section");
       return;
     }
+    setLoading(true);
     const ref = collection(
       db,
       "schools",
@@ -52,6 +55,7 @@ export default function PromoteDemotePage() {
     const snap = await getDocs(q);
     setStudents(snap.docs.map(d => d.data()));
     setSelected([]);
+    setLoading(false);
   }
   function toggle(uid) {
     setSelected(prev =>
@@ -86,13 +90,32 @@ export default function PromoteDemotePage() {
       toast.success("Students promoted");
       loadStudents();
     } catch(err) {
-      toast.error("Promotion failed: " + err);
+      toast.error("failed: " + err.response.data.message);
     } finally {
       setLoading(false);
     }
   }
+  async function handleSessionPromotion(toSession) {
+    setLoading(true);
+    try {
+      await secureAxios.put(
+        "/api/school/students/promote-session", 
+        { toSession }
+      );
+      toast.success("Session promoted successfully");
+      setPreviewOpen(false);
+    } catch (err) {
+      toast.error(
+        'Error: ' + err?.response?.data?.message ||
+          "Promotion failed"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }  
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex flex-col md:flex-row justify-start md:justify-between items-center">
       <div className="flex items-start gap-3">
         <Users className="text-(--primary) mt-1" />
         <div>
@@ -103,6 +126,14 @@ export default function PromoteDemotePage() {
             Load students, select them, then move to a new class
           </p>
         </div>
+      </div>
+      <button
+        onClick={() => setPreviewOpen(true)}
+        className="btn-outline flex items-center gap-2"
+      >
+        <ArrowUp size={16} />
+        Promote Entire Session
+      </button>
       </div>
       <div className="flex flex-wrap gap-3 items-end">
         <select
@@ -126,7 +157,7 @@ export default function PromoteDemotePage() {
         >
           <option value="">Section</option>
           {sourceClass?.sections.map(sec => (
-            <option key={sec.id} value={sec.id}>
+            <option key={sec.id} value={sec.name}>
               {sec.name}
             </option>
           ))}
@@ -221,7 +252,7 @@ export default function PromoteDemotePage() {
               >
                 <option value="">Section</option>
                 {targetClass?.sections.map(sec => (
-                  <option key={sec.id} value={sec.id}>
+                  <option key={sec.id} value={sec.name}>
                     {sec.name}
                   </option>
                 ))}
@@ -236,6 +267,13 @@ export default function PromoteDemotePage() {
             </div>
           </div>
         </div>
+      )}
+      {previewOpen && (
+        <PromotionPreviewModal
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          onConfirm={handleSessionPromotion}
+        />
       )}
     </div>
   );

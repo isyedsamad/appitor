@@ -6,10 +6,16 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "admission.create");
-    const {admissionId, name, gender, dob, className, section, branch} = await req.json();
-    if (!admissionId || !name || !dob || !className || !section || !branch) {
+    const {admissionId, name, gender, dob, className, section, branch, currentSession} = await req.json();
+    if (!admissionId || !name || !dob || !className || !section || !branch || !currentSession) {
       return NextResponse.json(
         { message: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+    if (dob.includes("/")) {
+      return NextResponse.json(
+        { message: "Invalid DOB format. Use YYYY-MM-DD" },
         { status: 400 }
       );
     }
@@ -39,6 +45,15 @@ export async function POST(req) {
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       createdBy: user.uid,
+      currentSession,
+      academicHistory: [
+        {
+          session: currentSession,
+          className,
+          section,
+          action: "admitted",
+        },
+      ],
     };
     await adminDb
       .collection("schoolUsers")

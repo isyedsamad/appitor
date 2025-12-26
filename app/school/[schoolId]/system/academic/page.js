@@ -14,7 +14,7 @@ import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function AcademicSessionSettingsPage() {
-  const { currentSession, setLoading } = useSchool();
+  const { currentSession, setCurrentSession, setLoading } = useSchool();
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState("");
   const [newSession, setNewSession] = useState({
@@ -48,6 +48,7 @@ export default function AcademicSessionSettingsPage() {
           currentSession: activeSession,
         }
       );
+      setCurrentSession(activeSession);
       toast.success("Academic settings updated");
     } catch(err) {
       toast.error("Failed to save settings: " + err.response.data.message);

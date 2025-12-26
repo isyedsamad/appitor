@@ -169,10 +169,7 @@ export default function StudentsListPage() {
                   <td className="px-4 py-3 font-semibold">{s.name}</td>
                   <td className="px-4 py-3">{s.className}</td>
                   <td className="px-4 py-3">
-                  {(() => {
-                    const matchingClass = classData.find(c => c.name === s.className);
-                    return matchingClass?.sections.find(sec => sec.id === s.section)?.name || 'N/A';
-                  })()}
+                  {s.section}
                   </td>
                   <td className="px-4 py-3">
                     <span
