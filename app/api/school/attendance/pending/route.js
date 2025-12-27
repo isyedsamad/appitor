@@ -46,15 +46,6 @@ export async function POST(req) {
     else {
       const actualRecords = attSnap.data().records || {};
       const changes = {};
-      // Object.entries(records).forEach(([uid, newStatus]) => {
-      //   const oldStatus = actualRecords[uid];
-      //   if (oldStatus !== newStatus) {
-      //     changes[uid] = {
-      //       from: oldStatus,
-      //       to: newStatus,
-      //     };
-      //   }
-      // });
       if(type == 'student') {
         await Promise.all(
           Object.entries(records).map(async ([uid, newStatus]) => {

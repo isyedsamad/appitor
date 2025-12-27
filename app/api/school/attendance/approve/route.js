@@ -3,16 +3,17 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
 
+function getStatusDelta(from, to) {
+  const delta = {};
+  if (from) delta[`total${from}`] = FieldValue.increment(-1);
+  if (to) delta[`total${to}`] = FieldValue.increment(1);
+  return delta;
+}
+
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "attendance.modify");
     const { requestId, branch } = await req.json();
-    if (!requestId || !branch) {
-      return NextResponse.json(
-        { message: "Request ID required" },
-        { status: 400 }
-      );
-    }
     const pendingRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -22,17 +23,11 @@ export async function POST(req) {
       .doc(requestId);
     const pendingSnap = await pendingRef.get();
     if (!pendingSnap.exists) {
-      return NextResponse.json(
-        { message: "Pending request not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Request not found" }, { status: 404 });
     }
     const pending = pendingSnap.data();
     if (pending.status !== "pending") {
-      return NextResponse.json(
-        { message: "Request already processed" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Already processed" }, { status: 400 });
     }
     const attendanceDocId =
       pending.type === "student"
@@ -42,7 +37,7 @@ export async function POST(req) {
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
-      .doc(pending.branch)
+      .doc(branch)
       .collection("attendance")
       .doc(attendanceDocId);
     const batch = adminDb.batch();
@@ -68,6 +63,63 @@ export async function POST(req) {
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: user.uid,
       });
+    }
+    if (pending.type === "student") {
+      const [dd, mm, yyyy] = pending.date.split("-");
+      const monthKey = `${yyyy}-${mm}`;
+      const dayNumber = Number(dd);
+      if (pending.mode === "full") {
+        Object.entries(pending.records).forEach(([uid, status]) => {
+          const monthRef = adminDb
+            .collection("schools")
+            .doc(user.schoolId)
+            .collection("branches")
+            .doc(branch)
+            .collection("students")
+            .doc(uid)
+            .collection("attendance_months")
+            .doc(monthKey);
+          batch.set(
+            monthRef,
+            {
+              month: monthKey,
+              session: pending.session,
+              className: pending.className,
+              section: pending.section,
+              days: { [dayNumber]: status },
+              [`total${status}`]: FieldValue.increment(1),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        });
+      }
+      if (pending.mode === "diff") {
+        Object.entries(pending.changes).forEach(([uid, c]) => {
+          const monthRef = adminDb
+            .collection("schools")
+            .doc(user.schoolId)
+            .collection("branches")
+            .doc(branch)
+            .collection("students")
+            .doc(uid)
+            .collection("attendance_months")
+            .doc(monthKey);
+          batch.set(
+            monthRef,
+            {
+              month: monthKey,
+              session: pending.session,
+              className: pending.className,
+              section: pending.section,
+              days: { [dayNumber]: c.to },
+              ...getStatusDelta(c.from, c.to),
+              updatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+          );
+        });
+      }
     }
     batch.update(pendingRef, {
       status: "approved",

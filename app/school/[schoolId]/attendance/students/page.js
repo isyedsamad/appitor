@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {Calendar, LayoutGrid, List, Users, Search} from "lucide-react";
+import {Calendar, LayoutGrid, List, Users, Search, Download} from "lucide-react";
 import {collection, doc, getDoc, getDocs, query, where} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { formatInputDate } from "@/lib/dateUtils";
 import { toast } from "react-toastify";
+import { studentMonthlyReport } from "@/lib/exports/attendance/studentMonthlyReport";
+import StudentAttendanceHeatmap, { ClassAttendanceHeatmap } from "@/components/school/attendance/StudentHeatmap";
 const STATUS_CLASS = {
   P: "bg-[var(--status-p-bg)] text-[var(--status-p-text)] border-[var(--status-p-border)]",
   A: "bg-[var(--status-a-bg)] text-[var(--status-a-text)] border-[var(--status-a-border)]",
@@ -21,7 +23,7 @@ function statusPill(status) {
 export default function ViewStudentAttendancePage() {
   const { classData, schoolUser, setLoading } = useSchool();
   const { branch } = useBranch();
-  const [mode, setMode] = useState("month");
+  const [mode, setMode] = useState("date");
   const [month, setMonth] = useState("");
   const [date, setDate] = useState("");
   const [className, setClassName] = useState("");
@@ -30,6 +32,7 @@ export default function ViewStudentAttendancePage() {
   const [dateRecords, setDateRecords] = useState({});
   const [monthRecords, setMonthRecords] = useState({});
   const [days, setDays] = useState([]);
+  const [summaryHeatmap, setSummaryHeatmap] = useState(null);
   const selectedClass = classData?.find(c => c.name === className);
   async function loadStudents() {
     if (!className || !section) {
@@ -105,31 +108,6 @@ export default function ViewStudentAttendancePage() {
       const totalDays = new Date(year, m, 0).getDate();
       const dList = Array.from({ length: totalDays }, (_, i) => i + 1);
       setDays(dList);
-      // const matrix = {};
-      // for (let d of dList) {
-      //   const day = String(d).padStart(2, "0");
-      //   const formattedDate = `${day}-${m}-${year}`;
-      //   const docId = `student_${formattedDate}_${className}_${section}`;
-      //   const snap = await getDoc(
-      //     doc(
-      //       db,
-      //       "schools",
-      //       schoolUser.schoolId,
-      //       "branches",
-      //       branch,
-      //       "attendance",
-      //       docId
-      //     )
-      //   );
-      //   if (snap.exists()) {
-      //     const rec = snap.data().records || {};
-      //     Object.entries(rec).forEach(([uid, status]) => {
-      //       if (!matrix[uid]) matrix[uid] = {};
-      //       matrix[uid][d] = status;
-      //     });
-      //   }
-      // }
-      // setMonthRecords(matrix);
       const promises = dList.map(async (d) => {
         const day = String(d).padStart(2, "0");
         const formattedDate = `${day}-${m}-${year}`;
@@ -171,22 +149,37 @@ export default function ViewStudentAttendancePage() {
   }
   function calculateMonthSummary() {
     const summary = {};
+    const totalStudents = students.length;
     days.forEach(d => {
-      summary[d] = { P: 0, A: 0, L: 0, M: 0 };
+      const daySummary = { P: 0, A: 0, L: 0, M: 0 };
       students.forEach(s => {
         const status = monthRecords[s.uid]?.[d];
-        if (status) summary[d][status]++;
+        if (status && daySummary[status] !== undefined) {
+          daySummary[status]++;
+        }
       });
+      const marked =
+        daySummary.P + daySummary.A + daySummary.L + daySummary.M;
+      const presentScore =
+        daySummary.P + 0.5 * (daySummary.L + daySummary.M);
+      const percent =
+        marked === 0 ? 0 : Math.round((presentScore / marked) * 100);
+      summary[d] = {
+        ...daySummary,
+        total: marked,
+        percent,
+        strength: totalStudents,
+      };
     });
     return summary;
-  }
+  }  
   useEffect(() => {
     setStudents([]);
     setDateRecords({});
     setMonthRecords({});
   }, [mode]);  
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex justify-between items-center flex-col md:flex-row gap-4">
         <div className="flex gap-3 items-start">
           <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
@@ -227,20 +220,28 @@ export default function ViewStudentAttendancePage() {
       <div className="border border-(--border) rounded-xl p-4 bg-(--bg-soft)">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           {mode === "month" ? (
+            <div className="flex flex-col">
+            <label className="text-sm text-(--text-muted)">Month</label>
             <input
               type="month"
               className="input"
               value={month}
               onChange={e => setMonth(e.target.value)}
             />
+            </div>
           ) : (
+            <div className="flex flex-col">
+            <label className="text-sm text-(--text-muted)">Date</label>
             <input
               type="date"
               className="input"
               value={date}
               onChange={e => setDate(e.target.value)}
             />
+            </div>
           )}
+          <div className="flex flex-col">
+          <label className="text-sm text-(--text-muted)">Class</label>
           <select
             className="input"
             value={className}
@@ -254,6 +255,9 @@ export default function ViewStudentAttendancePage() {
               <option key={c.name}>{c.name}</option>
             ))}
           </select>
+          </div>
+          <div className="flex flex-col">
+          <label className="text-sm text-(--text-muted)">Section</label>
           <select
             className="input"
             disabled={!selectedClass}
@@ -267,6 +271,7 @@ export default function ViewStudentAttendancePage() {
               </option>
             ))}
           </select>
+          </div>
           <button
             onClick={mode === "month" ? loadByMonth : loadByDate}
             className="btn-primary w-full flex gap-2 items-center justify-center"
@@ -277,24 +282,96 @@ export default function ViewStudentAttendancePage() {
         </div>
       </div>
       {students.length > 0 && (
-        <div className="flex flex-wrap gap-3 text-xs">
-          {Object.entries(STATUS_CLASS).map(([k, cls]) => (
-            <span
-              key={k}
-              className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
-            >
-              {k == 'P' && 'Present'}
-              {k == 'A' && 'Absent'}
-              {k == 'L' && 'Leave'}
-              {k == 'M' && 'Medical'}
-              {k == 'H' && 'Half-Day'}
-              {k == 'O' && 'Overtime'}
-            </span>
-          ))}
+        <div className="flex justify-between items-end flex-col md:flex-row">
+          <div className="flex flex-wrap gap-3 text-xs">
+            {Object.entries(STATUS_CLASS).map(([k, cls]) => (
+              <span
+                key={k}
+                className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
+              >
+                {k == 'P' && 'Present'}
+                {k == 'A' && 'Absent'}
+                {k == 'L' && 'Leave'}
+                {k == 'M' && 'Medical'}
+                {k == 'H' && 'Half-Day'}
+                {k == 'O' && 'Overtime'}
+              </span>
+            ))}
+          </div>
+          <div>
+          {mode === "month" && students.length > 0 && (
+            <div className="flex justify-end">
+              <button
+                onClick={() =>
+                  studentMonthlyReport({
+                    students, days, monthRecords, className, section, month
+                  })
+                }
+                className="btn-outline flex items-center gap-2"
+              >
+                <Download size={16} className="text-green-500" />
+                Export to Excel
+              </button>
+            </div>
+          )}
+          </div>
+        </div>
+      )}
+      {mode === "month" && days.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-(--text)">
+            Class Attendance Heatmap
+          </h3>
+          <ClassAttendanceHeatmap
+            days={days}
+            summary={calculateMonthSummary()}
+            totalStudents={students.length}
+          />
         </div>
       )}
       {mode === "date" && students.length > 0 && (
         <div className="border border-(--border) rounded-xl divide-y">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 bg-(--bg-soft) border border-(--border) rounded-xl p-4">
+            {(() => {
+              let P = 0, A = 0, L = 0, M = 0;
+
+              students.forEach(s => {
+                const st = dateRecords[s.uid];
+                if (st === "P") P++;
+                if (st === "A") A++;
+                if (st === "L") L++;
+                if (st === "M") M++;
+              });
+
+              const total = P + A + L + M;
+              const percent = total === 0 ? 0 : Math.round((P / total) * 100);
+
+              const statBox = (label, value, cls) => (
+                <div className="flex flex-col items-center justify-center rounded-lg border border-(--border) px-3 py-2 text-center">
+                  <span className="text-xs text-(--text-muted)">{label}</span>
+                  <span className={`font-semibold ${cls}`}>{(value >= 10 || value == 0) ? value : '0' + value}</span>
+                </div>
+              );
+
+              return (
+                <>
+                  {statBox("Present", P, "text-[var(--status-p-text)]")}
+                  {statBox("Absent", A, "text-[var(--status-a-text)]")}
+                  {statBox("Leave", L, "text-[var(--status-l-text)]")}
+                  {statBox("Medical", M, "text-[var(--status-m-text)]")}
+
+                  <div className="col-span-2 md:col-span-2 flex flex-col items-center justify-center rounded-lg border border-(--border) bg-(--bg)">
+                    <span className="text-xs text-(--text-muted)">
+                      Attendance %
+                    </span>
+                    <span className="text-lg font-bold text-(--primary)">
+                      {percent}%
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
           {students.map(s => (
             <div
               key={s.uid}
@@ -424,6 +501,12 @@ export default function ViewStudentAttendancePage() {
                           </span>
                           <span className="px-1.5 py-0.5 rounded bg-(--status-m-bg) text-(--status-m-text) font-semibold">
                             M {summary[d].M}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-(--bg-card) text-(--text) font-semibold">
+                            T {summary[d].total}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-(--bg-card) text-(--text) font-semibold">
+                            S {summary[d].strength}
                           </span>
                         </div>
                       </td>
