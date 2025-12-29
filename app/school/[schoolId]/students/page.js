@@ -114,7 +114,7 @@ export default function StudentsListPage() {
             >
               <option value="">All sections</option>
               {selectedClass?.sections.map(sec => (
-                <option key={sec.id} value={sec.id}>
+                <option key={sec.id} value={sec.name}>
                   {sec.name}
                 </option>
               ))}

@@ -64,7 +64,7 @@ export default function EditSchoolPage() {
           <option value="suspended">Suspended</option>
         </Select>
 
-        <Input label="Student Limit" type="number"
+        <Input label="Student Limit" type="number" onWheel={(e) => e.preventDefault()}
           value={school.studentLimit}
           onChange={(e) =>
             setSchool({ ...school, studentLimit: Number(e.target.value) })

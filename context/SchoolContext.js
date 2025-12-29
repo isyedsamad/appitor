@@ -2,11 +2,12 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, doc, FieldValue, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Loading from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
 import { useBranch } from "./BranchContext";
+import { formatDate } from "@/lib/dateUtils";
 
 const SchoolContext = createContext(null);
 
@@ -20,6 +21,7 @@ export function SchoolProvider({ schoolId, children }) {
   const [branches, setBranches] = useState([]);
   const [roles, setRoles] = useState([]);
   const [currentBranch, setCurrentBranch] = useState('');
+  const [sessionList, setSessionList] = useState(null);
   const loadClasses = async (branch) => {
     if(!branch) return;
     setLoading(true);
@@ -29,6 +31,22 @@ export function SchoolProvider({ schoolId, children }) {
     const branchData = branchSnap.docs;
     setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
     setLoading(false);
+  }
+  const setDayBook = async (schoolId, branch) => {
+    const dayId = formatDate();
+    const daySnap = await getDoc(doc(db, 'schools', schoolId, 'branches', branch, 'fees', 'day_book', 'items', dayId));
+    if (!daySnap.exists()) {
+      await setDoc(doc(db, 'schools', schoolId, 'branches', branch, 'fees', 'day_book', 'items', dayId),
+        {
+          date: dayId,
+          collections: { total: 0, cash: 0, upi: 0, card: 0, netbanking: 0, wallet: 0, cheque: 0 },
+          refunds: { total: 0, cash: 0, upi: 0, card: 0, netbanking: 0, wallet: 0, cheque: 0 },
+          net: 0,
+          transactions: 0,
+          updatedAt: serverTimestamp(),
+        }
+      );
+    }
   }
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
@@ -86,6 +104,7 @@ export function SchoolProvider({ schoolId, children }) {
         permissions: roleData.permissions || [],
         linkedId: userData.linkedId || null,
       });
+      setSessionList(schoolData.sessions);
       if (userData) {
         const currentBranchUser = userData.currentBranch;
         if(userData.branchIds.length > 1) {
@@ -110,6 +129,7 @@ export function SchoolProvider({ schoolId, children }) {
           }
         }
       }
+      await setDayBook(userData.schoolId, userData.currentBranch);
       setLoading(false);
       setIsLoaded(true);
     });
@@ -132,6 +152,7 @@ export function SchoolProvider({ schoolId, children }) {
         setClassData,
         currentSession,
         setCurrentSession,
+        sessionList,
         loadClasses
       }}
     >

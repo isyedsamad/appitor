@@ -28,7 +28,6 @@ export async function GET(req) {
   }
 }
 
-
 export async function PUT(req) {
   try {
     const user = await verifyUser(req, "system.manage");
@@ -63,6 +62,7 @@ export async function PUT(req) {
     );
     await schoolRef.update({
       currentSession,
+      sessions,
       updatedAt: FieldValue.serverTimestamp(),
     });
     return NextResponse.json({ success: true });

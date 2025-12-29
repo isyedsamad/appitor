@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon,} from "lucide-react";
+import {Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck,} from "lucide-react";
 import {collection, doc, getDoc, getDocs, query, where} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -158,6 +158,11 @@ export default function MarkAttendancePage() {
     list.forEach(i => (updated[i.uid] = "P"));
     setAttendance(updated);
   }
+  function markAllAbsent() {
+    const updated = {};
+    list.forEach(i => (updated[i.uid] = "A"));
+    setAttendance(updated);
+  }
   async function handleSave() {
     if (!list.length) return;
     if (isPastDate && !canModifyPast) {
@@ -213,7 +218,7 @@ export default function MarkAttendancePage() {
   }
   return (
     <div className="max-w-7xl mx-auto space-y-4">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
             <Users size={20} />
@@ -299,13 +304,21 @@ export default function MarkAttendancePage() {
         </div>
       </div>
       {list.length > 0 && (
-        <div className="sticky top-0 z-10 bg-(--bg) py-2 flex gap-3 justify-between items-center">
-          <button
-            onClick={markAllPresent}
-            className="btn-outline flex gap-2"
-          >
-            <CheckCircle size={16} /> Mark All Present
-          </button>
+        <div className="sticky top-0 z-10 bg-(--bg) py-2 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+          <div className="flex gap-2 flex-col sm:flex-row">
+            <button
+              onClick={markAllPresent}
+              className="btn-outline flex gap-2"
+            >
+              <ShieldCheck size={17} className="text-green-500" /> Mark All Present
+            </button>
+            <button
+              onClick={markAllAbsent}
+              className="btn-outline flex gap-2"
+            >
+              <ShieldX size={17} className="text-red-500" /> Mark All Absent
+            </button>
+          </div>
           <button
             onClick={handleSave}
             className="btn-primary flex gap-2"

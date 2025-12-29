@@ -70,7 +70,7 @@ export default function MobileSidebar({ open, onClose }) {
                     return (
                       <Link
                         key={sub.href}
-                        href={sub.href}
+                        href={`/school/${schoolUser.schoolId}/${sub.href}`}
                         className="block px-3 py-1.5 rounded
                         text-sm font-semibold text-(--text-muted)
                         hover:bg-(--primary-soft)"

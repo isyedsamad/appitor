@@ -162,7 +162,7 @@ export default function AssignRollPage() {
               <tr key={s.uid} className="border-t border-(--border)">
                 <td className="px-4 py-2">
                   <input
-                    type="number"
+                    type="number" onWheel={(e) => e.preventDefault()}
                     className="input w-20"
                     value={s.rollNo ?? ""}
                     onChange={e => updateRoll(s.uid, e.target.value)}

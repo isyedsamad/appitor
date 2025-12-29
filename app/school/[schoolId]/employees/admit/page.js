@@ -124,7 +124,7 @@ export default function AdmitEmployeePage() {
                 </label>
                 <input
                   className="input"
-                  type="number"
+                  type="number" onWheel={(e) => e.preventDefault()}
                   placeholder="i.e. 9900119900"
                   value={form.mobile}
                   onChange={e =>
@@ -196,7 +196,7 @@ export default function AdmitEmployeePage() {
                 </label>
                 <input
                   className="input"
-                  type="number"
+                  type="number" onWheel={(e) => e.preventDefault()}
                   placeholder="i.e. 12000"
                   value={form.salary}
                   onChange={e =>

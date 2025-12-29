@@ -13,7 +13,7 @@ export default function SchoolShell({ children }) {
   if (!schoolUser) return null;
 
   return (
-    <div className="flex h-screen bg-(--bg) overflow-y-auto overflow-x-hidden">
+    <div className="flex h-dvh bg-(--bg) overflow-y-auto overflow-x-hidden">
       <div className="hidden md:block">
         <Sidebar />
       </div>
@@ -23,7 +23,7 @@ export default function SchoolShell({ children }) {
       />
       <div className="flex flex-col flex-1 min-w-0">
         <div><Navbar onMenu={() => setMobileOpen(true)} /></div>
-        <main className="flex-1 px-6 py-4">
+        <main className="flex-1 px-6 pt-4 pb-6">
           {children}
         </main>
       </div>

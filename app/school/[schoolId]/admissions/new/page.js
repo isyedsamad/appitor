@@ -6,13 +6,18 @@ import { useSchool } from "@/context/SchoolContext";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
 import { useBranch } from "@/context/BranchContext";
-import { formatInputDate } from "@/lib/dateUtils";
+import { formatInputDate, toInputDate } from "@/lib/dateUtils";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function NewAdmissionPage() {
   const { schoolUser, classData, setLoading, currentSession } = useSchool();
   const { branch, branchInfo } = useBranch();
   const [branchCode, setBranchCode] = useState('');
   const [autoRoll, setAutoRoll] = useState(true);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [selectedTemplateName, setSelectedTemplateName] = useState("");
   const [form, setForm] = useState({
     admissionId: "",
     name: "",
@@ -31,8 +36,8 @@ export default function NewAdmissionPage() {
       : "";
   const password = form.dob
     ? (() => {
-      const [year, month, day] = form.dob.split("-");
-      return `${day}${month}${year}`;
+      const split = form.dob.split("-");
+      return `${split[0]}${split[1]}${split[2]}`;
     })()
     : "";    
   function update(key, value) {
@@ -60,9 +65,13 @@ export default function NewAdmissionPage() {
         branch,
         branchCode,
         autoRoll,
-        currentSession
+        currentSession,
+        templateId: selectedTemplateId || null,
+        templateName: selectedTemplateName || null
       });
       toast.success("Admission completed successfully");
+      setSelectedTemplateId('');
+      setSelectedTemplateName('');
       setForm({
         admissionId: "",
         name: "",
@@ -82,6 +91,33 @@ export default function NewAdmissionPage() {
     }
   }
   if(!classData && !schoolUser) return null;
+  useEffect(() => {
+    if (!form.className) {
+      setTemplates([]);
+      setSelectedTemplateId("");
+      return;
+    }
+    const fetchTemplates = async () => {
+      const snap = await getDocs(
+        query(
+          collection(
+            db,
+            "schools",
+            schoolUser.schoolId,
+            "branches",
+            branch,
+            "fees",
+            "templates",
+            "items"
+          ),
+          where("className", "==", form.className),
+          where("status", "==", "active")
+        )
+      );
+      setTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    };
+    fetchTemplates();
+  }, [form.className]);  
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center gap-3">
@@ -108,7 +144,7 @@ export default function NewAdmissionPage() {
               className="input"
               value={form.admissionId}
               onChange={e =>
-                update("admissionId", e.target.value)
+                update("admissionId", e.target.value.toUpperCase())
               }
               placeholder="e.g. ABCS-2025-001"
             />
@@ -206,6 +242,45 @@ export default function NewAdmissionPage() {
           </div>
           <div>
             <label className="text-sm text-(--text-muted)">
+              Date of Birth <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              className="input"
+              value={toInputDate(form.dob)}
+              onChange={e => {
+                if(e.target.value == '') update("dob", '');
+                else update("dob", formatInputDate(e.target.value));
+                console.log(formatInputDate(e.target.value));
+                
+              }}
+            />
+          </div>
+          <div>
+            <label className="text-sm  text-(--text-muted)">
+              Fee Template (Optional)
+            </label>
+            <select
+              className="input"
+              value={selectedTemplateId}
+              onChange={e => {
+                setSelectedTemplateName(e.target.options[e.target.selectedIndex].text);
+                setSelectedTemplateId(e.target.value)
+              }}
+            >
+              <option value="">Assign Later</option>
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name} · {t.className}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-(--text-muted)">
+              If skipped, fee can be assigned later from Fee Assignment
+            </p>
+          </div>
+          <div>
+            <label className="text-sm text-(--text-muted)">
               Auto Assign Roll No.
             </label>
             <select
@@ -218,20 +293,6 @@ export default function NewAdmissionPage() {
               <option value={true}>Yes</option>
               <option value={false}>No</option>
             </select>
-          </div>
-          <div>
-            <label className="text-sm text-(--text-muted)">
-              Date of Birth <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              className="input"
-              value={form.dob}
-              onChange={e => {
-                if(e.target.value == '') update("dob", '');
-                else update("dob", formatInputDate(e.target.value))
-              }}
-            />
           </div>
         </div>
       </section>

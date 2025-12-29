@@ -164,7 +164,7 @@ export default function AddSchoolModal({ open, onClose, orgList }) {
 
               <Input
                 label="Student Limit"
-                type="number"
+                type="number" onWheel={(e) => e.preventDefault()}
                 value={form.school.studentLimit}
                 onChange={(e) => updateSchool("studentLimit", e.target.value)}
               />

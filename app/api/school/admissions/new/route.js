@@ -6,7 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "admission.create");
-    const {admissionId, name, gender, dob, className, section, branch, currentSession, branchCode, autoRoll} = await req.json();
+    const {admissionId, name, gender, dob, className, section, branch, currentSession, branchCode, autoRoll, templateId, templateName} = await req.json();
     if (!admissionId || !name || !dob || !className || !section || !branch || !currentSession || !branchCode) {
       return NextResponse.json(
         { message: "Missing required fields" },
@@ -21,8 +21,8 @@ export async function POST(req) {
     }
     const appId = branchCode.toUpperCase() + admissionId;
     const email = `${appId}@${user.schoolCode.toLowerCase()}.appitor`;
-    const [year, month, day] = dob.split("-");
-    const password = `${day}${month}${year}`;
+    const split = dob.split("-");
+    const password = `${split[0]}${split[1]}${split[2]}`;
     const authUser = await adminAuth.createUser({
       email,
       password,
@@ -30,10 +30,8 @@ export async function POST(req) {
       disabled: false,
     });
     const uid = authUser.uid;
-    let nextRoll = 1;
-    if(!autoRoll || autoRoll == false) {
-      nextRoll = null;
-    } else {
+    let nextRoll = null;
+    if (autoRoll) {
       const studentsSnap = await adminDb
         .collection("schools")
         .doc(user.schoolId)
@@ -42,13 +40,15 @@ export async function POST(req) {
         .collection("students")
         .where("className", "==", className)
         .where("section", "==", section)
-        .where("currentSession", "==", user.currentSession)
+        .where("currentSession", "==", currentSession)
         .orderBy("rollNo", "desc")
         .limit(1)
         .get();
       if (!studentsSnap.empty) {
         const lastRoll = studentsSnap.docs[0].data().rollNo;
         if (lastRoll) nextRoll = lastRoll + 1;
+      } else {
+        nextRoll = 1;
       }
     }
     const studentData = {
@@ -80,22 +80,45 @@ export async function POST(req) {
         },
       ],
     };
-    await adminDb
-      .collection("schoolUsers")
-      .doc(uid)
-      .set({
-        ...studentData,
-        role: "student",
-        roleId: "student",
-      });
-    await adminDb
+    const batch = adminDb.batch();
+    const schoolUserRef = adminDb.collection("schoolUsers").doc(uid);
+    const studentRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
       .doc(branch)
       .collection("students")
-      .doc(uid)
-      .set(studentData);
+      .doc(uid);
+    batch.set(schoolUserRef, {
+      ...studentData,
+      role: "student",
+      roleId: "student",
+    });
+    batch.set(studentRef, studentData);
+    if (templateId && templateName) {
+      const assignmentRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection("fees")
+        .doc("assignments")
+        .collection("items")
+        .doc();
+      batch.set(assignmentRef, {
+        studentId: uid,
+        studentName: name,
+        className,
+        section,
+        templateId,
+        templateName,
+        sessionId: currentSession,
+        status: "active",
+        assignedAt: FieldValue.serverTimestamp(),
+        assignedBy: user.uid,
+      });
+    }
+    await batch.commit();
     return NextResponse.json({
       success: true,
       uid,
