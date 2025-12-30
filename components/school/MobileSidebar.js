@@ -9,25 +9,17 @@ import { useSchool } from "@/context/SchoolContext";
 
 export default function MobileSidebar({ open, onClose }) {
   const { schoolUser } = useSchool();
-
-  const [openMenu, setOpenMenu] = useState(null);      // MAIN
-  const [openSubMenu, setOpenSubMenu] = useState(null); // SUB
-
+  const [openMenu, setOpenMenu] = useState(null);
+  const [openSubMenu, setOpenSubMenu] = useState(null);
   if (!open || !schoolUser) return null;
-
   const basePath = `/school/${schoolUser.schoolId}`;
-
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      {/* BACKDROP */}
       <div
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
-
-      {/* SIDEBAR */}
       <aside className="absolute left-0 top-0 h-full w-64 bg-(--bg-card) border-r border-(--border) overflow-y-auto">
-        {/* HEADER */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-(--border)">
           <div>
             <p className="text-sm font-semibold">{schoolUser.name}</p>
@@ -39,8 +31,6 @@ export default function MobileSidebar({ open, onClose }) {
             <X size={18} />
           </button>
         </div>
-
-        {/* NAV */}
         <nav className="p-2 space-y-2">
           {MENU.map(main => {
             if (
@@ -59,7 +49,6 @@ export default function MobileSidebar({ open, onClose }) {
 
             return (
               <div key={main.label}>
-                {/* MAIN ITEM */}
                 <button
                   onClick={() =>
                     hasMainChildren
@@ -72,7 +61,6 @@ export default function MobileSidebar({ open, onClose }) {
                   <span className="text-sm font-semibold">
                     {main.label}
                   </span>
-
                   <div className="flex items-center gap-2">
                     {hasMainChildren && (
                       <ChevronDown
@@ -85,15 +73,11 @@ export default function MobileSidebar({ open, onClose }) {
                     {Icon && <Icon size={18} />}
                   </div>
                 </button>
-
-                {/* MAIN CHILDREN */}
                 {isMainOpen && hasMainChildren && (
                   <div className="ml-3 mt-1 space-y-2">
                     {main.children.map(sub => {
                       const subKey = `${main.label}__${sub.label}`;
                       const isSubOpen = openSubMenu === subKey;
-
-                      /* SUB-GROUP (3rd LEVEL) */
                       if (sub.children) {
                         return (
                           <div key={sub.label}>
@@ -115,7 +99,6 @@ export default function MobileSidebar({ open, onClose }) {
                                 }`}
                               />
                             </button>
-
                             {isSubOpen && (
                               <div className="ml-3 mt-1 space-y-1">
                                 {sub.children.map(page => {
@@ -146,8 +129,6 @@ export default function MobileSidebar({ open, onClose }) {
                           </div>
                         );
                       }
-
-                      /* NORMAL SUB ITEM */
                       if (
                         sub.permission &&
                         !hasPermission(schoolUser, sub.permission)

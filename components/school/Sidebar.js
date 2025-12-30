@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import {ChevronLeft, ChevronRight, ChevronDown} from "lucide-react";
@@ -15,8 +14,7 @@ export default function Sidebar() {
   if (!schoolUser) return null;
   const basePath = `/school/${schoolUser.schoolId}`;
   return (
-    <aside
-      className={`h-dvh border-r border-(--border) bg-(--bg)
+    <aside className={`h-dvh border-r border-(--border) bg-(--bg)
       transition-all duration-300 ${collapsed ? "w-15" : "w-55"}`}
     >
       <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--bg-card)">
