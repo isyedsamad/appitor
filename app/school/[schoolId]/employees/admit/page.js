@@ -89,7 +89,9 @@ export default function AdmitEmployeePage() {
     <RequirePermission permission="employee.manage">
       <div className="max-w-5xl mx-auto px-2">
         <div className="flex items-center gap-3 mb-6">
-          <UserPlus className="text-primary" />
+          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+            <UserPlus size={20} />
+          </div>
           <div>
             <h1 className="text-lg font-semibold text-text">
               Admit Employee

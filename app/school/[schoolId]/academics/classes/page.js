@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Layers, Plus, Pencil, Trash2 } from "lucide-react";
+import { Layers, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
@@ -94,9 +94,17 @@ export default function ClassesPage() {
     <RequirePermission permission="academic.manage">
       <div className="space-y-4">
         <header className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-          <h1 className="text-lg font-semibold flex items-center gap-3">
-            <Layers /> Classes & Sections
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+              <BookOpen size={20} />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold">Classes</h1>
+              <p className="text-sm text-(--text-muted)">
+                Organize classes for your branch
+              </p>
+            </div>
+          </div>
           <button
             className="btn-primary flex gap-2"
             onClick={() => setOpenClassModal(true)}

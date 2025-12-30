@@ -98,7 +98,9 @@ export default function AssignRollPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Hash className="text-(--primary)" />
+        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <Hash size={20} />
+        </div>
         <div>
           <h1 className="text-lg font-semibold text-(--text)">
             Assign Roll Numbers

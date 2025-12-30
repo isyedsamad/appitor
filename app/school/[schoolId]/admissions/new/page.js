@@ -121,13 +121,15 @@ export default function NewAdmissionPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center gap-3">
-        <UserPlus className="text-(--primary)" />
+        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <UserPlus size={20} />
+        </div>
         <div>
           <h1 className="text-lg font-semibold text-(--text)">
             New Admission
           </h1>
           <p className="text-sm text-(--text-muted)">
-            Register a new student
+            Register a new student with fees
           </p>
         </div>
       </div>

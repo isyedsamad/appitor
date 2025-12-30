@@ -71,9 +71,17 @@ export default function ClassesPage() {
     <RequirePermission permission="academic.manage">
       <div className="space-y-4">
         <header className="flex justify-between items-center">
-          <h1 className="text-lg font-semibold flex items-center gap-3">
-            <Layers /> Subjects
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+              <Layers size={20} />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold">Subjects</h1>
+              <p className="text-sm text-(--text-muted)">
+                Manage curriculum details
+              </p>
+            </div>
+          </div>
           <button
             className="btn-primary flex gap-2"
             onClick={() => setOpenSubjectModal(true)}

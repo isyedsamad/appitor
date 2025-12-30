@@ -66,7 +66,9 @@ export default function StudentsListPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Users className="text-(--primary) mt-1" />
+        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <Users size={20} />
+        </div>
         <div>
           <h1 className="text-lg font-semibold text-(--text)">
             Students

@@ -7,6 +7,9 @@ import {
   Square,
   ArrowUp,
   ChevronDown,
+  TrainTrack,
+  ChartNoAxesColumn,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import {
   collection,
@@ -119,7 +122,9 @@ export default function PromoteDemotePage() {
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-start md:justify-between items-center">
       <div className="flex items-center gap-3">
-        <Users className="text-(--primary) mt-1" />
+        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <ChartNoAxesCombined size={20} />
+        </div>
         <div>
           <h1 className="text-lg font-semibold text-(--text)">
             Promote / Demote Students

@@ -76,7 +76,9 @@ export default function EmployeeListPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <Users className="text-(--primary)" />
+          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+            <Users size={20} />
+          </div>
           <div>
             <h1 className="text-lg font-semibold text-(--text)">
               Employees
@@ -86,7 +88,7 @@ export default function EmployeeListPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full">
+        <div className="flex items-center gap-3 w-full max-w-sm">
           <Search size={16} className="text-(--text-muted)" />
           <input
             className="bg-transparent outline-none text-sm w-full"
