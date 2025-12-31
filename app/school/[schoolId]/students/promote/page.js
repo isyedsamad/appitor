@@ -214,7 +214,7 @@ export default function PromoteDemotePage() {
                   <td className="px-4 py-3 text-center font-medium">
                     {s.appId}
                   </td>
-                  <td className="text-center px-4 py-3 font-semibold">{s.name}</td>
+                  <td className="text-center px-4 py-3 font-semibold capitalize">{s.name}</td>
                 </tr>
               );
             })}

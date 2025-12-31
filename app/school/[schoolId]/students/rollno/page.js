@@ -15,7 +15,7 @@ export default function AssignRollPage() {
   const [section, setSection] = useState("");
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
-  const selectedClass = classData?.find(c => c.name === className);
+  const selectedClass = classData?.find(c => c.id === className);
   async function loadStudents() {
     if (!className || !section) {
       toast.error("Select class & section");
@@ -117,7 +117,7 @@ export default function AssignRollPage() {
         }}>
           <option value="">Select Class</option>
           {classData && classData.map(c => (
-            <option key={c.name}>{c.name}</option>
+            <option key={c.name} value={c.id}>{c.name}</option>
           ))}
         </select>
         <select
@@ -128,7 +128,7 @@ export default function AssignRollPage() {
         >
           <option value="">Select Section</option>
           {selectedClass?.sections.map(sec => (
-            <option key={sec.id} value={sec.name}>
+            <option key={sec.id} value={sec.id}>
               {sec.name}
             </option>
           ))}
