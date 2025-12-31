@@ -168,7 +168,7 @@ export default function StudentsListPage() {
                   <td className="px-4 py-3 font-semibold">
                     {s.appId}
                   </td>
-                  <td className="px-4 py-3 font-semibold">{s.name}</td>
+                  <td className="px-4 py-3 font-semibold capitalize">{s.name}</td>
                   <td className="px-4 py-3">{classData.filter(c => c.id == s.className).map(c => c.name)}</td>
                   <td className="px-4 py-3">
                   {classData.filter(c => c.id == s.className).map(c => 
