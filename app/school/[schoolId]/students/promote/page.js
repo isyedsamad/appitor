@@ -34,8 +34,8 @@ export default function PromoteDemotePage() {
   const [toClass, setToClass] = useState("");
   const [toSection, setToSection] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
-  const sourceClass = classData?.find(c => c.name === fromClass);
-  const targetClass = classData?.find(c => c.name === toClass);
+  const sourceClass = classData?.find(c => c.id === fromClass);
+  const targetClass = classData?.find(c => c.id === toClass);
   async function loadStudents() {
     if (!fromClass || !fromSection) {
       toast.error("Select class and section");
@@ -153,7 +153,7 @@ export default function PromoteDemotePage() {
         >
           <option value="">Class</option>
           {classData?.map(c => (
-            <option key={c.name}>{c.name}</option>
+            <option key={c.name} value={c.id}>{c.name}</option>
           ))}
         </select>
         <select
@@ -164,7 +164,7 @@ export default function PromoteDemotePage() {
         >
           <option value="">Section</option>
           {sourceClass?.sections.map(sec => (
-            <option key={sec.id} value={sec.name}>
+            <option key={sec.id} value={sec.id}>
               {sec.name}
             </option>
           ))}
@@ -248,7 +248,7 @@ export default function PromoteDemotePage() {
               >
                 <option value="">Target Class</option>
                 {classData?.map(c => (
-                  <option key={c.name}>{c.name}</option>
+                  <option key={c.name} value={c.id}>{c.name}</option>
                 ))}
               </select>
               <select
@@ -259,7 +259,7 @@ export default function PromoteDemotePage() {
               >
                 <option value="">Section</option>
                 {targetClass?.sections.map(sec => (
-                  <option key={sec.id} value={sec.name}>
+                  <option key={sec.id} value={sec.id}>
                     {sec.name}
                   </option>
                 ))}
