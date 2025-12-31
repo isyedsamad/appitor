@@ -40,7 +40,7 @@ export default function MarkAttendancePage() {
   const [isMarked, setIsMarked] = useState(false);
   const [showReason, setShowReason] = useState(false);
   const [dragStatus, setDragStatus] = useState(null);
-  const selectedClass = classData?.find(c => c.name === className);
+  const selectedClass = classData?.find(c => c.id === className);
   const isPastDate = date < toInputDate(today);
   const canModifyPast = hasPermission(schoolUser, 'attendance.modify', false);
   const STATUS = mode === "student" ? STUDENT_STATUS : EMPLOYEE_STATUS;
@@ -277,7 +277,7 @@ export default function MarkAttendancePage() {
               >
                 <option value="">Select Class</option>
                 {classData?.map(c => (
-                  <option key={c.name}>{c.name}</option>
+                  <option key={c.name} value={c.id}>{c.name}</option>
                 ))}
               </select>
               <select
@@ -288,7 +288,7 @@ export default function MarkAttendancePage() {
               >
                 <option value="">Select Section</option>
                 {selectedClass?.sections.map(sec => (
-                  <option key={sec.id} value={sec.name}>
+                  <option key={sec.id} value={sec.id}>
                     {sec.name}
                   </option>
                 ))}
@@ -374,7 +374,7 @@ export default function MarkAttendancePage() {
                 </div>
               )}
               <div>
-                <p className="font-semibold">{item.name}</p>
+                <p className="font-semibold capitalize">{item.name}</p>
                 <div className="flex items-center gap-1 font-medium text-xs text-(--text-muted)">
                   <BadgeCheck size={12} />
                   App ID: {mode === "student"
