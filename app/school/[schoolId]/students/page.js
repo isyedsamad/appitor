@@ -26,7 +26,7 @@ export default function StudentsListPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const selectedClass = classData?.find(
-    c => c.name === className
+    c => c.id === className
   );
   async function fetchStudents() {
     if (!className) {
@@ -98,7 +98,7 @@ export default function StudentsListPage() {
             >
               <option value="">Select class</option>
               {classData?.map(c => (
-                <option key={c.name} value={c.name}>
+                <option key={c.name} value={c.id}>
                   {c.name}
                 </option>
               ))}
@@ -116,7 +116,7 @@ export default function StudentsListPage() {
             >
               <option value="">All sections</option>
               {selectedClass?.sections.map(sec => (
-                <option key={sec.id} value={sec.name}>
+                <option key={sec.id} value={sec.id}>
                   {sec.name}
                 </option>
               ))}
@@ -169,9 +169,11 @@ export default function StudentsListPage() {
                     {s.appId}
                   </td>
                   <td className="px-4 py-3 font-semibold">{s.name}</td>
-                  <td className="px-4 py-3">{s.className}</td>
+                  <td className="px-4 py-3">{classData.filter(c => c.id == s.className).map(c => c.name)}</td>
                   <td className="px-4 py-3">
-                  {s.section}
+                  {classData.filter(c => c.id == s.className).map(c => 
+                    c.sections.filter(sec => sec.id == s.section).map(sec => sec.name)
+                  )}
                   </td>
                   <td className="px-4 py-3">
                     <span

@@ -215,14 +215,16 @@ export default function StudentProfilePage() {
               <div>
                 <label className="text-sm text-(--text-muted)">Class</label>
                 <div className="input bg-(--bg-soft) cursor-not-allowed">
-                  {student.className}
+                  {classData.filter(c => c.id == student.className).map(c => c.name)}
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-(--text-muted)">Section</label>
                 <div className="input bg-(--bg-soft) cursor-not-allowed">
-                  {student.section}
+                  {classData.filter(c => c.id == student.className).map(c => 
+                    c.sections.filter(sec => sec.id == student.section).map(sec => sec.name)
+                  )}
                 </div>
               </div>
             </div>
@@ -250,12 +252,15 @@ export default function StudentProfilePage() {
                           <span className="font-semibold text-(--text)">
                             {h.session}
                           </span>
-                          <span className="text-xs px-2 py-0.5 rounded border-2 border-(--border) text-white">
+                          <span className="text-xs px-2 py-0.5 rounded border-2 border-(--border) text-(--text)">
                             {h.action}
                           </span>
                         </div>
                         <p className="text-sm text-(--text-muted)">
-                          {h.className} – Section {h.section}
+                          {classData.filter(c => c.id == h.className).map(c => c.name)}
+                          – Section {classData.filter(c => c.id == h.className).map(c => 
+                              c.sections.filter(sec => sec.id == h.section).map(sec => sec.name)
+                            )}
                         </p>
                         {h.at && (
                           <p className="text-xs text-(--text-muted) mt-1">

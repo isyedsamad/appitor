@@ -28,7 +28,7 @@ export default function NewAdmissionPage() {
     mobile: "",
   });
   const selectedClass = classData?.find(
-    c => c.name === form.className
+    c => c.id === form.className
   );
   const studentEmail =
     form.admissionId && schoolUser
@@ -216,7 +216,7 @@ export default function NewAdmissionPage() {
             >
               <option value="">Select class</option>
               {classData?.map(cls => (
-                <option key={cls.name} value={cls.name}>
+                <option key={cls.id} value={cls.id}>
                   {cls.name}
                 </option>
               ))}
@@ -236,7 +236,7 @@ export default function NewAdmissionPage() {
             >
               <option value="">Select section</option>
               {selectedClass?.sections.map(sec => (
-                <option key={sec.id} value={sec.name}>
+                <option key={sec.id} value={sec.id}>
                   {sec.name}
                 </option>
               ))}
