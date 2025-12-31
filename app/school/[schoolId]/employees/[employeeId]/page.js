@@ -122,7 +122,7 @@ export default function EmployeeProfilePage() {
           <ArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-(--text)">
+          <h1 className="text-lg font-semibold text-(--text) capitalize">
             {employee.name}
           </h1>
           <p className="text-sm text-(--text-muted)">

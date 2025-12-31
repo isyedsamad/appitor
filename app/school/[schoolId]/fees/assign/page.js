@@ -148,7 +148,7 @@ export default function StudentFeeAssignmentPage() {
           >
             <option value="">Select Class</option>
             {classData && classData.map(c => (
-              <option key={c.name} value={c.name}>
+              <option key={c.name} value={c.id}>
                 {c.name}
               </option>
             ))}
@@ -161,9 +161,9 @@ export default function StudentFeeAssignmentPage() {
           >
             <option value="">Select Section</option>
             {classData && classData
-              .find(c => c.name === selectedClass)
+              .find(c => c.id === selectedClass)
               ?.sections.map(sec => (
-                <option key={sec.id} value={sec.name}>
+                <option key={sec.id} value={sec.id}>
                   {sec.name}
                 </option>
               ))}
@@ -231,7 +231,7 @@ export default function StudentFeeAssignmentPage() {
                     </td>
                     <td className="px-4 py-3 text-left">{s.rollNo ? s.rollNo >= 10 ? s.rollNo : '0' + s.rollNo : '-'}</td>
                     <td className="px-4 py-3 text-left font-semibold">{s.admissionId}</td>
-                    <td className="px-4 py-3 text-left font-semibold">{s.name}</td>
+                    <td className="px-4 py-3 text-left font-semibold capitalize">{s.name}</td>
                     <td className="px-4 py-3 text-left">
                       {s.assignment ? (
                         <div className="flex items-center gap-2">

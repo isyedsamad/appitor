@@ -25,11 +25,10 @@ export function SchoolProvider({ schoolId, children }) {
   const loadClasses = async (branch) => {
     if(!branch) return;
     setLoading(true);
-    const branchSnap = await getDocs(
-      query(collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes'),
-      orderBy('order', 'asc')));
-    const branchData = branchSnap.docs;
-    setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
+    const classSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes', 'data'));
+    if(!classSnap.exists()) return; 
+    const classdata = classSnap.data();
+    setClassData(classdata.classData);
     setLoading(false);
   }
   useEffect(() => {
