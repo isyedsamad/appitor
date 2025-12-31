@@ -171,7 +171,7 @@ export default function AssignRollPage() {
                   />
                 </td>
                 <td className="px-4 py-3 text-left font-semibold">{s.appId}</td>
-                <td className="px-4 py-3 text-left font-semibold">{s.name}</td>
+                <td className="px-4 py-3 text-left font-semibold capitalize">{s.name}</td>
               </tr>
             ))}
           </tbody>
