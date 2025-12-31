@@ -33,7 +33,7 @@ export default function ViewStudentAttendancePage() {
   const [monthRecords, setMonthRecords] = useState({});
   const [days, setDays] = useState([]);
   const [summaryHeatmap, setSummaryHeatmap] = useState(null);
-  const selectedClass = classData?.find(c => c.name === className);
+  const selectedClass = classData?.find(c => c.id === className);
   async function loadStudents() {
     if (!className || !section) {
       toast.error("Select class & section");
@@ -252,7 +252,7 @@ export default function ViewStudentAttendancePage() {
           >
             <option value="">Select Class</option>
             {classData?.map(c => (
-              <option key={c.name}>{c.name}</option>
+              <option key={c.name} value={c.id}>{c.name}</option>
             ))}
           </select>
           </div>
@@ -266,7 +266,7 @@ export default function ViewStudentAttendancePage() {
           >
             <option value="">Select Section</option>
             {selectedClass?.sections.map(sec => (
-              <option key={sec.id} value={sec.name}>
+              <option key={sec.id} value={sec.id}>
                 {sec.name}
               </option>
             ))}
@@ -378,7 +378,7 @@ export default function ViewStudentAttendancePage() {
               className="flex justify-between items-center px-4 py-3 hover:bg-(--bg-soft) border-(--border)"
             >
               <div>
-                <p className="font-semibold">{s.name}</p>
+                <p className="font-semibold capitalize">{s.name}</p>
                 <p className="text-xs text-(--text-muted)">
                   App ID: {s.admissionId}
                 </p>
@@ -417,7 +417,7 @@ export default function ViewStudentAttendancePage() {
                     <td className="px-3 py-2 font-semibold">
                       {s.admissionId}
                     </td>
-                    <td className="px-3 py-2 font-semibold">{s.name}</td>
+                    <td className="px-3 py-2 font-semibold capitalize">{s.name}</td>
                     <td className="px-3 py-2 text-center font-semibold">
                       <span
                         className={`px-2 py-1 rounded text-xs

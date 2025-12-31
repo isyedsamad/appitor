@@ -381,7 +381,7 @@ export default function ViewEmployeeAttendancePage() {
               className="flex justify-between items-center px-4 py-3 border-(--border) hover:bg-(--bg-soft)"
             >
               <div>
-                <p className="font-semibold">{e.name}</p>
+                <p className="font-semibold capitalize">{e.name}</p>
                 <p className="text-xs font-medium text-(--text-muted)">
                   Employee ID: {e.employeeId}
                 </p>
