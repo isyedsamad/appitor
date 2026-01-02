@@ -15,6 +15,8 @@ export function SchoolProvider({ schoolId, children }) {
   const router = useRouter();
   const [schoolUser, setSchoolUser] = useState(null);
   const [classData, setClassData] = useState(null);
+  const [employeeData, setEmployeeData] = useState(null);
+  const [subjectData, setSubjectData] = useState(null);
   const [currentSession, setCurrentSession] = useState('');
   const [loading, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,6 +31,24 @@ export function SchoolProvider({ schoolId, children }) {
     if(!classSnap.exists()) return; 
     const classdata = classSnap.data();
     setClassData(classdata.classData);
+    setLoading(false);
+  }
+  const loadSubjects = async (branch) => {
+    if(!branch) return;
+    setLoading(true);
+    const subSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'subjects', 'branch_subjects'));
+    if(!subSnap.exists()) return; 
+    const subdata = subSnap.data();
+    setSubjectData(subdata.subjects);
+    setLoading(false);
+  }
+  const loadEmployee = async (branch) => {
+    if(!branch) return;
+    setLoading(true);
+    const empSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'meta', 'employees'));
+    if(!empSnap.exists()) return; 
+    const empdata = empSnap.data();
+    setEmployeeData(empdata.employees);
     setLoading(false);
   }
   useEffect(() => {
@@ -131,11 +151,15 @@ export function SchoolProvider({ schoolId, children }) {
         setCurrentBranch,
         roles,
         classData,
+        subjectData,
+        employeeData,
         setClassData,
         currentSession,
         setCurrentSession,
         sessionList,
-        loadClasses
+        loadClasses,
+        loadSubjects,
+        loadEmployee
       }}
     >
       {loading && <Loading />}

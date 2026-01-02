@@ -100,7 +100,16 @@ export default function TimetableSettingsPage() {
       breaks: form.breaks.filter((_, index) => index !== i),
     });
   };
+  const isValidBreak = (b) =>
+    b.label?.trim() &&
+    b.afterPeriod !== "" &&
+    b.duration !== "";
   const saveSettings = async () => {
+    const invalidBreak = form.breaks?.find(b => !isValidBreak(b));
+    if (invalidBreak) {
+      toast.error("Please fill all break fields!");
+      return;
+    }
     try {
       setLoading(true);
       await secureAxios.post("/api/school/timetable/settings", {

@@ -117,7 +117,7 @@ export default function MarkAttendancePage() {
         branch,
         "employees"
       );
-      const q = query(ref, where("status", "==", "active"));
+      const q = query(ref, where("status", "!=", "disabled"));
       const snap = await getDocs(q);
       const data = snap.docs.map(d => ({
         uid: d.id,

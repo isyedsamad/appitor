@@ -11,7 +11,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 
 export default function Navbar({ onMenu }) {
-  const { isLoaded, schoolUser, branches, currentBranch, classData, setClassData, loadClasses } = useSchool();
+  const { isLoaded, schoolUser, branches, currentBranch, classData, setClassData, loadClasses, loadSubjects, loadEmployee } = useSchool();
   const { branch, changeBranch, setBranchInfo } = useBranch();
   const [branchesList, setBranchesList] = useState([]);
   const logout = () => {
@@ -30,11 +30,14 @@ export default function Navbar({ onMenu }) {
   //   const branchData = branchSnap.docs;
   //   setClassData(branchData.map((b) => ({ id:b.id, ...b.data() })))
   // }
+  const loadData = async () => {
+    const [r1, r2, r3] = await Promise.all([loadClasses(branch), loadSubjects(branch), loadEmployee(branch)]);
+  }
   useEffect(() => {
     if(branch && schoolUser) {
-      loadClasses(branch);
+      loadData();
     }
-  }, [branch])
+  }, [branch, schoolUser])
   
   return (
     <header
