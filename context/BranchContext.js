@@ -15,6 +15,15 @@ export function BranchProvider({ children }) {
     const saved = localStorage.getItem("appitor_branch");
     if (saved) setBranch(saved);
   }, []);
+  const loadBranch = async (b) => {
+    const branchSnap = await getDoc(doc(db, "branches", b));
+    const branchData = branchSnap.data();
+    setCurrentBranch(b);
+    setBranchInfo({
+      id: branchSnap.id,
+      ...branchData
+    });
+  }
   async function changeBranch(b) {
     setLoading(true);
     try {
@@ -38,7 +47,7 @@ export function BranchProvider({ children }) {
   }
 
   return (
-    <BranchContext.Provider value={{ branch, changeBranch, branchInfo, setBranchInfo }}>
+    <BranchContext.Provider value={{ branch, changeBranch, loadBranch, branchInfo, setBranchInfo }}>
       {children}
     </BranchContext.Provider>
   );

@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 import { limit, startAfter } from "firebase/firestore";
 
 export default function SubjectTeacherMappingPage() {
-  const { setLoading, schoolUser, classData } = useSchool();
+  const { setLoading, schoolUser, classData, employeeData, subjectData } = useSchool();
   const { branch } = useBranch();
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState('');
@@ -38,30 +38,10 @@ export default function SubjectTeacherMappingPage() {
     periodsPerWeek: "",
   });
   useEffect(() => {
-    if (!branch || !schoolUser?.schoolId || !classData) return;
-    const fetchAll = async () => {
-      try {
-        setLoading(true);
-        const basePath = ["schools", schoolUser.schoolId, "branches", branch];
-        const [teacherSnap, subjectSnap] = await Promise.all([
-          getDocs(query(collection(db, ...basePath, "employees"), where('status', '!=', 'disabled'))),
-          getDoc(doc(db, ...basePath, "subjects", "branch_subjects")),
-        ]);
-        setTeachers(teacherSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-        if (subjectSnap.exists()) {
-          setSubjects(
-            (subjectSnap.data().subjects || []).filter(s => s.isActive)
-          );
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed: " + err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAll();
-  }, [branch, schoolUser?.schoolId, classData]);
+    if (!branch || !schoolUser?.schoolId || !classData || !subjectData || !employeeData) return;
+    setSubjects(subjectData);
+    setTeachers(employeeData);
+  }, [branch, schoolUser?.schoolId, classData, subjectData, employeeData]);
   const fetchMapping = async (reset = false) => {
     if (!selectedClassId || !selectedSectionId) return;
     try {

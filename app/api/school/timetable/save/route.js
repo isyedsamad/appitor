@@ -21,8 +21,6 @@ export async function POST(req) {
       .collection("timetable")
       .doc("items");
 
-    /* ---------------- LIMIT CHECK (OUTSIDE TX) ---------------- */
-
     const mappingSnap = await baseRef
       .collection("subjectTeacherMapping")
       .where("classId", "==", classId)
@@ -61,12 +59,7 @@ export async function POST(req) {
       }
     }
 
-    /* ---------------- TRANSACTION ---------------- */
-
     await adminDb.runTransaction(async tx => {
-
-      /* ---------- READ PHASE ---------- */
-
       const teacherDocs = new Map();
       const classDocs = new Map();
       const periodDocs = new Map();
@@ -101,8 +94,6 @@ export async function POST(req) {
         }
       }
 
-      /* ---------- MUTABLE STATE ---------- */
-
       const teacherSlotMap = new Map();
       const classDayMap = new Map();
       const periodEntryMap = new Map();
@@ -118,8 +109,6 @@ export async function POST(req) {
       for (const [pid, snap] of periodDocs.entries()) {
         periodEntryMap.set(pid, structuredClone(snap.data()?.entries || []));
       }
-
-      /* ---------- APPLY CONFLICT REMOVALS ---------- */
 
       for (const c of conflicts) {
         const tSlots = teacherSlotMap.get(c.teacherId) || [];
@@ -152,8 +141,6 @@ export async function POST(req) {
         );
       }
 
-      /* ---------- WRITE CLEANED STATE ---------- */
-
       for (const [tid, slots] of teacherSlotMap.entries()) {
         tx.set(
           baseRef.collection("teachers").doc(tid),
@@ -178,8 +165,6 @@ export async function POST(req) {
         );
       }
 
-      /* ---------- SAVE CURRENT CLASS ---------- */
-
       tx.set(
         baseRef.collection("classes").doc(classSectionId),
         {
@@ -193,15 +178,11 @@ export async function POST(req) {
         },
         { merge: true }
       );
-
-      /* ---------- ADD NEW INDEXES ---------- */
-
       for (const day of Object.keys(days)) {
         for (const slot of days[day] || []) {
           const period = slot.period;
           const entries = slot.entries || [];
           if (!entries.length) continue;
-
           tx.set(
             baseRef.collection("periodIndex").doc(`${day}_${period}`),
             {
@@ -217,7 +198,6 @@ export async function POST(req) {
             },
             { merge: true }
           );
-
           for (const e of entries) {
             tx.set(
               baseRef.collection("teachers").doc(e.teacherId),

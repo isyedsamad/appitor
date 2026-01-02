@@ -16,7 +16,7 @@ import { useSchool } from "@/context/SchoolContext";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function AdmitEmployeePage() {
-  const { branch, branchInfo } = useBranch();
+  const { branch, branchInfo, loadBranch } = useBranch();
   const { schoolUser, setLoading, roles } = useSchool();
   const [employeeId, setEmployeeId] = useState("");
   const [rolesList, setRolesList] = useState([]);
@@ -60,9 +60,8 @@ export default function AdmitEmployeePage() {
         branchIds: [branch],
         branchNames: [branchInfo.name]
       });
-      toast.success("Employee admitted successfully", {
-        theme: 'colored'
-      });
+      await loadBranch(branch);
+      toast.success("Employee admitted successfully");
       setForm({
         name: "",
         mobile: "",
@@ -87,7 +86,7 @@ export default function AdmitEmployeePage() {
 
   return (
     <RequirePermission permission="employee.manage">
-      <div className="max-w-5xl mx-auto px-2">
+      <div className="max-w-5xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
             <UserPlus size={20} />

@@ -45,10 +45,14 @@ export function SchoolProvider({ schoolId, children }) {
   const loadEmployee = async (branch) => {
     if(!branch) return;
     setLoading(true);
-    const empSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'meta', 'employees'));
-    if(!empSnap.exists()) return; 
-    const empdata = empSnap.data();
-    setEmployeeData(empdata.employees);
+    const empSnap = await getDocs(query(
+      collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'employees'),
+      orderBy('createdAt', 'desc')
+    ));
+    if(!empSnap.docs) return;
+    console.log(empSnap.docs.map(e => ({ id: e.id, ...e.data() })));
+    
+    setEmployeeData(empSnap.docs.map(e => ({ id: e.id, ...e.data() })));
     setLoading(false);
   }
   useEffect(() => {

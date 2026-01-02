@@ -20,7 +20,7 @@ import Link from "next/link";
 const PAGE_SIZE = 10;
 
 export default function EmployeeListPage() {
-  const { schoolUser } = useSchool();
+  const { schoolUser, employeeData } = useSchool();
   const { branchInfo } = useBranch();
   const { theme } = useTheme();
   const [employees, setEmployees] = useState([]);
@@ -29,40 +29,40 @@ export default function EmployeeListPage() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (schoolUser && branchInfo) fetchEmployees();
-  }, [schoolUser, branchInfo]);
-  async function fetchEmployees(next = false) {
-    setLoading(true);
-    const ref = collection(
-      db,
-      "schools",
-      schoolUser.schoolId,
-      "branches",
-      branchInfo.id,
-      "employees"
-    );
+    if (schoolUser && branchInfo && employeeData) setEmployees(employeeData);
+  }, [schoolUser, branchInfo, employeeData]);
+  // async function fetchEmployees(next = false) {
+  //   setLoading(true);
+  //   const ref = collection(
+  //     db,
+  //     "schools",
+  //     schoolUser.schoolId,
+  //     "branches",
+  //     branchInfo.id,
+  //     "employees"
+  //   );
 
-    let q = query(
-      ref,
-      orderBy("createdAt", "desc"),
-      limit(PAGE_SIZE)
-    );
+  //   let q = query(
+  //     ref,
+  //     orderBy("createdAt", "desc"),
+  //     limit(PAGE_SIZE)
+  //   );
 
-    if (next && lastDoc) {
-      q = query(q, startAfter(lastDoc));
-    }
+  //   if (next && lastDoc) {
+  //     q = query(q, startAfter(lastDoc));
+  //   }
 
-    const snap = await getDocs(q);
+  //   const snap = await getDocs(q);
 
-    const data = snap.docs.map(d => d.data());
+  //   const data = snap.docs.map(d => d.data());
 
-    setEmployees(prev =>
-      next ? [...prev, ...data] : data
-    );
+  //   setEmployees(prev =>
+  //     next ? [...prev, ...data] : data
+  //   );
 
-    setLastDoc(snap.docs[snap.docs.length - 1] || null);
-    setLoading(false);
-  }
+  //   setLastDoc(snap.docs[snap.docs.length - 1] || null);
+  //   setLoading(false);
+  // }
 
   const filtered = employees.filter(emp =>
     [emp.name, emp.employeeId, emp.mobile]
