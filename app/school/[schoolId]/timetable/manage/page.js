@@ -362,7 +362,7 @@ export default function EditTimetablePage() {
   const classObj = classData && classData.find((c) => c.id === classId);
   return (
     <RequirePermission permission="timetable.edit">
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex flex-col gap-5 md:flex-row justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -427,13 +427,13 @@ export default function EditTimetablePage() {
         </div>
 
         {searched && (
-          <div className="rounded-xl border border-(--border) overflow-x-auto">
+          <div className="rounded-xl bg-(--bg-card) border border-(--border) overflow-x-auto">
             <div className="timetable-grid" style={{ '--days-count': DAYS.length }}>
               <div />
               {DAYS.map(d => (
                 <div
                   key={d}
-                  className="text-sm font-semibold text-center py-4 border-b-3 border-(--border) bg-(--bg)"
+                  className="text-sm font-semibold text-center py-4 border-b-3 border-(--border)"
                 >
                   {d}
                 </div>

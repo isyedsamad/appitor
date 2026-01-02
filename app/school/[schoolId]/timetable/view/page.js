@@ -89,6 +89,7 @@ export default function ViewTimetablePage() {
     setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
   }, [DAYS])
   
+  const BREAKS = timetableSettings?.breaks || [];
   const PERIODS = useMemo(() => {
     const total = timetableSettings?.totalPeriods || 0;
     return Array.from({ length: total }, (_, i) => i + 1);
@@ -255,6 +256,7 @@ export default function ViewTimetablePage() {
                     sectionName: getSection(classId, sectionId),
                     timetable: data,
                     days: DAYS,
+                    breaks: BREAKS,
                     periods: PERIODS,
                     getSubjectName,
                     getTeacherName,
@@ -318,7 +320,7 @@ export default function ViewTimetablePage() {
         <div>
           {mode === "class" && data && (
             <div className="border border-(--border) rounded-lg bg-(--bg-card) overflow-x-auto">
-            <div className={`grid ${GRID_COLS}`}>
+            <div className="timetable-grid" style={{ '--days-count': DAYS.length }}>
               <div />
               {DAYS.map(d => (
                 <div key={d} className="text-sm font-semibold text-center py-4">
@@ -360,6 +362,14 @@ export default function ViewTimetablePage() {
                             </div>
                           </div>
                         ))}
+                    </div>
+                  ))}
+                  {BREAKS.filter(b => b.afterPeriod === p).map((b, i) => (
+                    <div
+                      key={`break-${p}-${i}`}
+                      className="col-span-full text-center py-2 bg-(--status-o-bg) text-(--status-o-text) text-sm font-semibold"
+                    >
+                      {b.label} - {b.duration} min
                     </div>
                   ))}
                 </>
