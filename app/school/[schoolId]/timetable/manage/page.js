@@ -12,8 +12,10 @@ import { toast } from "react-toastify";
 import Loading from "@/components/ui/Loading";
 
 export default function EditTimetablePage() {
-  const { schoolUser, classData, setLoading } = useSchool();
+  const { schoolUser, classData, setLoading, employeeData, subjectData } = useSchool();
   const { branch } = useBranch();
+  const [teacherTimetables, setTeacherTimetables] = useState({});
+  const [conflict, setConflict] = useState(null);
 
   const [classId, setClassId] = useState("");
   const [sectionId, setSectionId] = useState("");
@@ -25,12 +27,17 @@ export default function EditTimetablePage() {
   const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [sidebar, setSidebar] = useState(null);
-  const DAYS = settings?.workingDays || [];
+  const [DAYS, setDAYS] = useState([]);
   const [GRID_COLS, setGRID_COLS] = useState('');
   useEffect(() => {
-    setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
+    if(settings) setDAYS(settings.workingDays);
+  }, [settings])
+  useEffect(() => {
+    if(settings) {
+      setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
+    }
   }, [DAYS])
-  
+  const getSectionName = (cid, sid) => classData?.find(c => c.id === cid)?.sections.find(s => s.id == sid)?.name;
   const PERIODS = useMemo(
     () =>
       Array.from(
@@ -55,23 +62,101 @@ export default function EditTimetablePage() {
       }));
     }
     return normalized;
-  };  
+  };
+  const findTeacherConflict = (teacherId, day, period) => {
+    const slots = teacherTimetables[teacherId] || [];
+    return slots.find(
+      s => s.day === day && s.period === period &&
+           !(s.classId === classId && s.sectionId === sectionId)
+    );
+  };
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setLoading(true);
+        const ref = doc(
+          db,
+          "schools",
+          schoolUser.schoolId,
+          "branches",
+          branch,
+          "timetable",
+          "items",
+          "timetableSettings",
+          "global"
+        );
+        const snap = await getDoc(ref);
+        if (!snap.exists()) {
+          toast.error("Timetable settings not found");
+          return;
+        }
+        setSettings(snap.data());
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load timetable settings");
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (schoolUser?.schoolId && branch) {
+      loadSettings();
+    }
+  }, [schoolUser?.schoolId, branch]);
+  
+  useEffect(() => {
+    if (!employeeData?.length) return;
+    const loadTeacherTimetables = async () => {
+      try {
+        setLoading(true);
+        const base = ["schools", schoolUser.schoolId, "branches", branch];
+        const snaps = await Promise.all(
+          employeeData.map(t =>
+            getDoc(
+              doc(
+                db,
+                ...base,
+                "timetable",
+                "items",
+                "teachers",
+                t.id
+              )
+            )
+          )
+        );
+        const map = {};
+        snaps.forEach((snap, i) => {
+          map[employeeData[i].id] = snap.exists()
+            ? snap.data().slots || []
+            : [];
+        });
+        setTeacherTimetables(map);
+      } catch (err) {
+        toast.error("Failed to load teacher availability");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTeacherTimetables();
+  }, [employeeData, branch]);
+
+  useEffect(() => {
+    if(employeeData) setTeachers(employeeData);
+    if(subjectData) setSubjects(subjectData);
+  }, [employeeData, subjectData])
+
   const loadData = async () => {
     if (classId == '' || sectionId == '') {
       toast.error('Select Class and Section!');
       return;
     }
+    setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
     setLoading(true);
     try {
       const base = ["schools", schoolUser.schoolId, "branches", branch];
       const [
-        settingsSnap,
         timetableSnap,
         mappingSnap,
-        teacherSnap,
-        subjectSnap,
       ] = await Promise.all([
-        getDoc(doc(db, ...base, "timetable", "items", "timetableSettings", "global")),
         getDoc(
           doc(
             db,
@@ -95,24 +180,13 @@ export default function EditTimetablePage() {
             where("sectionId", "==", sectionId)
           )
         ),
-        getDocs(collection(db, ...base, "employees")),
-        getDoc(doc(db, ...base, "subjects", "branch_subjects")),
       ]);
-      if(!settingsSnap.exists()) {
-        toast.error('Timetable Settings not found! Please set the from Menu.');
-        return;
-      }
-      setSettings(settingsSnap.data());
       setTimetable(
         timetableSnap.exists()
           ? normalizeTimetable(timetableSnap.data().days)
-          : Object.fromEntries((settingsSnap.data()?.workingDays || []).map((d) => [d, []]))
+          : Object.fromEntries((settings?.workingDays || []).map((d) => [d, []]))
       );
       setMappings(mappingSnap.docs.map((d) => d.data()));
-      setTeachers(teacherSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setSubjects(
-        subjectSnap.exists() ? subjectSnap.data().subjects || [] : []
-      );
       setSearched(true);
     } catch {
       toast.error("Failed to load timetable");
@@ -139,6 +213,7 @@ export default function EditTimetablePage() {
         p.entries?.some((e) => e.teacherId === teacherId)
     );
   };
+
   const applySingleMapping = (mapping) => {
     const { subjectId, teacherId, periodsPerWeek } = mapping;
     const used = getUsageCount(subjectId, teacherId);
@@ -148,6 +223,20 @@ export default function EditTimetablePage() {
     }
     if (!sidebar.allDays) {
       const { day, period } = sidebar;
+      const otherClassConflict = findTeacherConflict(teacherId, day, period);
+      if (otherClassConflict) {
+        setConflict({
+          teacherId,
+          subjectId,
+          day,
+          period,
+          from: {
+            classId: otherClassConflict.classId,
+            sectionId: otherClassConflict.sectionId,
+          },
+        });
+        return;
+      }
       if (!canAssign(day, period, teacherId)) {
         toast.error("Teacher already busy in this slot");
         return;
@@ -184,7 +273,66 @@ export default function EditTimetablePage() {
     });
     setSidebar(null);
   };
+
+  // const forceAssign = ({ teacherId, subjectId, day, period }) => {
+  //   setTimetable(prev => {
+  //     const copy = structuredClone(prev);
+  //     const slot = copy[day].find(p => p.period === period);
+  //     if (slot) {
+  //       slot.entries.push({ subjectId, teacherId });
+  //     } else {
+  //       copy[day].push({
+  //         period,
+  //         entries: [{ subjectId, teacherId }],
+  //       });
+  //     }
+  //     return copy;
+  //   });
+  //   setSidebar(null);
+  //   setConflict(null);
+  // };
+
+  const forceAssign = ({ teacherId, subjectId, day, period }) => {
+    setTimetable(prev => {
+      const copy = structuredClone(prev);
+      const slot = copy[day].find(p => p.period === period);
+      if (slot) {
+        slot.entries.push({ subjectId, teacherId });
+      } else {
+        copy[day].push({
+          period,
+          entries: [{ subjectId, teacherId }],
+        });
+      }
+      return copy;
+    });
+    setTeacherTimetables(prev => {
+      if (!prev[teacherId]) return prev;
   
+      return {
+        ...prev,
+        [teacherId]: prev[teacherId].filter(
+          s => !(s.day === day && s.period === period)
+        ),
+      };
+    });
+    setTeacherTimetables(prev => ({
+      ...prev,
+      [teacherId]: [
+        ...(prev[teacherId] || []),
+        {
+          classId,
+          sectionId,
+          subjectId,
+          day,
+          period,
+        },
+      ],
+    }));
+    setSidebar(null);
+    setConflict(null);
+  };
+
   const removeEntry = (day, period, index) => {
     setTimetable((prev) => ({
       ...prev,
@@ -355,6 +503,7 @@ export default function EditTimetablePage() {
         )}
 
         {sidebar && (
+          <>
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
             <div className="w-full max-w-md bg-(--bg-card) h-full py-4 px-5 space-y-4 overflow-y-auto border-l-3 border-(--primary)">
               <div className="flex justify-between items-center">
@@ -435,6 +584,54 @@ export default function EditTimetablePage() {
               })}
             </div>
           </div>
+          {conflict && (
+            <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-(--status-o-bg) text-(--status-o-text)">
+                    <AlertTriangle size={17} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Teacher Busy</h3>
+                    <p className="text-sm text-(--text-muted)">
+                      This teacher is already assigned.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm space-y-1">
+                  <p>
+                    <b className="capitalize">{teachers.find(t => t.id === conflict.teacherId)?.name}</b> is busy in
+                  </p>
+                  <p className="text-(--text-muted)">
+                    Class: <span className="font-semibold text-(--text)">{classData.find(c => c.id === conflict.from.classId)?.name} {getSectionName(conflict.from.classId, conflict.from.sectionId)}</span>
+                  </p>
+                  <p className="text-(--text-muted) capitalize">
+                    {conflict.day} • Period {conflict.period}
+                  </p>
+                </div>
+          
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    className="btn-outline"
+                    onClick={() => setConflict(null)}
+                  >
+                    Cancel
+                  </button>
+          
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
+                      setConflict(null);
+                      forceAssign(conflict);
+                    }}
+                  >
+                    Override & Replace
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          </>          
         )}
       </div>
     </RequirePermission>

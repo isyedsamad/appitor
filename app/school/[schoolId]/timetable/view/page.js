@@ -11,6 +11,7 @@ import {
   BookOpen,
   AlertCircle,
   Search,
+  FileDown,
 } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
@@ -18,6 +19,7 @@ import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { toast } from "react-toastify";
+import { exportClassTimetablePdf } from "@/lib/exports/timetable/timetableClass";
 
 const MODES = [
   { id: "class", label: "Class View", icon: Users },
@@ -96,6 +98,7 @@ export default function ViewTimetablePage() {
 
   const loadClassView = async () => {
     if (!classId || !sectionId) return;
+    setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
     try {
       setLoading(true);
       const ref = doc(
@@ -208,39 +211,64 @@ export default function ViewTimetablePage() {
           })}
         </div>
         {mode === "class" && (
-          <div className="grid md:grid-cols-5 items-end gap-3">
-            <div className="flex flex-col">
-              <p className="text-xs text-(--text-muted) font-medium">Class</p>
-              <select
-                className="input"
-                value={classId}
-                onChange={e => {
-                  setClassId(e.target.value);
-                  setSectionId("");
-                }}
-              >
-                <option value="">Select Class</option>
-                {classData && classData.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+          <div className="flex flex-col md:flex-row gap-3 md:justify-between md:items-end">
+            <div className="grid md:grid-cols-4 items-end gap-3">
+              <div className="flex flex-col">
+                <p className="text-xs text-(--text-muted) font-medium">Class</p>
+                <select
+                  className="input"
+                  value={classId}
+                  onChange={e => {
+                    setClassId(e.target.value);
+                    setSectionId("");
+                  }}
+                >
+                  <option value="">Select Class</option>
+                  {classData && classData.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <p className="text-xs text-(--text-muted) font-medium">Section</p>
+                <select
+                  value={sectionId}
+                  className="input"
+                  onChange={e => setSectionId(e.target.value)}
+                >
+                  <option value="">Select Section</option>
+                  {selectedClass?.sections.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button className="btn-primary gap-2 md:max-w-40" onClick={() => loadClassView()}>
+              <Search size={16} />Load
+              </button>
             </div>
-            <div className="flex flex-col">
-              <p className="text-xs text-(--text-muted) font-medium">Section</p>
-              <select
-                value={sectionId}
-                className="input"
-                onChange={e => setSectionId(e.target.value)}
+            {mode === "class" && data && (
+              <button
+                onClick={() =>
+                  exportClassTimetablePdf({
+                    schoolName: schoolUser.schoolName,
+                    className: getClassName(classId),
+                    sectionName: getSection(classId, sectionId),
+                    timetable: data,
+                    days: DAYS,
+                    periods: PERIODS,
+                    getSubjectName,
+                    getTeacherName,
+                  })
+                }
+                className="
+                  btn-outline flex items-center gap-2
+                  hover:bg-(--primary-soft)
+                "
               >
-                <option value="">Select Section</option>
-                {selectedClass?.sections.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            <button className="btn-primary gap-2 md:max-w-40" onClick={() => loadClassView()}>
-             <Search size={16} />Load
-            </button>
+                <FileDown size={16} className="text-red-500" />
+                Export PDF
+              </button>
+            )}
           </div>
         )}
 
@@ -491,7 +519,7 @@ export default function ViewTimetablePage() {
                               {getTeacherName(e.teacherId)}
                             </div>
                             <div className="text-sm text-(--status-a-text) font-medium flex items-center gap-1">
-                              {getClassName(e.sectionId)} {getSection(e.sectionId)} - {getSubjectName(e.subjectId)}
+                              {getClassName(e.classId)} {getSection(e.classId, e.sectionId)} - {getSubjectName(e.subjectId)}
                             </div>
                           </div>
                           <span className="

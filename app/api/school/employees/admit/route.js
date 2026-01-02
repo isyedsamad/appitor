@@ -4,6 +4,7 @@ import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
+  let authUser = null;
   try {
     const user = await verifyUser(req, "employee.manage");
     const body = await req.json();
@@ -16,7 +17,7 @@ export async function POST(req) {
     }
     const schoolCode = user.schoolCode;
     const authEmail = `${employeeId.toLowerCase()}@${schoolCode.toLowerCase()}.appitor`;
-    const authUser = await adminAuth.createUser({
+    authUser = await adminAuth.createUser({
       email: authEmail,
       password: password,
       displayName: name,
@@ -25,13 +26,6 @@ export async function POST(req) {
     const branchRef = adminDb
       .collection("branches")
       .doc(branchIds[0]);
-    // const branchSnap = await branchRef.get();
-    // if (!branchSnap.exists) {
-    //   return NextResponse.json(
-    //     { message: "Invalid branch" },
-    //     { status: 400 }
-    //   );
-    // }
     await adminDb
       .collection("schoolUsers")
       .doc(authUser.uid)
@@ -88,8 +82,15 @@ export async function POST(req) {
     });
   } catch (err) {
     console.error("ADMIT EMPLOYEE ERROR:", err);
+    if (authUser && authUser.uid) {
+      try {
+        await adminAuth.deleteUser(authUser.uid);
+      } catch (delErr) {
+        console.error("FAILED TO ROLLBACK AUTH USER:", delErr);
+      }
+    }
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Failed: " + err},
       { status: 500 }
     );
   }

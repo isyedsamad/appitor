@@ -101,6 +101,7 @@ export function SchoolProvider({ schoolId, children }) {
         uid: fbUser.uid,
         schoolId,
         currentSession: schoolData.currentSession,
+        schoolName: schoolData.name,
         schoolCode: schoolData.code,
         roleId: userData.roleId,
         roleName: roleData.name,
