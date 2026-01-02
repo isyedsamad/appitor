@@ -26,56 +26,58 @@ export async function POST(req) {
     const branchRef = adminDb
       .collection("branches")
       .doc(branchIds[0]);
-    await adminDb
-      .collection("schoolUsers")
-      .doc(authUser.uid)
-      .set({
-        uid: authUser.uid,
-        employeeId,
-        name,
-        mobile,
-        email: email || null,
-        gender: gender || null,
-        roleId,
-        role,
-        salary: salary || null,
-        schoolId: user.schoolId,
-        branchIds,
-        currentBranch: branchIds[0],
-        branchNames,
-        status: "pending",
-        createdBy: user.uid,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    await adminDb
-      .collection("schools").doc(user.schoolId)
-      .collection('branches').doc(branchIds[0])
-      .collection('employees')
-      .doc(authUser.uid)
-      .set({
-        uid: authUser.uid,
-        employeeId,
-        name,
-        password,
-        mobile,
-        email: email || null,
-        gender: gender || null,
-        roleId,
-        role,
-        salary: salary || null,
-        schoolId: user.schoolId,
-        branchIds,
-        currentBranch: branchIds[0],
-        branchNames,
-        status: "pending",
-        createdBy: user.uid,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    await branchRef.update({
+    const batch = adminDb.batch();
+    const schoolUserRef = adminDb.collection("schoolUsers").doc(authUser.uid);
+    batch.set(schoolUserRef, {
+      uid: authUser.uid,
+      employeeId,
+      name,
+      mobile,
+      email: email || null,
+      gender: gender || null,
+      roleId,
+      role,
+      salary: salary || null,
+      schoolId: user.schoolId,
+      branchIds,
+      currentBranch: branchIds[0],
+      branchNames,
+      status: "pending",
+      createdBy: user.uid,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    const employeeRef = adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(branchIds[0])
+      .collection("employees")
+      .doc(authUser.uid);
+    batch.set(employeeRef, {
+      uid: authUser.uid,
+      employeeId,
+      name,
+      password,
+      mobile,
+      email: email || null,
+      gender: gender || null,
+      roleId,
+      role,
+      salary: salary || null,
+      schoolId: user.schoolId,
+      branchIds,
+      currentBranch: branchIds[0],
+      branchNames,
+      status: "pending",
+      createdBy: user.uid,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    batch.update(branchRef, {
       employeeCounter: FieldValue.increment(1),
     });
+    await batch.commit();
     return NextResponse.json({
       success: true,
       message: "Employee admitted successfully",

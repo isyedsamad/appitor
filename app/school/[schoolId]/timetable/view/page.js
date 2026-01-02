@@ -243,7 +243,7 @@ export default function ViewTimetablePage() {
                 </select>
               </div>
               <button className="btn-primary gap-2 md:max-w-40" onClick={() => loadClassView()}>
-              <Search size={16} />Load
+                <Search size={16} />Load
               </button>
             </div>
             {mode === "class" && data && (
@@ -336,8 +336,7 @@ export default function ViewTimetablePage() {
                     className="
                       min-h-[80px] border border-(--border) p-2
                       transition-all duration-150
-                      hover:bg-(--primary-soft)
-                      hover:shadow-sm
+                      hover:bg-(--primary-soft) hover:shadow-sm
                     "
                   >
                       {(data[d] || [])
