@@ -164,6 +164,11 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 70px repeat(var(--days-count), minmax(140px, 1fr));
+}
+
 @layer base {
   body {
     @apply bg-[var(--bg)] text-[var(--text)]

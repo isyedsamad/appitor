@@ -28,15 +28,15 @@ export default function EditTimetablePage() {
   const [subjects, setSubjects] = useState([]);
   const [sidebar, setSidebar] = useState(null);
   const [DAYS, setDAYS] = useState([]);
-  const [GRID_COLS, setGRID_COLS] = useState('');
+  // const [GRID_COLS, setGRID_COLS] = useState('');
   useEffect(() => {
     if(settings) setDAYS(settings.workingDays);
   }, [settings])
-  useEffect(() => {
-    if(settings) {
-      setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
-    }
-  }, [DAYS])
+  // useEffect(() => {
+  //   if(settings) {
+  //     setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
+  //   }
+  // }, [DAYS])
   const getSectionName = (cid, sid) => classData?.find(c => c.id === cid)?.sections.find(s => s.id == sid)?.name;
   const PERIODS = useMemo(
     () =>
@@ -149,7 +149,7 @@ export default function EditTimetablePage() {
       toast.error('Select Class and Section!');
       return;
     }
-    setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
+    // setGRID_COLS(`grid-cols-[70px_repeat(${DAYS.length},minmax(140px,1fr))]`);
     setLoading(true);
     try {
       const base = ["schools", schoolUser.schoolId, "branches", branch];
@@ -428,7 +428,7 @@ export default function EditTimetablePage() {
 
         {searched && (
           <div className="rounded-xl border border-(--border) overflow-x-auto">
-            <div className={`grid ${GRID_COLS}`}>
+            <div className="timetable-grid" style={{ '--days-count': DAYS.length }}>
               <div />
               {DAYS.map(d => (
                 <div
