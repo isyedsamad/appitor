@@ -448,34 +448,103 @@ export default function ViewTimetablePage() {
           )}
 
           {mode === "period" && data && (
-            <div className="space-y-3">
-              <div className="font-semibold">
-                {day} • Period {period}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">
+                    {day} • Period {period}
+                  </h3>
+                  <p className="text-sm text-(--text-muted)">
+                    Faculty availability overview
+                  </p>
+                </div>
               </div>
-              {(data.entries || []).map((e, i) => (
-                <div
-                key={i}
-                className="
-                  p-3 rounded-lg border border-(--border)
-                  flex justify-between items-center
-                  hover:bg-(--primary-soft)
-                  transition
-                "
-              >
-                  <div>
-                    <div className="font-medium">
-                      {getTeacherName(e.teacherId)}
+              {(() => {
+                const busyEntries = data.entries || [];
+                const busyTeacherIds = busyEntries.map(e => e.teacherId);
+                const freeTeachers = employeeData.filter(
+                  t => !busyTeacherIds.includes(t.id)
+                );
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold flex items-center gap-2 text-red-500">
+                        <AlertCircle size={16} />
+                        Busy Teachers ({busyEntries.length == 0 ? busyEntries.length : busyEntries.length.toString().padStart(2, '0')})
+                      </h4>
+                      {busyEntries.length === 0 && (
+                        <div className="text-sm text-(--text-muted)">
+                          No teachers occupied in this period
+                        </div>
+                      )}
+                      {busyEntries.map((e, i) => (
+                        <div
+                          key={i}
+                          className="
+                            rounded-xl border border-(--status-a-border)
+                            bg-(--status-a-bg)
+                            p-4 flex justify-between items-center
+                          "
+                        >
+                          <div>
+                            <div className="font-semibold capitalize">
+                              {getTeacherName(e.teacherId)}
+                            </div>
+                            <div className="text-sm text-(--status-a-text) font-medium flex items-center gap-1">
+                              {getClassName(e.sectionId)} {getSection(e.sectionId)} - {getSubjectName(e.subjectId)}
+                            </div>
+                          </div>
+                          <span className="
+                            text-xs px-3 py-1 rounded-full
+                            bg-red-500 text-(--status-a-bg)
+                          ">
+                            Busy
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="text-sm text-(--text-muted)">
-                      {getSubjectName(e.subjectId)}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold flex items-center gap-2 text-green-500">
+                        <Clock size={16} />
+                        Free Teachers ({freeTeachers.length == 0 ? freeTeachers.length : freeTeachers.length.toString().padStart(2, '0')})
+                      </h4>
+                      {freeTeachers.length === 0 && (
+                        <div className="text-sm text-(--text-muted)">
+                          No free teachers available
+                        </div>
+                      )}
+                      {freeTeachers.map(t => (
+                        <div
+                          key={t.id}
+                          className="
+                            rounded-xl border border-(--status-p-border)
+                            bg-(--status-p-bg)
+                            p-4 flex justify-between items-center
+                            hover:shadow-sm transition
+                          "
+                        >
+                          <div>
+                            <div className="font-semibold capitalize">
+                              {t.name}
+                            </div>
+                            <div className="text-xs text-(--status-p-text) font-medium flex items-center gap-1">
+                              {t.employeeId}
+                            </div>
+                          </div>
+                          <span className="
+                            text-xs px-3 py-1 rounded-full
+                            bg-green-500 text-(--status-p-bg)
+                          ">
+                            Available
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <AlertCircle className="text-red-500" />
-                </div>
-              ))}
+                );
+              })()}
             </div>
           )}
-
         </div>
       </div>
     </RequirePermission>
