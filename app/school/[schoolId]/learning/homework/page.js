@@ -40,7 +40,6 @@ export default function HomeworkPage() {
   const [openAdd, setOpenAdd] = useState(false);
   const [timetableOptions, setTimetableOptions] = useState([]);
   const [timetableSettings, setTimetableSettings] = useState(null);
-  const [loadedCombo, setLoadedCombo] = useState('');
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     classId: "",
@@ -127,8 +126,6 @@ export default function HomeworkPage() {
   useEffect(() => {
     if (!openAdd || !isAdmin) return;
     if (!form.classId || !form.sectionId || !form.date) return;
-    const myLoadCombo = form.classId + '_' + form.sectionId + '_' + form.date;
-    if(loadedCombo == myLoadCombo) return;
     async function fetchClassSectionTimetable() {
       setLoading(true);
       try {
@@ -158,10 +155,6 @@ export default function HomeworkPage() {
         }
         const options = [];
         for (const segment of dayEntries) {
-          if(segment.entries.length == 0) {
-            setTimetableOptions([]);
-            return;
-          }
           for(const element of segment.entries) {
             options.push({
               period: segment.period,
@@ -173,8 +166,9 @@ export default function HomeworkPage() {
             });
           }
         }
-        setLoadedCombo(myLoadCombo);
         setTimetableOptions(options);
+      } catch(err) {
+        toast.error('Failed: ' + err);
       } finally {
         setLoading(false);
       }
@@ -214,6 +208,17 @@ export default function HomeworkPage() {
     }
   }
 
+  const closeHomework = () => {
+    setForm({
+      date: new Date().toISOString().slice(0, 10),
+      classId: "",
+      sectionId: "",
+      timetableKey: "",
+      content: "",
+    });
+    setOpenAdd(false)
+  }
+
   async function searchHomework() {
     if (!filters.classId || !filters.sectionId || !filters.date) {
       return;
@@ -229,7 +234,7 @@ export default function HomeworkPage() {
         "learning",
         "items",
         "homework",
-        `${filters.classId}_${filters.sectionId}_${filters.date}`
+        `${filters.classId}_${filters.sectionId}_${formatInputDate(filters.date)}`
       );
       const snap = await getDoc(ref);
       setHomeworkDoc(snap.exists() ? snap.data() : null);
@@ -320,32 +325,52 @@ export default function HomeworkPage() {
           </div>
         )}
         {homeworkDoc && (
-          <div className="bg-(--bg-card) border rounded-lg p-4 space-y-3">
+          <div className="grid md:grid-cols-3 gap-3">
             {homeworkDoc.items?.length === 0 && (
-              <p className="text-sm text-(--text-muted)">
-                No homework added yet
-              </p>
+              <div className="bg-(--bg-card) border border-(--border) rounded-lg p-6 text-center">
+                <p className="text-sm text-(--text-muted)">
+                  No homework added yet for this day
+                </p>
+              </div>
             )}
             {homeworkDoc.items?.map((i, idx) => (
-              <div key={idx} className="border rounded-md p-3">
-                <p className="font-medium">
-                  Period {i.period} · {i.subjectName}
-                </p>
-                <p className="text-sm text-(--text-muted)">
-                  {i.teacherName}
-                </p>
-                <p className="mt-1">{i.content}</p>
+              <div
+                key={idx}
+                className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-md"
+              >
+                <div className="flex items-center justify-between px-5 py-3 bg-(--bg)">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-(--primary-soft) text-(--primary) font-semibold">
+                      P{i.period}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-(--text)">
+                        {getSubjectName(i.subjectId)}
+                      </p>
+                      <p className="text-xs font-medium text-(--text-muted)">
+                        Period {i.period}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-1 capitalize rounded-full bg-(--bg-card) border border-(--border) text-(--text-muted)">
+                    {getTeacherName(i.teacherId)}
+                  </span>
+                </div>
+                <div className="px-5 py-4">
+                  <p className="text-sm leading-relaxed text-(--text)">
+                    {i.content}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         )}
-
         {openAdd && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm px-5 flex items-center justify-center z-50">
             <div className="bg-(--bg-card) w-full max-w-md rounded-lg">
               <div className="flex justify-between bg-(--bg) py-4 px-5 rounded-t-lg">
                 <h2 className="font-semibold">Add Homework</h2>
-                <button onClick={() => setOpenAdd(false)}>
+                <button onClick={() => closeHomework()}>
                   <X />
                 </button>
               </div>

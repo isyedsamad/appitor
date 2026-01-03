@@ -629,7 +629,7 @@ export default function EditTimetablePage() {
                   >
                     P{p}
                     <div className="text-xs text-(--text-muted) opacity-40 flex justify-center items-center gap-0 mt-1">
-                      <Plus size={12} /> Add
+                      <PlusCircle size={15} />
                     </div>
                   </div>
                   {DAYS.map(d => {

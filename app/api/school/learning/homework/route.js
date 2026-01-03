@@ -22,7 +22,9 @@ export async function POST(req) {
       );
     }
 
-    const isAdmin = user.permissions?.includes("learning.all");
+    console.log(user);
+    
+    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all");
     let classId, sectionId, teacherId;
     if (!isAdmin) {
       classId = timetable.classId;
