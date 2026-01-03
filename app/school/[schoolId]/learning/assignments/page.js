@@ -19,8 +19,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatDate } from "@/lib/dateUtils";
 import { toast } from "react-toastify";
+import { useTheme } from "next-themes";
 
 export default function AssignmentPage() {
+  const { theme } = useTheme();
   const {schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading} = useSchool();
   const { branch } = useBranch();
   const isAdmin = hasPermission(schoolUser, "learning.all", false);
@@ -41,7 +43,6 @@ export default function AssignmentPage() {
     title: "",
     description: "",
     dueDate: "",
-    maxMarks: ""
   });
 
   const getClassName = id => classData.find(c => c.id === id)?.name;
@@ -58,11 +59,16 @@ export default function AssignmentPage() {
         ...filters,
         sessionId: currentSession
       })
+      setForm({
+        ...form,
+        sessionId: currentSession
+      })
     }
   }, [sessionList, currentSession])
   
   useEffect(() => {
     if (!openAdd || isAdmin) return;
+    if(teacherOptions.length > 0) return;
     async function fetchTeacherClasses() {
       setLoading(true);
       try {
@@ -113,25 +119,17 @@ export default function AssignmentPage() {
       setLoading(false);
     }
   }
-
   async function saveAssignment() {
-    if (
-      !form.title ||
-      !form.subjectId ||
-      !form.dueDate ||
-      !form.sessionId
-    ) {
+    if (!form.title || !form.subjectId || !form.dueDate || !form.sessionId) {
       toast.error("Please fill all required fields");
       return;
     }
-
     setLoading(true);
     try {
       await secureAxios.post("/api/school/learning/assignments", {
         branch,
         ...form
       });
-
       toast.success("Assignment created successfully");
       setOpenAdd(false);
       setForm({
@@ -143,7 +141,6 @@ export default function AssignmentPage() {
         title: "",
         description: "",
         dueDate: "",
-        maxMarks: ""
       });
 
       searchAssignments();
@@ -153,6 +150,56 @@ export default function AssignmentPage() {
       setLoading(false);
     }
   }
+
+  function formatDueDate(ts) {
+    if (!ts) return "-";
+    const date =
+      typeof ts.toDate === "function"
+        ? ts.toDate()
+        : new Date(ts);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  
+  function isExpired(ts) {
+    if (!ts) return false;
+    const date =
+      typeof ts.toDate === "function"
+        ? ts.toDate()
+        : new Date(ts);
+    return date.getTime() < Date.now();
+  }
+
+  async function handleDeleteAssignment(assignmentId) {
+    if (!confirm("Are you sure you want to delete this assignment?")) return;
+    setLoading(true);
+    try {
+      await secureAxios.delete(
+        "/api/school/learning/assignments",
+        {
+          data: {
+            branch,
+            sessionId: filters.sessionId,
+            classId: filters.classId,
+            sectionId: filters.sectionId,
+            assignmentId,
+          },
+        }
+      );
+      toast.success("Assignment deleted successfully");
+      searchAssignments();
+    } catch (err) {
+      toast.error(
+        err?.response?.data?.message || "Failed to delete assignment"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }  
+  
   return (
     <RequirePermission permission="learning.manage">
       <div className="space-y-5">
@@ -192,7 +239,7 @@ export default function AssignmentPage() {
             </select>
           </div>
           <div className="flex flex-col">
-            <p className="text-(--text-muted) font-medium text-sm">Session</p>
+            <p className="text-(--text-muted) font-medium text-sm">Class</p>
             <select
               className="input"
               value={filters.classId}
@@ -200,14 +247,14 @@ export default function AssignmentPage() {
                 setFilters({ ...filters, classId: e.target.value, sectionId: "" })
               }
             >
-              <option value="">Class</option>
+              <option value="">Select Class</option>
               {classData && classData.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col">
-            <p className="text-(--text-muted) font-medium text-sm">Session</p>
+            <p className="text-(--text-muted) font-medium text-sm">Section</p>
             <select
               className="input"
               disabled={!filters.classId}
@@ -216,7 +263,7 @@ export default function AssignmentPage() {
                 setFilters({ ...filters, sectionId: e.target.value })
               }
             >
-              <option value="">Section</option>
+              <option value="">Select Section</option>
               {(classData && classData.find(c => c.id === filters.classId)?.sections || []).map(
                 s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -237,31 +284,58 @@ export default function AssignmentPage() {
           </div>
         )}
         {assignmentDoc && (
-          <div className="grid md:grid-cols-3 gap-4">
-            {(assignmentDoc.items || []).map(a => (
-              <div
-                key={a.assignmentId}
-                className="bg-(--bg-card) border border-(--border) rounded-xl p-5 hover:shadow-md transition"
-              >
-                <div className="flex justify-between mb-2">
-                  <h3 className="font-semibold">{a.title}</h3>
-                  <span className="text-xs px-2 py-1 rounded-full bg-(--primary-soft) text-(--primary)">
-                    {getSubjectName(a.subjectId)}
-                  </span>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(assignmentDoc.items || []).map((a) => {
+              const expired = isExpired(a.dueDate);
+              const canDelete = hasPermission(schoolUser, "learning.all", false);
+
+              return (
+                <div
+                  key={a.assignmentId}
+                  className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-lg"
+                >
+                  <div className="flex justify-between items-start px-5 py-4 bg-(--bg)">
+                    <div>
+                      <h3 className="font-semibold text-(--text) leading-tight">
+                        {a.title}
+                      </h3>
+                      <p className="text-xs text-(--text-muted)">
+                        {getSubjectName(a.subjectId)}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-medium px-2.5 py-1 rounded-full 
+                        ${!expired ? `${theme == 'dark' ? 'bg-green-950 text-green-600' : 'bg-green-100 text-green-600'}` : `${theme == 'dark' ? 'bg-red-950 text-red-600' : 'bg-red-100 text-red-600'}`}
+                      `}
+                    >
+                      {expired ? "Expired" : "Active"}
+                    </span>
+                  </div>
+                  <div className="px-5 py-4 space-y-3">
+                    <p className="text-sm text-(--text-muted) flex items-center gap-2">
+                      <CalendarClock size={14} />
+                      Due on <span className="font-medium">{formatDueDate(a.dueDate)}</span>
+                    </p>
+                    <p className="text-sm text-(--text) line-clamp-4">
+                      {a.description || "No description provided"}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-center px-5 py-3 border-t border-(--border)">
+                    <p className="text-xs text-(--text-muted)">
+                      {getTeacherName(a.teacherId)}
+                    </p>
+                    {canDelete && (
+                      <button
+                        onClick={() => handleDeleteAssignment(a.assignmentId)}
+                        className="text-xs font-medium text-(--danger) hover:underline"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
-
-                <p className="text-sm text-(--text-muted) mb-2 flex items-center gap-1">
-                  <CalendarClock size={14} />
-                  Due {formatDate(a.dueDate)}
-                </p>
-
-                <p className="text-sm line-clamp-3">{a.description}</p>
-
-                <div className="mt-3 text-xs text-(--text-muted)">
-                  {getTeacherName(a.teacherId)} · {a.maxMarks || "-"} marks
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {openAdd && (
@@ -371,17 +445,6 @@ export default function AssignmentPage() {
                     value={form.dueDate}
                     onChange={(e) =>
                       setForm({ ...form, dueDate: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <p className="text-(--text-muted) font-medium text-sm">Max Marks (optional)</p>
-                  <input
-                    className="input"
-                    placeholder="i.e. 50"
-                    value={form.maxMarks}
-                    onChange={(e) =>
-                      setForm({ ...form, maxMarks: e.target.value })
                     }
                   />
                 </div>
