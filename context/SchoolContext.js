@@ -103,6 +103,7 @@ export function SchoolProvider({ schoolId, children }) {
       setSchoolUser({
         ...userData,
         uid: fbUser.uid,
+        employeeId: userData.employeeId ? userData.employeeId : '',
         schoolId,
         currentSession: schoolData.currentSession,
         schoolName: schoolData.name,

@@ -214,44 +214,198 @@ export default function EditTimetablePage() {
     );
   };
 
+  // const applySingleMapping = (mapping) => {
+  //   const { subjectId, teacherId, periodsPerWeek } = mapping;
+  //   const used = getUsageCount(subjectId, teacherId);
+  //   if (used >= periodsPerWeek) {
+  //     toast.error("Weekly limit reached");
+  //     return;
+  //   }
+  //   if (!sidebar.allDays) {
+  //     const { day, period } = sidebar;
+  //     const otherClassConflict = findTeacherConflict(teacherId, day, period);
+  //     if (otherClassConflict) {
+  //       setConflict({
+  //         teacherId,
+  //         subjectId,
+  //         day,
+  //         period,
+  //         from: {
+  //           classId: otherClassConflict.classId,
+  //           sectionId: otherClassConflict.sectionId,
+  //         },
+  //       });
+  //       return;
+  //     }
+  //     if (!canAssign(day, period, teacherId)) {
+  //       toast.error("Teacher already busy in this slot");
+  //       return;
+  //     }
+  //   }
+  //   setTimetable(prev => {
+  //     const copy = structuredClone(prev);
+  //     if (sidebar.allDays) {
+  //       DAYS.forEach(day => {
+  //         if (!canAssign(day, sidebar.period, teacherId)) return;
+  //         const slot = copy[day].find(p => p.period === sidebar.period);
+  //         if (slot) {
+  //           slot.entries.push({ subjectId, teacherId });
+  //         } else {
+  //           copy[day].push({
+  //             period: sidebar.period,
+  //             entries: [{ subjectId, teacherId }],
+  //           });
+  //         }
+  //       });
+  //     } else {
+  //       const { day, period } = sidebar;
+  //       const slot = copy[day].find(p => p.period === period);
+  //       if (slot) {
+  //         slot.entries.push({ subjectId, teacherId });
+  //       } else {
+  //         copy[day].push({
+  //           period,
+  //           entries: [{ subjectId, teacherId }],
+  //         });
+  //       }
+  //     }
+  //     return copy;
+  //   });
+  //   setSidebar(null);
+  // };
+
+  // const applySingleMapping = (mapping) => {
+  //   const { subjectId, teacherId, periodsPerWeek } = mapping;
+  //   const used = getUsageCount(subjectId, teacherId);
+  //   if (used >= periodsPerWeek) {
+  //     toast.error("Weekly limit reached");
+  //     return;
+  //   }
+  //   if (sidebar.allDays) {
+  //     for (const d of DAYS) {
+  //       const conflict = findTeacherConflict(teacherId, d, sidebar.period);
+  //       if (conflict) {
+  //         setConflict({
+  //           teacherId,
+  //           subjectId,
+  //           day: d,
+  //           period: sidebar.period,
+  //           from: {
+  //             classId: conflict.classId,
+  //             sectionId: conflict.sectionId,
+  //           },
+  //           allDays: true,
+  //         });
+  //         return;
+  //       }
+  //     }
+  //   } else {
+  //     const { day, period } = sidebar;
+  //     const conflict = findTeacherConflict(teacherId, day, period);
+  //     if (conflict) {
+  //       setConflict({
+  //         teacherId,
+  //         subjectId,
+  //         day,
+  //         period,
+  //         from: {
+  //           classId: conflict.classId,
+  //           sectionId: conflict.sectionId,
+  //         },
+  //       });
+  //       return;
+  //     }
+  //   }
+  //   setTimetable(prev => {
+  //     const copy = structuredClone(prev);
+  //     if (sidebar.allDays) {
+  //       DAYS.forEach(day => {
+  //         const slot = copy[day].find(p => p.period === sidebar.period);
+  //         if (slot) {
+  //           slot.entries.push({ subjectId, teacherId });
+  //         } else {
+  //           copy[day].push({
+  //             period: sidebar.period,
+  //             entries: [{ subjectId, teacherId }],
+  //           });
+  //         }
+  //       });
+  //     } else {
+  //       const { day, period } = sidebar;
+  //       const slot = copy[day].find(p => p.period === period);
+  //       if (slot) {
+  //         slot.entries.push({ subjectId, teacherId });
+  //       } else {
+  //         copy[day].push({
+  //           period,
+  //           entries: [{ subjectId, teacherId }],
+  //         });
+  //       }
+  //     }
+  //     return copy;
+  //   });
+  //   setSidebar(null);
+  // };
+
+
   const applySingleMapping = (mapping) => {
     const { subjectId, teacherId, periodsPerWeek } = mapping;
+  
     const used = getUsageCount(subjectId, teacherId);
     if (used >= periodsPerWeek) {
       toast.error("Weekly limit reached");
       return;
     }
-    if (!sidebar.allDays) {
+    if (sidebar.allDays) {
+      const conflicts = [];
+  
+      for (const d of DAYS) {
+        const c = findTeacherConflict(teacherId, d, sidebar.period);
+        if (c) {
+          conflicts.push({
+            day: d,
+            classId: c.classId,
+            sectionId: c.sectionId,
+          });
+        }
+      }
+      if (conflicts.length > 0) {
+        setConflict({
+          teacherId,
+          subjectId,
+          period: sidebar.period,
+          allDays: true,
+          conflicts,
+        });
+        return;
+      }
+    }else {
       const { day, period } = sidebar;
-      const otherClassConflict = findTeacherConflict(teacherId, day, period);
-      if (otherClassConflict) {
+      const c = findTeacherConflict(teacherId, day, period);
+      if (c) {
         setConflict({
           teacherId,
           subjectId,
           day,
           period,
           from: {
-            classId: otherClassConflict.classId,
-            sectionId: otherClassConflict.sectionId,
+            classId: c.classId,
+            sectionId: c.sectionId,
           },
+          allDays: false,
         });
-        return;
-      }
-      if (!canAssign(day, period, teacherId)) {
-        toast.error("Teacher already busy in this slot");
         return;
       }
     }
     setTimetable(prev => {
       const copy = structuredClone(prev);
       if (sidebar.allDays) {
-        DAYS.forEach(day => {
-          if (!canAssign(day, sidebar.period, teacherId)) return;
-          const slot = copy[day].find(p => p.period === sidebar.period);
+        DAYS.forEach(d => {
+          const slot = copy[d].find(p => p.period === sidebar.period);
           if (slot) {
             slot.entries.push({ subjectId, teacherId });
           } else {
-            copy[day].push({
+            copy[d].push({
               period: sidebar.period,
               entries: [{ subjectId, teacherId }],
             });
@@ -288,50 +442,73 @@ export default function EditTimetablePage() {
   //     }
   //     return copy;
   //   });
+  //   setTeacherTimetables(prev => {
+  //     if (!prev[teacherId]) return prev;
+  
+  //     return {
+  //       ...prev,
+  //       [teacherId]: prev[teacherId].filter(
+  //         s => !(s.day === day && s.period === period)
+  //       ),
+  //     };
+  //   });
+  //   setTeacherTimetables(prev => ({
+  //     ...prev,
+  //     [teacherId]: [
+  //       ...(prev[teacherId] || []),
+  //       {
+  //         classId,
+  //         sectionId,
+  //         subjectId,
+  //         day,
+  //         period,
+  //       },
+  //     ],
+  //   }));
   //   setSidebar(null);
   //   setConflict(null);
   // };
 
-  const forceAssign = ({ teacherId, subjectId, day, period }) => {
+  const forceAssign = ({ teacherId, subjectId, day, period, allDays }) => {
+    const daysToApply = allDays ? DAYS : [day];
     setTimetable(prev => {
       const copy = structuredClone(prev);
-      const slot = copy[day].find(p => p.period === period);
-      if (slot) {
-        slot.entries.push({ subjectId, teacherId });
-      } else {
-        copy[day].push({
-          period,
-          entries: [{ subjectId, teacherId }],
-        });
-      }
+      daysToApply.forEach(d => {
+        copy[d] = copy[d].map(p =>
+          p.period === period
+            ? { ...p, entries: p.entries.filter(e => e.teacherId !== teacherId) }
+            : p
+        );
+        const slot = copy[d].find(p => p.period === period);
+        if (slot) {
+          slot.entries.push({ subjectId, teacherId });
+        } else {
+          copy[d].push({
+            period,
+            entries: [{ subjectId, teacherId }],
+          });
+        }
+      });
       return copy;
-    });
-    setTeacherTimetables(prev => {
-      if (!prev[teacherId]) return prev;
-  
-      return {
-        ...prev,
-        [teacherId]: prev[teacherId].filter(
-          s => !(s.day === day && s.period === period)
-        ),
-      };
     });
     setTeacherTimetables(prev => ({
       ...prev,
       [teacherId]: [
-        ...(prev[teacherId] || []),
-        {
+        ...(prev[teacherId] || []).filter(
+          s => !(s.period === period && daysToApply.includes(s.day))
+        ),
+        ...daysToApply.map(d => ({
           classId,
           sectionId,
           subjectId,
-          day,
+          day: d,
           period,
-        },
+        })),
       ],
     }));
     setSidebar(null);
     setConflict(null);
-  };
+  };  
 
   const removeEntry = (day, period, index) => {
     setTimetable((prev) => ({
@@ -360,6 +537,11 @@ export default function EditTimetablePage() {
     }
   };
   const classObj = classData && classData.find((c) => c.id === classId);
+  useEffect(() => {
+    console.log(conflict);
+    
+  }, [conflict])
+  
   return (
     <RequirePermission permission="timetable.edit">
       <div className="space-y-5">
@@ -584,7 +766,7 @@ export default function EditTimetablePage() {
               })}
             </div>
           </div>
-          {conflict && (
+          {/* {conflict && (
             <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
                 <div className="flex items-center gap-3">
@@ -622,6 +804,81 @@ export default function EditTimetablePage() {
                     className="btn-primary"
                     onClick={() => {
                       setConflict(null);
+                      forceAssign(conflict);
+                    }}
+                  >
+                    Override & Replace
+                  </button>
+                </div>
+              </div>
+            </div>
+          )} */}
+          {conflict && (
+            <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-(--status-o-bg) text-(--status-o-text)">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Teacher Busy</h3>
+                    <p className="text-sm text-(--text-muted)">
+                      Scheduling conflict detected
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm space-y-2">
+                  <p>
+                    <b className="capitalize">
+                      {teachers.find(t => t.id === conflict.teacherId)?.name}
+                    </b>{" "}
+                    is already assigned in the following slot(s):
+                  </p>
+                  {!conflict.allDays && (
+                    <div className="rounded-lg border border-(--border) p-3 bg-(--bg)">
+                      <p className="font-medium">
+                        {classData.find(c => c.id === conflict.from.classId)?.name}{" "}
+                        {getSectionName(conflict.from.classId, conflict.from.sectionId)}
+                      </p>
+                      <p className="text-(--text-muted)">
+                        {conflict.day} • Period {conflict.period}
+                      </p>
+                    </div>
+                  )}
+                  {conflict.allDays && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {conflict.conflicts.map((c, i) => (
+                        <div
+                          key={i}
+                          className="rounded-lg border border-(--border) p-3 bg-(--bg) flex justify-between items-center"
+                        >
+                          <div>
+                            <p className="font-medium">
+                              {classData.find(x => x.id === c.classId)?.name}{" "}
+                              {getSectionName(c.classId, c.sectionId)}
+                            </p>
+                            <p className="text-(--text-muted) capitalize">
+                              {c.day} • Period {conflict.period}
+                            </p>
+                          </div>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                            Busy
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    className="btn-outline"
+                    onClick={() => setConflict(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn-primary"
+                    onClick={() => {
                       forceAssign(conflict);
                     }}
                   >
