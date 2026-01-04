@@ -292,7 +292,7 @@ export default function AssignmentPage() {
               return (
                 <div
                   key={a.assignmentId}
-                  className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-lg"
+                  className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-sm"
                 >
                   <div className="flex justify-between items-start px-5 py-4 bg-(--bg)">
                     <div>
