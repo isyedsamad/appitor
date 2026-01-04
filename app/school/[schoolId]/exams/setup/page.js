@@ -321,7 +321,7 @@ export default function ExamSetupPage() {
               <div className="pt-4 pb-6 px-5 space-y-2 max-h-[75dvh] overflow-y-auto">
                 {searched && terms.filter(t => t.id == selectedTerm).map(t => 
                   <>
-                    <div className="flex justify-between items-start">
+                    <div key={t} className="flex justify-between items-start">
                       <div>
                         <h3 className="text-lg font-semibold text(--text)">
                           {t.name}

@@ -192,7 +192,7 @@ export default function MarksEntryPage() {
             </p>
           </div>
         </div>
-        <div className="grid md:grid-cols-6 gap-3 md:items-end">
+        <div className="grid md:grid-cols-6 gap-2 md:items-end">
           <Select
             label="Session"
             value={filters.session}
@@ -235,10 +235,10 @@ export default function MarksEntryPage() {
               <table className="w-full text-[13px] border-collapse">
                 <thead className="sticky top-0 z-20 bg-(--bg)">
                   <tr className="border-b border-(--border)">
-                    <th className="px-3 py-2 text-left font-semibold w-[60px]">
+                    <th className="px-3 py-2 text-left font-semibold">
                       Roll
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold min-w-[180px]">
+                    <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[180px]">
                       Student
                     </th>
                     {setups.map(s => (
@@ -257,10 +257,10 @@ export default function MarksEntryPage() {
                       </th>
                     ))}
 
-                    <th className="px-3 py-2 text-center font-semibold min-w-[90px]">
+                    <th className="px-3 py-2 text-center font-semibold min-w-[70px]">
                       Total
                     </th>
-                    <th className="px-3 py-2 text-center font-semibold min-w-[90px]">
+                    <th className="px-3 py-2 text-center font-semibold min-w-[70px]">
                       Result
                     </th>
                   </tr>
@@ -273,14 +273,19 @@ export default function MarksEntryPage() {
                     let gradeBucket = [];
 
                     setups.forEach(s => {
-                      const val = marks[`${stu.id}_${s.id}`];
-                      if (s.markingType === "marks" && val !== "") {
-                        totalMarks += Number(val || 0);
-                        maxTotal += Number(s.maxMarks || 0);
-                        hasMarks = true;
+                      const key = `${stu.id}_${s.id}`;
+                      const val = marks[key];
+                      if (s.markingType === "marks") {
+                        if (val !== undefined && val !== "" && !isNaN(val)) {
+                          totalMarks += Number(val);
+                          maxTotal += Number(s.maxMarks || 0);
+                          hasMarks = true;
+                        }
                       }
-                      if (s.markingType === "grades" && val) {
-                        gradeBucket.push(val);
+                      if (s.markingType === "grades") {
+                        if (val !== undefined && val !== "") {
+                          gradeBucket.push(val);
+                        }
                       }
                     });
                     const percentage =
@@ -305,7 +310,7 @@ export default function MarksEntryPage() {
                           ${rowIndex % 2 === 0 ? "bg-(--bg-card)" : "bg-(--bg)"}
                         `}
                       >
-                        <td className="px-3 py-2 font-medium">
+                        <td className="px-3 py-2 font-medium text-center">
                           {stu.rollNo
                             ? stu.rollNo.toString().padStart(2, "0")
                             : "-"}
