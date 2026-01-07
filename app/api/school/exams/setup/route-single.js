@@ -6,21 +6,37 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "exam.create");
-    const isAdmin = user.permissions?.includes("*") || user.permissions?.includes("exam.create");
+    const isAdmin =
+      user.permissions?.includes("*") ||
+      user.permissions?.includes("exam.create");
     if (!isAdmin) {
       return NextResponse.json(
         { message: "You are not allowed to create exam setup" },
         { status: 403 }
       );
     }
+
     const body = await req.json();
-    const { branch, session, termId, classId, sectionId, rows } = body;
-    if (!branch || !session || !termId || !classId || !sectionId || !Array.isArray(rows) || rows.length === 0) {
+    const { branch, session, termId, classId, sectionId, subjectId, examDate, markingType, maxMarks } = body;
+    if (!branch || !session || !termId || !classId || !sectionId || !subjectId || !examDate || !markingType) {
       return NextResponse.json(
-        { message: "Invalid bulk setup payload" },
+        { message: "All fields are required" },
         { status: 400 }
       );
     }
+    if (!["grades", "marks"].includes(markingType)) {
+      return NextResponse.json(
+        { message: "Invalid marking type" },
+        { status: 400 }
+      );
+    }
+    if (markingType === "marks" && (!maxMarks || Number(maxMarks) <= 0)) {
+      return NextResponse.json(
+        { message: "Maximum marks is required for marks-based exams" },
+        { status: 400 }
+      );
+    }
+
     const setupRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -29,41 +45,42 @@ export async function POST(req) {
       .collection("exams")
       .doc("items")
       .collection("exam_setups");
-    const batch = adminDb.batch();
-    const now = FieldValue.serverTimestamp();
-    for (const row of rows) {
-      const { subjectId, examDate, markingType, maxMarks } = row;
-      if (!subjectId || !examDate || !markingType) continue;
-      if (!["grades", "marks"].includes(markingType)) continue;
-      if (markingType === "marks" && (!maxMarks || Number(maxMarks) <= 0)) continue;
-      const docId = `${session}_${termId}_${classId}_${sectionId}_${subjectId}`;
-      const docRef = setupRef.doc(docId);
-      batch.set(
-        docRef,
-        {
-          session,
-          termId,
-          classId,
-          sectionId,
-          subjectId,
-          examDate,
-          markingType,
-          maxMarks: markingType === "marks" ? Number(maxMarks) : null,
-          updatedAt: now,
-          updatedBy: user.uid,
-          createdAt: FieldValue.serverTimestamp(),
-          createdBy: user.uid
-        },
-        { merge: true }
+
+    const dupSnap = await setupRef
+      .where("session", "==", session)
+      .where("termId", "==", termId)
+      .where("classId", "==", classId)
+      .where("sectionId", "==", sectionId)
+      .where("subjectId", "==", subjectId)
+      .limit(1)
+      .get();
+
+    if (!dupSnap.empty) {
+      return NextResponse.json(
+        { message: "Exam setup already exists for this class & subject" },
+        { status: 409 }
       );
     }
-    await batch.commit();
+
+    const docRef = setupRef.doc();
+    await docRef.set({
+      session,
+      termId,
+      classId,
+      sectionId,
+      subjectId,
+      examDate,
+      markingType,
+      maxMarks: markingType === "marks" ? Number(maxMarks) : null,
+      createdAt: FieldValue.serverTimestamp(),
+      createdBy: user.uid
+    });
     return NextResponse.json(
-      { message: "Exam setups saved successfully" },
-      { status: 200 }
+      { message: "Exam setup saved successfully" },
+      { status: 201 }
     );
   } catch (err) {
-    console.error("EXAM SETUP BULK UPSERT ERROR:", err);
+    console.error("EXAM SETUP CREATE ERROR:", err);
     return NextResponse.json(
       { message: err.message || "Internal server error" },
       { status: 500 }
@@ -71,11 +88,12 @@ export async function POST(req) {
   }
 }
 
-
 export async function PUT(req) {
   try {
     const user = await verifyUser(req, "exam.create");
-    const isAdmin = user.permissions?.includes("*") || user.permissions?.includes("exam.create");
+    const isAdmin =
+      user.permissions?.includes("*") ||
+      user.permissions?.includes("exam.create");
     if (!isAdmin) {
       return NextResponse.json(
         { message: "You are not allowed to update exam setup" },
@@ -136,6 +154,7 @@ export async function PUT(req) {
     );
   }
 }
+
 
 export async function DELETE(req) {
   try {

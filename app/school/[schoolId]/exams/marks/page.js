@@ -347,9 +347,18 @@ export default function MarksEntryPage() {
                                   className="input text-center"
                                   placeholder="-"
                                   value={marks[key] || ""}
-                                  onChange={e =>
-                                    updateMark(stu.id, s.id, e.target.value)
-                                  }
+                                  onChange={e => {
+                                    let val = e.target.value;
+                                    if (val === "") {
+                                      updateMark(stu.id, s.id, "");
+                                      return;
+                                    }
+                                    val = Number(val);
+                                    if (isNaN(val)) return;
+                                    if (val < 0) val = 0;
+                                    if (val > s.maxMarks) val = s.maxMarks;
+                                    updateMark(stu.id, s.id, val);
+                                  }}
                                 />
                               )}
                             </td>

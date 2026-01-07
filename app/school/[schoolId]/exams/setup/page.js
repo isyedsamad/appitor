@@ -25,12 +25,15 @@ export default function ExamSetupPage() {
   const { schoolUser, sessionList, classData, subjectData, setLoading } = useSchool();
   const { branch } = useBranch();
   const [editId, setEditId] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [setups, setSetups] = useState([]);
   const [terms, setTerms] = useState([]);
   const [selectedSession, setSelectedSession] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [searched, setSearched] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
+  const [mappedSubjects, setMappedSubjects] = useState([]);
+  const [bulkRows, setBulkRows] = useState([]);
   const [form, setForm] = useState({
     classId: "",
     sectionId: "",
@@ -47,6 +50,23 @@ export default function ExamSetupPage() {
     subjectData.find(s => s.id === id)?.name;
   const getTeacherName = id =>
     employeeData.find(t => t.id === id)?.name;
+
+  function mergeSetupWithMapping(mapping, setups) {
+    const setupMap = {};
+    setups.forEach(s => {
+      setupMap[s.subjectId] = s;
+    });
+    return mapping.map(m => {
+      const existing = setupMap[m.subjectId];
+      return {
+        subjectId: m.subjectId,
+        teacherId: m.teacherId,
+        examDate: existing?.examDate || "",
+        markingType: existing?.markingType || "grades",
+        maxMarks: existing?.maxMarks || ""
+      };
+    });
+  }  
 
   async function fetchTerms(session) {
     if (!session) {
@@ -74,7 +94,7 @@ export default function ExamSetupPage() {
   }
 
   async function fetchSetups() {
-    if (!selectedSession || !selectedTerm) return;
+    if (!selectedSession || !selectedTerm || !form.classId || !form.sectionId) return;
     setLoading(true);
     const q = query(
       collection(
@@ -89,6 +109,8 @@ export default function ExamSetupPage() {
       ),
       where("session", "==", selectedSession),
       where("termId", "==", selectedTerm),
+      where("classId", "==", form.classId),
+      where("sectionId", "==", form.sectionId),
       orderBy("examDate", "asc")
     );
     const snap = await getDocs(q);
@@ -97,70 +119,118 @@ export default function ExamSetupPage() {
     setLoading(false);
   }
 
-  async function saveSetup() {
-    const { classId, sectionId, subjectId, examDate, markingType, maxMarks } = form;
-    if (!classId || !sectionId || !subjectId || !examDate) {
-      toast.error("All fields are required");
-      return;
+  async function fetchMappedSubjects(classId, sectionId, mode = "add") {
+    if (!classId || !sectionId) return;
+    setLoading(true);
+    try {
+      const mapQ = query(
+        collection(
+          db,
+          "schools",
+          schoolUser.schoolId,
+          "branches",
+          branch,
+          "timetable",
+          "items",
+          "subjectTeacherMapping"
+        ),
+        where("classId", "==", classId),
+        where("sectionId", "==", sectionId)
+      );
+      const mapSnap = await getDocs(mapQ);
+      const mapping = mapSnap.docs.map(d => ({
+        subjectId: d.data().subjectId,
+        teacherId: d.data().teacherId
+      }));
+      let rows = mapping;
+      if (mode === "edit") {
+        rows = mergeSetupWithMapping(mapping, setups);
+        setIsEditMode(true);
+      } else {
+        rows = mapping.map(m => ({
+          ...m,
+          examDate: "",
+          markingType: "grades",
+          maxMarks: ""
+        }));
+        setIsEditMode(false);
+      }
+      setBulkRows(rows);
+      setOpenAdd(true);
+    } finally {
+      setLoading(false);
     }
-    if (markingType === "marks" && !maxMarks) {
-      toast.error("Maximum marks required");
+  }  
+
+  async function saveBulkSetup() {
+    const { classId, sectionId } = form;
+    if (!classId || !sectionId || !selectedTerm || !selectedSession) {
+      toast.error("Class, section, session and term are required");
       return;
     }
     const term = terms.find(t => t.id === selectedTerm);
-    if (
-      new Date(examDate) < new Date(term.startDate) ||
-      new Date(examDate) > new Date(term.endDate)
-    ) {
-      toast.error("Exam Date should be within the exam period!");
+    if (!term) {
+      toast.error("Invalid exam term");
+      return;
+    }
+    const validRows = [];
+    const invalidSubjects = [];
+    bulkRows.forEach(r => {
+      // if (!r.examDate) {
+      //   invalidSubjects.push(r.subjectId);
+      //   return;
+      // }
+      const examDateObj = new Date(r.examDate);
+      if (
+        examDateObj < new Date(term.startDate) ||
+        examDateObj > new Date(term.endDate)
+      ) {
+        invalidSubjects.push(r.subjectId);
+        return;
+      }
+      if (r.markingType === "marks") {
+        if (!r.maxMarks || Number(r.maxMarks) <= 0) {
+          invalidSubjects.push(r.subjectId);
+          return;
+        }
+      }
+      validRows.push({
+        subjectId: r.subjectId,
+        examDate: r.examDate,
+        markingType: r.markingType,
+        maxMarks:
+          r.markingType === "marks" ? Number(r.maxMarks) : null
+      });
+    });
+    if (validRows.length === 0) {
+      toast.error("Please complete exam setup for at least one subject");
+      return;
+    }
+    if (invalidSubjects.length > 0) {
+      toast.error("Some subjects have invalid date selected or incomplete data");
       return;
     }
     setLoading(true);
     try {
-      if (editId) {
-        await secureAxios.put("/api/school/exams/setup", {
-          id: editId,
-          branch,
-          session: selectedSession,
-          termId: selectedTerm,
-          classId,
-          sectionId,
-          subjectId,
-          examDate,
-          markingType,
-          maxMarks: markingType === "marks" ? Number(maxMarks) : null
-        });
-      } else {
-        await secureAxios.post("/api/school/exams/setup", {
-          branch,
-          session: selectedSession,
-          termId: selectedTerm,
-          classId,
-          sectionId,
-          subjectId,
-          examDate,
-          markingType,
-          maxMarks: markingType === "marks" ? Number(maxMarks) : null
-        });
-      }      
-      toast.success("Exam Setup Saved!");
-      setEditId(null);
-      setOpenAdd(false);
-      setForm({
-        classId: "",
-        sectionId: "",
-        subjectId: "",
-        examDate: "",
-        markingType: "grades",
-        maxMarks: ""
+      await secureAxios.post("/api/school/exams/setup", {
+        branch,
+        session: selectedSession,
+        termId: selectedTerm,
+        classId,
+        sectionId,
+        rows: validRows
       });
+      toast.success("Exam setup saved successfully");
+      setOpenAdd(false);
+      setEditId(null);
+      setBulkRows([]);
       fetchSetups();
-    } catch(err) {
-      toast.error('Failed: ' + err);
+    } catch (err) {
+      toast.error("Failed: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
-  }
+  }  
 
   async function deleteSetup(id) {
     if (!confirm("Delete this exam setup?")) return;
@@ -189,7 +259,7 @@ export default function ExamSetupPage() {
       maxMarks: s.maxMarks || ""
     });
     setOpenAdd(true);
-  }  
+  }
 
   return (
     <RequirePermission permission="exam.create">
@@ -208,11 +278,11 @@ export default function ExamSetupPage() {
           </div>
           {searched && (
             <button
-              onClick={() => setOpenAdd(true)}
+              onClick={() => fetchMappedSubjects(form.classId, form.sectionId, "edit")}
               className="btn-primary flex items-center gap-2"
             >
               <Plus size={15} />
-              Add Setup
+              {setups.length == 0 ? "Add Setup" : "Edit Setup"}
             </button>
           )}
         </div>
@@ -222,6 +292,7 @@ export default function ExamSetupPage() {
             value={selectedSession}
             options={sessionList}
             onChange={v => {
+              setSearched(false);
               setSelectedSession(v);
               setSelectedTerm("");
               fetchTerms(v);
@@ -231,7 +302,30 @@ export default function ExamSetupPage() {
             label="Exam Term"
             value={selectedTerm}
             options={terms}
-            onChange={v => setSelectedTerm(v)}
+            onChange={v => {
+              setSearched(false);
+              setSelectedTerm(v)
+            }}
+          />
+          <Select
+            label="Class"
+            value={form.classId}
+            options={classData && classData}
+            onChange={v => {
+              setSearched(false);
+              setForm({ ...form, classId: v, sectionId: "" });
+            }}
+          />
+          <Select
+            label="Section"
+            value={form.sectionId}
+            options={
+              classData && classData.find(c => c.id === form.classId)?.sections || []
+            }
+            onChange={v => {
+              setSearched(false);
+              setForm({ ...form, sectionId: v });
+            }}
           />
           <button onClick={fetchSetups} className="btn-primary flex gap-2">
             <Search size={15} />
@@ -261,7 +355,9 @@ export default function ExamSetupPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => openEditSetup(s)}
+                        onClick={() =>
+                          fetchMappedSubjects(form.classId, form.sectionId, "edit")
+                        }
                         className="action-btn hover:text-(--status-l-text)"
                         title="Edit"
                       >
@@ -310,10 +406,10 @@ export default function ExamSetupPage() {
 
         {openAdd && (
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4">
-            <div className="bg-(--bg-card) w-full max-w-md rounded-xl border border-(--border)">
+            <div className="bg-(--bg-card) w-full max-w-3xl rounded-xl border border-(--border)">
               <div className="flex justify-between items-center bg-(--bg) rounded-t-xl py-4 px-5">
                 <h2 className="text-md font-semibold">Add Exam Setup</h2>
-                <X onClick={() => {
+                <X className="cursor-pointer hover:text-red-500" onClick={() => {
                   setEditId(null);
                   setOpenAdd(false)
                 }} />
@@ -350,77 +446,97 @@ export default function ExamSetupPage() {
                     </div>
                   </>
                 )}
-                <Input
-                  label="Exam Date"
-                  type="date"
-                  value={form.examDate}
-                  onChange={v => setForm({ ...form, examDate: v })}
-                />
-                <Select
-                  label="Class"
-                  value={form.classId}
-                  options={classData}
-                  onChange={v =>
-                    setForm({ ...form, classId: v, sectionId: "" })
-                  }
-                />
-                <Select
-                  label="Section"
-                  value={form.sectionId}
-                  options={
-                    classData.find(c => c.id === form.classId)?.sections || []
-                  }
-                  onChange={v => setForm({ ...form, sectionId: v })}
-                />
-                <Select
-                  label="Subject"
-                  value={form.subjectId}
-                  options={subjectData}
-                  onChange={v => setForm({ ...form, subjectId: v })}
-                />
-                <div>
-                  <label className="text-sm font-medium text-(--text-muted)">
-                    Marking Scheme
-                  </label>
-                  <div className="flex gap-4 mt-2 items-center">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={form.markingType === "grades"}
-                        onChange={() =>
-                          setForm({ ...form, markingType: "grades", maxMarks: "" })
-                        }
-                      />
-                      Grades
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        checked={form.markingType === "marks"}
-                        onChange={() =>
-                          setForm({ ...form, markingType: "marks" })
-                        }
-                      />
-                      Marks
-                    </label>
+                {bulkRows.length > 0 && (
+                  <div className="mt-4 border border-(--border) rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-(--bg)">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Subject</th>
+                          <th className="px-3 py-2 text-center">Exam Date</th>
+                          <th className="px-3 py-2 text-center">Marking</th>
+                          <th className="px-3 py-2 text-center">Max Marks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkRows.map((row, i) => (
+                          <tr key={row.subjectId} className="border-t border-(--border)">
+                            <td className="px-3 py-2 font-medium">
+                              {subjectData.find(s => s.id === row.subjectId)?.name}
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="date"
+                                className="input"
+                                value={row.examDate}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setBulkRows(r =>
+                                    r.map((x, idx) =>
+                                      idx === i ? { ...x, examDate: v } : x
+                                    )
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <select
+                                className="input"
+                                value={row.markingType}
+                                onChange={e => {
+                                  const v = e.target.value;
+                                  setBulkRows(r =>
+                                    r.map((x, idx) =>
+                                      idx === i
+                                        ? { ...x, markingType: v, maxMarks: "" }
+                                        : x
+                                    )
+                                  );
+                                }}
+                              >
+                                <option value="grades">Grades</option>
+                                <option value="marks">Marks</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {row.markingType === "marks" ? (
+                                <input
+                                  type="number"
+                                  className="input max-w-[90px]"
+                                  placeholder="100"
+                                  value={row.maxMarks}
+                                  onChange={e => {
+                                    const v = e.target.value;
+                                    setBulkRows(r =>
+                                      r.map((x, idx) =>
+                                        idx === i ? { ...x, maxMarks: v } : x
+                                      )
+                                    );
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-(--text-muted)">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    </div>
                   </div>
-                </div>
-                {form.markingType === "marks" && (
-                  <Input
-                    label="Maximum Marks"
-                    type="number"
-                    placeholder="i.e. 100"
-                    value={form.maxMarks}
-                    onChange={v => setForm({ ...form, maxMarks: v })}
-                  />
                 )}
                 <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-(--border)">
                   <button onClick={() => setOpenAdd(false)} className="btn-outline">
                     Cancel
                   </button>
-                  <button onClick={saveSetup} className="btn-primary flex gap-2">
+                  <button
+                    onClick={() =>
+                      saveBulkSetup()
+                    }
+                    className="btn-primary flex gap-2"
+                  >
                     <Save size={15} />
-                    Save Setup
+                    Save Exam Setup
                   </button>
                 </div>
               </div>
@@ -457,7 +573,7 @@ function Select({ label, value, onChange, options }) {
         onChange={e => onChange(e.target.value)}
       >
         <option value="">Select</option>
-        {options.map(o => (
+        {options && options.map(o => (
           <option key={o.id} value={o.id}>
             {o.name || o.id}
           </option>

@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
         </Providers>
-        <ToastContainer position="top-right" theme="colored" />
+        <ToastContainer position="top-right" theme="colored" autoClose={2300} />
       </body>
     </html>
   );
