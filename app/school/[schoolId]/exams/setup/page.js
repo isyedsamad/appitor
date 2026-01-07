@@ -333,7 +333,7 @@ export default function ExamSetupPage() {
           </button>
         </div>
         {searched && (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
             {setups.length === 0 ? (
               <div className="col-span-full text-center text-(--text-muted) py-12">
                 No exam setup found

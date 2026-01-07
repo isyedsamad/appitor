@@ -11,6 +11,16 @@ import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 
 const GRADES = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const GRADE_POINTS = {
+  A: 95,
+  B: 85,
+  C: 70,
+  D: 55,
+  E: 40,
+  F: 30,
+  G: 20,
+  H: 10
+};
 
 export default function MarksEntryPage() {
   const { schoolUser, sessionList, classData, setLoading, subjectData, employeeData } = useSchool();
@@ -269,9 +279,8 @@ export default function MarksEntryPage() {
                   {students.map((stu, rowIndex) => {
                     let totalMarks = 0;
                     let maxTotal = 0;
-                    let hasMarks = false;
-                    let gradeBucket = [];
-
+                    let gradePointsSum = 0;
+                    let gradeCount = 0;
                     setups.forEach(s => {
                       const key = `${stu.id}_${s.id}`;
                       const val = marks[key];
@@ -279,29 +288,34 @@ export default function MarksEntryPage() {
                         if (val !== undefined && val !== "" && !isNaN(val)) {
                           totalMarks += Number(val);
                           maxTotal += Number(s.maxMarks || 0);
-                          hasMarks = true;
                         }
                       }
                       if (s.markingType === "grades") {
-                        if (val !== undefined && val !== "") {
-                          gradeBucket.push(val);
+                        if (val && GRADE_POINTS[val] !== undefined) {
+                          gradePointsSum += GRADE_POINTS[val];
+                          gradeCount += 1;
                         }
                       }
                     });
-                    const percentage =
-                      hasMarks && maxTotal > 0
-                        ? Math.round((totalMarks / maxTotal) * 100)
-                        : null;
-                    const derivedGrade =
-                      gradeBucket.length > 0
-                        ? gradeBucket.sort()[0]
-                        : percentage !== null
-                        ? percentage >= 90 ? "A"
-                          : percentage >= 75 ? "B"
-                          : percentage >= 60 ? "C"
-                          : percentage >= 45 ? "D"
-                          : "E"
-                        : "-";
+                    const marksPercentage = maxTotal > 0 ? (totalMarks / maxTotal) * 100 : null;
+                    const gradePercentage = gradeCount > 0 ? gradePointsSum / gradeCount : null;
+                    let finalPercentage = null;
+                    if (marksPercentage !== null && gradePercentage !== null) {
+                      finalPercentage = Math.round((marksPercentage + gradePercentage) / 2);
+                    } else if (marksPercentage !== null) {
+                      finalPercentage = Math.round(marksPercentage);
+                    } else if (gradePercentage !== null) {
+                      finalPercentage = Math.round(gradePercentage);
+                    }
+                    let derivedGrade = "-";
+                    if (finalPercentage !== null) {
+                      derivedGrade =
+                        finalPercentage >= 90 ? "A" :
+                        finalPercentage >= 75 ? "B" :
+                        finalPercentage >= 60 ? "C" :
+                        finalPercentage >= 45 ? "D" :
+                        "E";
+                    }                    
 
                     return (
                       <tr
@@ -349,7 +363,7 @@ export default function MarksEntryPage() {
                                   value={marks[key] || ""}
                                   onChange={e => {
                                     let val = e.target.value;
-                                    if (val === "") {
+                                    if (val == "") {
                                       updateMark(stu.id, s.id, "");
                                       return;
                                     }
@@ -365,7 +379,12 @@ export default function MarksEntryPage() {
                           );
                         })}
                         <td className="px-3 py-2 text-center font-semibold">
-                          {hasMarks ? `${totalMarks}/${maxTotal}` : "-"}
+                        {maxTotal > 0
+                          ? `${totalMarks}/${maxTotal}`
+                          : gradeCount > 0
+                          ? "Grade Based"
+                          : "-"
+                        }
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span
@@ -382,6 +401,11 @@ export default function MarksEntryPage() {
                             `}
                           >
                             {derivedGrade}
+                            {finalPercentage !== null && (
+                              <span className="ml-1">
+                                ({finalPercentage}%)
+                              </span>
+                            )}
                           </span>
                         </td>
                       </tr>
@@ -416,7 +440,7 @@ function Select({ label, value, onChange, options }) {
         onChange={e => onChange(e.target.value)}
       >
         <option value="">Select</option>
-        {options.map(o => (
+        {options && options.map(o => (
           <option key={o.id} value={o.id}>
             {o.name || o.id}
           </option>

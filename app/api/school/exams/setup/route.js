@@ -36,7 +36,7 @@ export async function POST(req) {
       if (!subjectId || !examDate || !markingType) continue;
       if (!["grades", "marks"].includes(markingType)) continue;
       if (markingType === "marks" && (!maxMarks || Number(maxMarks) <= 0)) continue;
-      const docId = `${session}_${termId}_${classId}_${sectionId}_${subjectId}`;
+      const docId = `${session}::${termId}::${classId}::${sectionId}::${subjectId}`;
       const docRef = setupRef.doc(docId);
       batch.set(
         docRef,
