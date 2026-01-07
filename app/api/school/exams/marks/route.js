@@ -15,7 +15,6 @@ export async function POST(req) {
         { status: 403 }
       );
     }
-
     const body = await req.json();
     const { branch, session, termId, classId, sectionId, marks } = body;
     if (!branch || !session || !termId || !classId || !sectionId || !marks || typeof marks !== "object") {
@@ -37,7 +36,6 @@ export async function POST(req) {
         value
       });
     });
-
     const batch = adminDb.batch();
     const baseRef = adminDb
       .collection("schools")
@@ -47,7 +45,7 @@ export async function POST(req) {
       .collection("exams")
       .doc("items")
       .collection("student_marks");
-      
+
     for (const studentId of Object.keys(studentMap)) {
       const docId = `${studentId}_${termId}`;
       const ref = baseRef.doc(docId);

@@ -248,7 +248,7 @@ export default function MarksEntryPage() {
                     <th className="px-3 py-2 text-left font-semibold">
                       Roll
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[180px]">
+                    <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[150px]">
                       Student
                     </th>
                     {setups.map(s => (
@@ -360,11 +360,11 @@ export default function MarksEntryPage() {
                                   max={s.maxMarks}
                                   className="input text-center"
                                   placeholder="-"
-                                  value={marks[key] || ""}
+                                  value={marks[key] || ''}
                                   onChange={e => {
                                     let val = e.target.value;
                                     if (val == "") {
-                                      updateMark(stu.id, s.id, "");
+                                      updateMark(stu.id, s.id, 0);
                                       return;
                                     }
                                     val = Number(val);
