@@ -46,37 +46,54 @@ export async function POST(req) {
         );
       }
 
-      const teacherRef = adminDb
+      const ttSettingsSnap = await adminDb
         .collection("schools")
         .doc(user.schoolId)
         .collection("branches")
         .doc(branch)
         .collection("timetable")
         .doc("items")
-        .collection("teachers")
-        .doc(user.uid);
+        .collection("timetableSettings")
+        .doc('global').get();
 
-      const teacherSnap = await teacherRef.get();
-      if (!teacherSnap.exists) {
+      if(!ttSettingsSnap.exists()) {
         return NextResponse.json(
-          { message: "Teacher timetable not found" },
-          { status: 403 }
+          { message: "School setup is not completed!" },
+          { status: 440 }
         );
       }
-
-      const ownsSlot = (teacherSnap.data().slots || []).some(
-        (s) =>
-          s.classId === classId &&
-          s.sectionId === sectionId &&
-          s.period === timetable.period &&
-          s.subjectId === timetable.subjectId
-      );
-
-      if (!ownsSlot) {
-        return NextResponse.json(
-          { message: "Unauthorized timetable slot" },
-          { status: 403 }
+      const ttSettingsData = ttSettingsSnap.data();
+      if(ttSettingsData.status == 'active') {
+        const teacherRef = adminDb
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection("timetable")
+          .doc("items")
+          .collection("teachers")
+          .doc(user.uid);
+        const teacherSnap = await teacherRef.get();
+        if (!teacherSnap.exists) {
+          return NextResponse.json(
+            { message: "Teacher timetable not found" },
+            { status: 403 }
+          );
+        }
+        const ownsSlot = (teacherSnap.data().slots || []).some(
+          (s) =>
+            s.classId === classId &&
+            s.sectionId === sectionId &&
+            s.period === timetable.period &&
+            s.subjectId === timetable.subjectId
         );
+        if (!ownsSlot) {
+          return NextResponse.json(
+            { message: "Unauthorized timetable slot" },
+            { status: 403 }
+          );
+        }
+
       }
     }else {
       classId = bodyClassId;

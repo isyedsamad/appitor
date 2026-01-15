@@ -177,36 +177,83 @@ export default function HomeworkPage() {
   }, [openAdd, form.classId, form.sectionId, form.date]);
   
   async function saveHomework() {
-    if (!form.timetableKey || !form.content) {
-      alert("Please fill all fields");
+    if (!canCreateHomework) {
+      toast.show({
+        type: "error",
+        text1: "Permission denied",
+        text2: "You are not allowed to add homework",
+      });
       return;
+    }
+    if (!content.trim()) {
+      toast.show({
+        type: "error",
+        text1: "Homework required",
+        text2: "Please enter homework content",
+      });
+      return;
+    }
+    if (timetableActive && !selectedSlot) {
+      toast.show({
+        type: "error",
+        text1: "Select Period",
+        text2: "Choose a class period from today’s timetable",
+      });
+      return;
+    }
+    if (!timetableActive) {
+      if (!classId || !sectionId || !subjectId) {
+        toast.show({
+          type: "error",
+          text1: "Missing fields",
+          text2: "Select class, section and subject",
+        });
+        return;
+      }
     }
     setLoading(true);
     try {
       await secureAxios.post("/api/school/learning/homework", {
-        branch,
-        date: isAdmin ? formatInputDate(form.date) : formatInputDate(filters.date),
-        classId: isAdmin ? form.classId : undefined,
-        sectionId: isAdmin ? form.sectionId : undefined,
-        timetable: JSON.parse(form.timetableKey),
-        content: form.content,
+        branch: schoolUser.currentBranch,
+        date,
+        classId: !timetableActive ? classId : undefined,
+        sectionId: !timetableActive ? sectionId : undefined,
+        timetable: timetableActive
+          ? {
+              period: selectedSlot.period,
+              classId: selectedSlot.classId,
+              sectionId: selectedSlot.sectionId,
+              subjectId: selectedSlot.subjectId,
+              teacherId: schoolUser.uid,
+            }
+          : {
+              period: null,
+              classId,
+              sectionId,
+              subjectId,
+              teacherId: schoolUser.uid,
+            },
+        content: content.trim(),
+      });
+      toast.show({
+        type: "success",
+        text1: "Homework Added",
+        text2: "Homework saved successfully",
       });
       setOpenAdd(false);
-      setForm({
-        date: new Date().toISOString().slice(0, 10),
-        classId: "",
-        sectionId: "",
-        timetableKey: "",
-        content: "",
-      });
+      setContent("");
+      setSelectedSlot(null);
       searchHomework();
-      toast.success('Homework saved successfully!');
-    } catch(err) {
-      toast.error('Failed: ' + err.response.data.message);
+    } catch (err) {
+      toast.show({
+        type: "error",
+        text1: "Failed to save homework",
+        text2: err?.response?.data?.message || "Server error",
+      });
     } finally {
       setLoading(false);
     }
-  }
+  }  
 
   const closeHomework = () => {
     setForm({
