@@ -56,7 +56,7 @@ export async function POST(req) {
         .collection("timetableSettings")
         .doc('global').get();
 
-      if(!ttSettingsSnap.exists()) {
+      if(!ttSettingsSnap.exists) {
         return NextResponse.json(
           { message: "School setup is not completed!" },
           { status: 440 }
