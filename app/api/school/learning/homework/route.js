@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "learning.manage");
+    const user = await verifyUser(req, "learning.create");
     const body = await req.json();
     const {
       branch,
@@ -15,6 +15,7 @@ export async function POST(req) {
       timetable,
       content,
     } = body;
+
     if (!branch || !date || !timetable || !content) {
       return NextResponse.json(
         { message: "Missing required fields" },
@@ -22,14 +23,17 @@ export async function POST(req) {
       );
     }
 
-    console.log(user);
-    
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all");
+    const isAdmin =
+      user.permissions?.includes("*") ||
+      user.permissions?.includes("learning.all");
+
     let classId, sectionId, teacherId;
+
     if (!isAdmin) {
       classId = timetable.classId;
       sectionId = timetable.sectionId;
       teacherId = user.uid;
+
       if (
         !classId ||
         !sectionId ||
@@ -41,6 +45,7 @@ export async function POST(req) {
           { status: 400 }
         );
       }
+
       const teacherRef = adminDb
         .collection("schools")
         .doc(user.schoolId)
@@ -50,6 +55,7 @@ export async function POST(req) {
         .doc("items")
         .collection("teachers")
         .doc(user.uid);
+
       const teacherSnap = await teacherRef.get();
       if (!teacherSnap.exists) {
         return NextResponse.json(
@@ -57,6 +63,7 @@ export async function POST(req) {
           { status: 403 }
         );
       }
+
       const ownsSlot = (teacherSnap.data().slots || []).some(
         (s) =>
           s.classId === classId &&
@@ -64,6 +71,7 @@ export async function POST(req) {
           s.period === timetable.period &&
           s.subjectId === timetable.subjectId
       );
+
       if (!ownsSlot) {
         return NextResponse.json(
           { message: "Unauthorized timetable slot" },
@@ -74,6 +82,7 @@ export async function POST(req) {
       classId = bodyClassId;
       sectionId = bodySectionId;
       teacherId = timetable.teacherId;
+
       if (!classId || !sectionId || !teacherId) {
         return NextResponse.json(
           { message: "Class, section or teacher missing" },
@@ -81,8 +90,12 @@ export async function POST(req) {
         );
       }
     }
-    const docId = `${classId}_${sectionId}_${date}`;
-    const homeworkRef = adminDb
+
+    const batch = adminDb.batch();
+    const now = Timestamp.now();
+
+    const classDocId = `${classId}_${sectionId}_${date}`;
+    const classHomeworkRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
@@ -90,53 +103,103 @@ export async function POST(req) {
       .collection("learning")
       .doc("items")
       .collection("homework")
-      .doc(docId);
-    await adminDb.runTransaction(async (tx) => {
-      const snap = await tx.get(homeworkRef);
-      let items = [];
-      if (snap.exists) {
-        items = snap.data().items || [];
-      }
-      const now = FieldValue.serverTimestamp();
-      const nowArray = Timestamp.now();
-      const newEntry = {
+      .doc(classDocId);
+
+    const classSnap = await classHomeworkRef.get();
+    let classItems = classSnap.exists ? classSnap.data().items || [] : [];
+
+    const entry = {
+      period: timetable.period,
+      subjectId: timetable.subjectId,
+      teacherId,
+      content,
+      classId,
+      sectionId,
+      updatedAt: now,
+      updatedBy: user.uid,
+    };
+
+    const idx = classItems.findIndex(i => i.period === timetable.period);
+    if (idx !== -1) {
+      classItems[idx] = { ...classItems[idx], ...entry };
+    } else {
+      classItems.push({
+        ...entry,
+        createdAt: now,
+        createdBy: user.uid,
+      });
+    }
+
+    batch.set(
+      classHomeworkRef,
+      {
+        classId,
+        sectionId,
+        date,
+        items: classItems,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+
+    if (!isAdmin) {
+      const teacherDocId = `${date}_${teacherId}`;
+      const teacherHomeworkRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection("learning")
+        .doc("items")
+        .collection("homework_employee")
+        .doc(teacherDocId);
+
+      const teacherSnap = await teacherHomeworkRef.get();
+      let teacherItems = teacherSnap.exists
+        ? teacherSnap.data().items || []
+        : [];
+
+      const tIdx = teacherItems.findIndex(
+        i =>
+          i.period === timetable.period &&
+          i.classId === classId &&
+          i.sectionId === sectionId
+      );
+
+      const teacherEntry = {
         period: timetable.period,
         subjectId: timetable.subjectId,
-        teacherId,
+        classId,
+        sectionId,
         content,
-        updatedAt: nowArray,
-        updatedBy: user.uid,
+        updatedAt: now,
       };
-      const index = items.findIndex(
-        (i) => i.period === timetable.period
-      );
-      if (index !== -1) {
-        items[index] = {
-          ...items[index],
-          ...newEntry,
-        };
+
+      if (tIdx !== -1) {
+        teacherItems[tIdx] = { ...teacherItems[tIdx], ...teacherEntry };
       } else {
-        items.push({
-          ...newEntry,
-          createdAt: nowArray,
-          createdBy: user.uid,
+        teacherItems.push({
+          ...teacherEntry,
+          createdAt: now,
         });
       }
-      tx.set(
-        homeworkRef,
+
+      batch.set(
+        teacherHomeworkRef,
         {
-          classId,
-          sectionId,
+          teacherId,
           date,
-          items,
-          updatedAt: nowArray,
+          items: teacherItems,
+          updatedAt: now,
         },
         { merge: true }
       );
-    });
+    }
+
+    await batch.commit();
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Homework transaction failed:", err);
+    console.error("Homework batch save failed:", err);
     return NextResponse.json(
       { message: "Failed to save homework" },
       { status: 500 }
