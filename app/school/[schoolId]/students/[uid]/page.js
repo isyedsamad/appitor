@@ -59,7 +59,7 @@ export default function StudentProfilePage() {
           dob: form.dob,
         },
       });
-      toast.success("Profile updated");
+      toast.success("Student Profile updated!");
       fetchStudent();
     } catch(err) {
       toast.error("Update failed: " + err);
@@ -93,6 +93,7 @@ export default function StudentProfilePage() {
         branch,
         status: isActive ? "disabled" : "active",
       });
+      toast.success('Student status updated!')
       fetchStudent();
     } catch(err) {
       toast.error('Error: ' + err.response.data.message);
