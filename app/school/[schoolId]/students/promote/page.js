@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -42,23 +44,38 @@ export default function PromoteDemotePage() {
       return;
     }
     setLoading(true);
-    const ref = collection(
-      db,
-      "schools",
-      branchInfo.schoolId,
-      "branches",
-      branchInfo.id,
-      "students"
-    );
-    const q = query(
-      ref,
-      where("className", "==", fromClass),
-      where("section", "==", fromSection)
-    );
-    const snap = await getDocs(q);
-    setStudents(snap.docs.map(d => d.data()));
-    setSelected([]);
-    setLoading(false);
+    try {
+      const rosterRef = doc(
+        db,
+        "schools",
+        branchInfo.schoolId,
+        "branches",
+        branchInfo.id,
+        "meta",
+        `${fromClass}_${fromSection}`
+      );
+  
+      const snap = await getDoc(rosterRef);
+      if (!snap.exists()) {
+        setStudents([]);
+      } else {
+        const data = snap.data();
+        const classId = data.classId;
+        const sectionId = data.sectionId;
+        const students = (data.students || []).map((s) => ({
+          ...s,
+          classId,
+          sectionId,
+        }));
+        setStudents(students);
+      }
+      setSelected([]);
+    } catch (err) {
+      console.error("LOAD STUDENTS META ERROR:", err);
+      toast.error("Failed to load students");
+    } finally {
+      setLoading(false);
+    }
   }
   function toggle(uid) {
     setSelected(prev =>

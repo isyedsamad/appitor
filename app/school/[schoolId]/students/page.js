@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Eye, Users, Filter } from "lucide-react";
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -35,28 +37,56 @@ export default function StudentsListPage() {
     }
     setLoading(true);
     try {
-      const ref = collection(
-        db,
+      const basePath = [
         "schools",
         branchInfo.schoolId,
         "branches",
         branchInfo.id,
-        "students"
-      );
-      let q = query(
-        ref,
-        where("className", "==", className)
-      );
+        "meta",
+      ];
+      let students = [];
       if (section) {
-        q = query(
-          ref,
-          where("className", "==", className),
-          where("section", "==", section)
+        const rosterRef = doc(
+          db,
+          ...basePath,
+          `${className}_${section}`
         );
+        const snap = await getDoc(rosterRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          const classId = data.classId;
+          const sectionId = data.sectionId;
+          students = (data.students || []).map((s) => ({
+            ...s,
+            classId,
+            sectionId,
+          }));
+        }
       }
-      const snap = await getDocs(q);
-      setStudents(snap.docs.map(d => d.data()));
+      else {
+        const metaColRef = collection(db, ...basePath);
+        const snaps = await getDocs(metaColRef);
+        snaps.forEach((d) => {
+          const data = d.data();
+          if (data.classId === className && Array.isArray(data.students)) {
+            const classId = data.classId;
+            const sectionId = data.sectionId;
+            students.push(
+              ...data.students.map((s) => ({
+                ...s,
+                classId,
+                sectionId,
+              }))
+            );
+          }
+        });
+      }
+      students.sort((a, b) =>
+        String(a.appId).localeCompare(String(b.appId))
+      );
+      setStudents(students);
     } catch (err) {
+      console.error("FETCH STUDENTS META ERROR:", err);
       toast.error("Failed to load students");
     } finally {
       setLoading(false);
@@ -169,10 +199,10 @@ export default function StudentsListPage() {
                     {s.appId}
                   </td>
                   <td className="px-4 py-3 font-semibold capitalize">{s.name}</td>
-                  <td className="px-4 py-3">{classData.filter(c => c.id == s.className).map(c => c.name)}</td>
+                  <td className="px-4 py-3">{classData.filter(c => c.id == s.classId).map(c => c.name)}</td>
                   <td className="px-4 py-3">
-                  {classData.filter(c => c.id == s.className).map(c => 
-                    c.sections.filter(sec => sec.id == s.section).map(sec => sec.name)
+                  {classData.filter(c => c.id == s.classId).map(c => 
+                    c.sections.filter(sec => sec.id == s.sectionId).map(sec => sec.name)
                   )}
                   </td>
                   <td className="px-4 py-3">

@@ -43,17 +43,33 @@ export function SchoolProvider({ schoolId, children }) {
     setLoading(false);
   }
   const loadEmployee = async (branch) => {
-    if(!branch) return;
+    if (!branch) return;
     setLoading(true);
-    const empSnap = await getDocs(query(
-      collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'employees'),
-      orderBy('createdAt', 'desc')
-    ));
-    if(!empSnap.docs) return;
-    console.log(empSnap.docs.map(e => ({ id: e.id, ...e.data() })));
-    
-    setEmployeeData(empSnap.docs.map(e => ({ id: e.id, ...e.data() })));
-    setLoading(false);
+    try {
+      const metaRef = doc(
+        db,
+        "schools",
+        schoolUser.schoolId,
+        "branches",
+        branch,
+        "meta",
+        "employees"
+      );
+      const snap = await getDoc(metaRef);
+      if (!snap.exists()) {
+        setEmployeeData([]);
+        return;
+      }
+      const employees = snap.data().employees || [];
+      employees.sort((a, b) =>
+        String(a.employeeId).localeCompare(String(b.employeeId))
+      );
+      setEmployeeData(employees);
+    } catch (err) {
+      console.error("LOAD EMPLOYEE META ERROR:", err);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
