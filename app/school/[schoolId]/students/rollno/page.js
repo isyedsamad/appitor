@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Hash, RefreshCcw, Save, Trash2, ArrowDownAZ } from "lucide-react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -22,27 +22,40 @@ export default function AssignRollPage() {
       return;
     }
     setLoading(true);
-    const ref = collection(
-      db,
-      "schools",
-      schoolUser.schoolId,
-      "branches",
-      branch,
-      "students"
-    );
-    const q = query(
-      ref,
-      where("className", "==", className),
-      where("section", "==", section),
-    );
-    const snap = await getDocs(q);
-    setStudents(
-      snap.docs.map(d => ({
-        uid: d.id,
-        ...d.data(),
-      }))
-    );
-    setLoading(false);
+    try {
+      const rosterRef = doc(
+        db,
+        "schools",
+        schoolUser.schoolId,
+        "branches",
+        branch,
+        "meta",
+        `${className}_${section}`
+      );
+      const snap = await getDoc(rosterRef);
+      if (!snap.exists()) {
+        setStudents([]);
+        return;
+      }
+      const data = snap.data();
+      const classId = data.classId;
+      const sectionId = data.sectionId;
+      const students = (data.students || [])
+        .map((s) => ({
+          ...s,
+          classId,
+          sectionId,
+        }))
+        .sort((a, b) =>
+          String(a.appId).localeCompare(String(b.appId))
+        );
+      setStudents(students);
+    } catch (err) {
+      console.error("LOAD STUDENTS META ERROR:", err);
+      toast.error("Failed to load students");
+    } finally {
+      setLoading(false);
+    }
   }
   function updateRoll(uid, value) {
     setStudents(prev =>

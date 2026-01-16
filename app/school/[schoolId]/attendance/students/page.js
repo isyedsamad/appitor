@@ -41,29 +41,33 @@ export default function ViewStudentAttendancePage() {
     }
     setLoading(true);
     try {
-      const ref = collection(
+      const rosterRef = doc(
         db,
         "schools",
         schoolUser.schoolId,
         "branches",
         branch,
-        "students"
+        "meta",
+        `${className}_${section}`
       );
-      const q = query(
-        ref,
-        where("status", "==", "active"),
-        where("className", "==", className),
-        where("section", "==", section),
-        where("rollNo", "!=", null)
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({
-        uid: d.id,
-        ...d.data(),
-      }));
+      const snap = await getDoc(rosterRef);
+      let data = [];
+      if (snap.exists()) {
+        const roster = snap.data();
+        data = (roster.students || [])
+          .filter(
+            (s) => s.status === "active" && s.rollNo !== null
+          )
+          .map((s) => ({
+            ...s,
+            classId: roster.classId,
+            sectionId: roster.sectionId,
+          }));
+      }
       setStudents(data);
-    } catch(err) {
-      toast.error('Error: ' + err);
+    } catch (err) {
+      console.error("LOAD STUDENTS META ERROR:", err);
+      toast.error("Error: " + err);
     } finally {
       setLoading(false);
     }

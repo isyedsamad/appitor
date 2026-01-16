@@ -7,7 +7,6 @@ export async function PUT(req) {
   try {
     const user = await verifyUser(req, "student.manage");
     const { uids, toClass, toSection } = await req.json();
-
     if (!uids?.length || !toClass || !toSection) {
       return NextResponse.json(
         { message: "Invalid payload" },
@@ -16,19 +15,13 @@ export async function PUT(req) {
     }
 
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
-
     await adminDb.runTransaction(async (tx) => {
-      /* ==========================
-         🔹 READ PHASE (ONLY READS)
-      ========================== */
-
       const schoolSnap = await tx.get(schoolRef);
       if (!schoolSnap.exists || !schoolSnap.data().currentSession) {
         throw new Error("Academic session not configured");
       }
 
       const currentSession = schoolSnap.data().currentSession;
-
       const studentEntries = [];
       const rosterSnapshots = new Map();
 
@@ -36,9 +29,7 @@ export async function PUT(req) {
         const userRef = adminDb.collection("schoolUsers").doc(uid);
         const userSnap = await tx.get(userRef);
         if (!userSnap.exists) continue;
-
         const student = userSnap.data();
-
         const branchRef = adminDb
           .collection("schools")
           .doc(student.schoolId)
@@ -49,7 +40,6 @@ export async function PUT(req) {
 
         const oldRosterId = `${student.className}_${student.section}`;
         const newRosterId = `${toClass}_${toSection}`;
-
         const oldRosterRef = adminDb
           .collection("schools")
           .doc(student.schoolId)
@@ -72,14 +62,12 @@ export async function PUT(req) {
             snap: await tx.get(oldRosterRef),
           });
         }
-
         if (!rosterSnapshots.has(newRosterId)) {
           rosterSnapshots.set(newRosterId, {
             ref: newRosterRef,
             snap: await tx.get(newRosterRef),
           });
         }
-
         studentEntries.push({
           uid,
           student,
@@ -90,10 +78,6 @@ export async function PUT(req) {
         });
       }
 
-      /* ==========================
-         🔹 IN-MEMORY STATE SETUP
-      ========================== */
-
       const rosterState = new Map();
       for (const [id, { ref, snap }] of rosterSnapshots.entries()) {
         rosterState.set(id, {
@@ -103,12 +87,7 @@ export async function PUT(req) {
         });
       }
 
-      const removals = new Map(); // oldRosterId -> Set<uid>
-
-      /* ==========================
-         🔹 WRITE PHASE (STATE MUTATION)
-      ========================== */
-
+      const removals = new Map();
       for (const entry of studentEntries) {
         const {
           uid,
@@ -139,18 +118,12 @@ export async function PUT(req) {
           rollAssignedBy: null,
           updatedAt: FieldValue.serverTimestamp(),
         };
-
-        // Core document updates (unchanged logic)
         tx.update(userRef, updatePayload);
         tx.update(branchRef, updatePayload);
-
-        // Track removals (DO NOT mutate arrays here)
         if (!removals.has(oldRosterId)) {
           removals.set(oldRosterId, new Set());
         }
         removals.get(oldRosterId).add(uid);
-
-        // Add to new roster in memory
         const newState = rosterState.get(newRosterId);
         if (newState && !newState.students.some((s) => s.uid === uid)) {
           newState.students.push({
@@ -162,24 +135,13 @@ export async function PUT(req) {
           });
         }
       }
-
-      /* ==========================
-         🔹 APPLY REMOVALS (ONCE)
-      ========================== */
-
       for (const [oldRosterId, uidSet] of removals.entries()) {
         const state = rosterState.get(oldRosterId);
         if (!state) continue;
-
         state.students = state.students.filter(
           (s) => !uidSet.has(s.uid)
         );
       }
-
-      /* ==========================
-         🔹 FINAL META WRITES (ONCE)
-      ========================== */
-
       for (const [_, state] of rosterState.entries()) {
         if (!state.exists && state.students.length) {
           tx.set(state.ref, {

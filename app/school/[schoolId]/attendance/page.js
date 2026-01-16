@@ -27,7 +27,7 @@ const EMPLOYEE_STATUS = {
 };
 
 export default function MarkAttendancePage() {
-  const { classData, schoolUser, setLoading } = useSchool();
+  const { classData, employeeData, schoolUser, setLoading } = useSchool();
   const { branchInfo, branch } = useBranch();
   const today = todayDDMMYYYY();
   const [mode, setMode] = useState("student");
@@ -58,26 +58,29 @@ export default function MarkAttendancePage() {
     setLoading(true);
     try {
       const docId = getAttendanceDocId();
-      const ref = collection(
+      const rosterRef = doc(
         db,
         "schools",
         schoolUser.schoolId,
         "branches",
         branch,
-        "students"
+        "meta",
+        `${className}_${section}`
       );
-      const q = query(
-        ref,
-        where("status", "==", "active"),
-        where("className", "==", className),
-        where("section", "==", section),
-        where("rollNo", "!=", null)
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({
-        uid: d.id,
-        ...d.data(),
-      }));
+      const rosterSnap = await getDoc(rosterRef);
+      let data = [];
+      if (rosterSnap.exists()) {
+        const roster = rosterSnap.data();
+        data = (roster.students || [])
+          .filter(
+            (s) => s.status === "active" && s.rollNo !== null
+          )
+          .map((s) => ({
+            ...s,
+            classId: roster.classId,
+            sectionId: roster.sectionId,
+          }));
+      }
       setList(data);
       const snapAtt = await getDoc(
         doc(
@@ -95,11 +98,10 @@ export default function MarkAttendancePage() {
         setAttendance(snapAtt.data().records || {});
       } else {
         setIsMarked(false);
-        const initial = {};
-        // data.forEach(s => (initial[s.uid] = "P"));
-        setAttendance(initial);
+        setAttendance({});
       }
-    } catch(err) {
+    } catch (err) {
+      console.error("LOAD ATTENDANCE META ERROR:", err);
       toast.error("Failed: " + err);
     } finally {
       setLoading(false);
@@ -109,21 +111,21 @@ export default function MarkAttendancePage() {
     setLoading(true);
     try {
       const docId = getAttendanceDocId();
-      const ref = collection(
-        db,
-        "schools",
-        schoolUser.schoolId,
-        "branches",
-        branch,
-        "employees"
-      );
-      const q = query(ref, where("status", "!=", "disabled"));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({
-        uid: d.id,
-        ...d.data(),
-      }));
-      setList(data);
+      // const ref = collection(
+      //   db,
+      //   "schools",
+      //   schoolUser.schoolId,
+      //   "branches",
+      //   branch,
+      //   "employees"
+      // );
+      // const q = query(ref, where("status", "!=", "disabled"));
+      // const snap = await getDocs(q);
+      // const data = snap.docs.map(d => ({
+      //   uid: d.id,
+      //   ...d.data(),
+      // }));
+      setList(employeeData.filter(e => e.status != 'disabled'));
       const snapAtt = await getDoc(
         doc(
           db,
@@ -378,7 +380,7 @@ export default function MarkAttendancePage() {
                 <div className="flex items-center gap-1 font-medium text-xs text-(--text-muted)">
                   <BadgeCheck size={12} />
                   App ID: {mode === "student"
-                    ? item.admissionId
+                    ? item.appId
                     : item.employeeId}
                 </div>
               </div>

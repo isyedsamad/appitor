@@ -25,7 +25,7 @@ const STATUS_PILL = status => {
   return "text-(--text-muted)";
 };
 export default function ViewEmployeeAttendancePage() {
-  const { schoolUser, setLoading } = useSchool();
+  const { schoolUser, setLoading, employeeData } = useSchool();
   const { branchInfo, branch } = useBranch();
   const todayInput = new Date().toISOString().split("T")[0];
   const [mode, setMode] = useState("date");
@@ -46,23 +46,9 @@ export default function ViewEmployeeAttendancePage() {
   async function loadEmployees() {
     setLoading(true);
     try {
-      const ref = collection(
-        db,
-        "schools",
-        schoolUser.schoolId,
-        "branches",
-        branch,
-        "employees"
-      );
-      const q = query(ref, where("status", "!=", "disabled"));
-      const snap = await getDocs(q);
-      const list = snap.docs.map(d => ({
-        uid: d.id,
-        ...d.data(),
-      }));
-      setEmployees(list);
+      setEmployees(employeeData.filter(e => e.status != 'disabled'));
       if (mode === "month") {
-        await loadMonthAttendance(list);
+        await loadMonthAttendance(employeeData.filter(e => e.status != 'disabled'));
       } else {
         await loadDayAttendance();
       }
