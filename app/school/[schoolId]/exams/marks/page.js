@@ -6,7 +6,7 @@ import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 
@@ -96,23 +96,30 @@ export default function MarksEntryPage() {
       const setupSnap = await getDocs(setupQ);
       const setupData = setupSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setSetups(setupData);
-      const stuQ = query(
-        collection(
-          db,
-          "schools",
-          schoolUser.schoolId,
-          "branches",
-          branch,
-          "students"
-        ),
-        where("className", "==", classId),
-        where("section", "==", sectionId),
-        where("rollNo", "!=", null),
-        where("status", "==", "active"),
-        orderBy("rollNo", "asc")
-      );
-      const stuSnap = await getDocs(stuQ);
-      const stuData = stuSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const rosterRef = doc(
+        db,
+        "schools",
+        schoolUser.schoolId,
+        "branches",
+        branch,
+        "meta",
+        `${classId}_${sectionId}`
+      ); 
+      const snap = await getDoc(rosterRef);
+      let stuData = [];
+      if (snap.exists()) {
+        const roster = snap.data();
+        stuData = (roster.students || [])
+          .filter(
+            (s) => s.status === "active" && s.rollNo !== null
+          )
+          .sort((a, b) => a.rollNo - b.rollNo)
+          .map((s) => ({
+            ...s,
+            classId: roster.classId,
+            sectionId: roster.sectionId,
+          }));
+      }
       setStudents(stuData);
       const existingMarks = await loadExistingMarks(stuData, termId);
       setMarks(existingMarks);
@@ -140,7 +147,7 @@ export default function MarksEntryPage() {
       return getDocs(
         query(
           ref,
-          where("studentId", "==", stu.id),
+          where("studentId", "==", stu.uid),
           where("termId", "==", termId)
         )
       );
@@ -245,7 +252,7 @@ export default function MarksEntryPage() {
               <table className="w-full text-[13px] border-collapse">
                 <thead className="sticky top-0 z-20 bg-(--bg)">
                   <tr className="border-b border-(--border)">
-                    <th className="px-3 py-2 text-left font-semibold">
+                    <th className="px-3 py-2 text-center font-semibold">
                       Roll
                     </th>
                     <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[150px]">
@@ -331,8 +338,8 @@ export default function MarksEntryPage() {
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-col">
-                            <span className="font-semibold">{stu.name}</span>
-                            <span className="text-xs text-(--text-muted) font-medium">
+                            <span className="font-semibold capitalize">{stu.name}</span>
+                            <span className="text-xs text-(--text-muted) font-medium uppercase">
                               {stu.appId}
                             </span>
                           </div>
