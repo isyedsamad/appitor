@@ -224,7 +224,7 @@ export default function SubjectTeacherMappingPage() {
                      )}
                   </td>
                   <td className="px-4 py-3">{subjects.filter(s => s.id == row.subjectId).map(s => s.name)}</td>
-                  <td className="px-4 py-3 capitalize">{teachers.filter(t => t.id == row.teacherId).map(t => t.name)}</td>
+                  <td className="px-4 py-3 capitalize">{teachers.filter(t => t.uid == row.teacherId).map(t => t.name)}</td>
                   <td className="px-4 py-3">{(row.periodsPerWeek >= 10 || row.periodsPerWeek == 0) ? row.periodsPerWeek : '0' + row.periodsPerWeek}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end items-center gap-2">
@@ -350,17 +350,17 @@ export default function SubjectTeacherMappingPage() {
                   className="input capitalize"
                   value={form.teacherId}
                   onChange={(e) => {
-                    const t = teachers.find(t => t.id === e.target.value);
+                    const t = teachers.find(t => t.uid === e.target.value);
                     setForm({
                       ...form,
-                      teacherId: t.id,
+                      teacherId: t.uid,
                       teacherName: t.name,
                     });
                   }}
                 >
                   <option value="">Select Teacher</option>
                   {teachers.map(t => (
-                    <option key={t.id} value={t.id}>
+                    <option key={t.uid} value={t.uid}>
                       {t.name}
                     </option>
                   ))}

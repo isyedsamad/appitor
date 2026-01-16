@@ -104,7 +104,7 @@ export default function EditTimetablePage() {
   }, [schoolUser?.schoolId, branch]);
   
   useEffect(() => {
-    if (!employeeData?.length) return;
+    if (employeeData?.length == 0) return;
     const loadTeacherTimetables = async () => {
       try {
         setLoading(true);
@@ -118,19 +118,20 @@ export default function EditTimetablePage() {
                 "timetable",
                 "items",
                 "teachers",
-                t.id
+                t.uid
               )
             )
           )
         );
         const map = {};
         snaps.forEach((snap, i) => {
-          map[employeeData[i].id] = snap.exists()
+          map[employeeData[i].uid] = snap.exists()
             ? snap.data().slots || []
             : [];
         });
         setTeacherTimetables(map);
       } catch (err) {
+        console.log(err);
         toast.error("Failed to load teacher availability");
       } finally {
         setLoading(false);
@@ -347,10 +348,8 @@ export default function EditTimetablePage() {
   //   setSidebar(null);
   // };
 
-
   const applySingleMapping = (mapping) => {
     const { subjectId, teacherId, periodsPerWeek } = mapping;
-  
     const used = getUsageCount(subjectId, teacherId);
     if (used >= periodsPerWeek) {
       toast.error("Weekly limit reached");
@@ -531,16 +530,12 @@ export default function EditTimetablePage() {
       });
       toast.success("Timetable saved successfully");
     } catch (err) {
-      toast.error((err.response?.data?.message + ' ' + (err.response?.data?.teacherId && teachers.filter(t => t.id == err.response?.data?.teacherId).map(t => t.name))) || "Save failed");
+      toast.error((err.response?.data?.message + ' ' + (err.response?.data?.teacherId && teachers.filter(t => t.uid == err.response?.data?.teacherId).map(t => t.name))) || "Save failed");
     } finally {
       setLoading(false);
     }
   };
   const classObj = classData && classData.find((c) => c.id === classId);
-  useEffect(() => {
-    console.log(conflict);
-    
-  }, [conflict])
   
   return (
     <RequirePermission permission="timetable.edit">
@@ -642,7 +637,7 @@ export default function EditTimetablePage() {
                       >
                         {slot?.entries?.map((e, i) => {
                           const sub = subjects.find(s => s.id === e.subjectId);
-                          const t = teachers.find(t => t.id === e.teacherId);
+                          const t = teachers.find(t => t.uid === e.teacherId);
                           return (
                             <div
                               key={i}
@@ -699,7 +694,7 @@ export default function EditTimetablePage() {
                 const used = getUsageCount(m.subjectId, m.teacherId);
                 const max = m.periodsPerWeek;
                 const sub = subjects.find(s => s.id === m.subjectId);
-                const t = teachers.find(t => t.id === m.teacherId);
+                const t = teachers.find(t => t.uid === m.teacherId);
                 const exhausted = used >= max;
 
                 return (
@@ -782,7 +777,7 @@ export default function EditTimetablePage() {
                 </div>
                 <div className="text-sm space-y-1">
                   <p>
-                    <b className="capitalize">{teachers.find(t => t.id === conflict.teacherId)?.name}</b> is busy in
+                    <b className="capitalize">{teachers.find(t => t.uid === conflict.teacherId)?.name}</b> is busy in
                   </p>
                   <p className="text-(--text-muted)">
                     Class: <span className="font-semibold text-(--text)">{classData.find(c => c.id === conflict.from.classId)?.name} {getSectionName(conflict.from.classId, conflict.from.sectionId)}</span>
@@ -830,7 +825,7 @@ export default function EditTimetablePage() {
                 <div className="text-sm space-y-2">
                   <p>
                     <b className="capitalize">
-                      {teachers.find(t => t.id === conflict.teacherId)?.name}
+                      {teachers.find(t => t.uid === conflict.teacherId)?.name}
                     </b>{" "}
                     is already assigned in the following slot(s):
                   </p>
