@@ -146,6 +146,7 @@ export async function POST(req) {
         uid,
         name,
         appId,
+        rollNo: nextRoll,
         status: "active",
       };
       if (!rosterSnap.exists) {

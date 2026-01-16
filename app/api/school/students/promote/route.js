@@ -125,6 +125,7 @@ export async function PUT(req) {
           uid,
           name: student.name,
           appId: student.appId,
+          rollNo: null,
           status: student.status,
         };
         if (!newRoster.snap.exists) {
