@@ -4,95 +4,124 @@ import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
-  let authUser = null;
+  let createdUid = null;
   try {
     const user = await verifyUser(req, "employee.manage");
     const body = await req.json();
-    const {name, mobile, email, gender, roleId, role, salary, employeeId, branchIds, branchNames, password} = body;
-    if (!name || !mobile || !roleId || !employeeId || !branchIds) {
+    const { name, mobile, email, gender, roleId, role, salary, employeeId, branchIds, branchNames, password } = body;
+    if (!name || !mobile || !roleId || !employeeId || !branchIds?.length) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
       );
     }
-    const schoolCode = user.schoolCode;
-    const authEmail = `${employeeId.toLowerCase()}@${schoolCode.toLowerCase()}.appitor`;
-    authUser = await adminAuth.createUser({
+
+    const authEmail = `${employeeId.toLowerCase()}@${user.schoolCode.toLowerCase()}.appitor`;
+    const authUser = await adminAuth.createUser({
       email: authEmail,
-      password: password,
+      password,
       displayName: name,
       disabled: false,
     });
-    const branchRef = adminDb
-      .collection("branches")
-      .doc(branchIds[0]);
-    const batch = adminDb.batch();
-    const schoolUserRef = adminDb.collection("schoolUsers").doc(authUser.uid);
-    batch.set(schoolUserRef, {
-      uid: authUser.uid,
-      employeeId,
-      name,
-      mobile,
-      email: email || null,
-      gender: gender || null,
-      roleId,
-      role,
-      salary: salary || null,
-      schoolId: user.schoolId,
-      branchIds,
-      currentBranch: branchIds[0],
-      branchNames,
-      status: "pending",
-      createdBy: user.uid,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+
+    const uid = authUser.uid;
+    createdUid = uid;
+    const primaryBranch = branchIds[0];
+    const schoolUserRef = adminDb.collection("schoolUsers").doc(uid);
+
     const employeeRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
-      .doc(branchIds[0])
+      .doc(primaryBranch)
       .collection("employees")
-      .doc(authUser.uid);
-    batch.set(employeeRef, {
-      uid: authUser.uid,
-      employeeId,
-      name,
-      password,
-      mobile,
-      email: email || null,
-      gender: gender || null,
-      roleId,
-      role,
-      salary: salary || null,
-      schoolId: user.schoolId,
-      branchIds,
-      currentBranch: branchIds[0],
-      branchNames,
-      status: "pending",
-      createdBy: user.uid,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      .doc(uid);
+
+    const branchRef = adminDb.collection("branches").doc(primaryBranch);
+    const metaEmployeesRef = adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(primaryBranch)
+      .collection("meta")
+      .doc("employees");
+
+    await adminDb.runTransaction(async (tx) => {
+      const metaSnap = await tx.get(metaEmployeesRef);
+      const baseEmployeeData = {
+        uid,
+        employeeId,
+        name,
+        mobile,
+        email: email || null,
+        gender: gender || null,
+        roleId,
+        role,
+        salary: salary || null,
+        schoolId: user.schoolId,
+        branchIds,
+        currentBranch: primaryBranch,
+        branchNames,
+        status: "pending",
+        createdBy: user.uid,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      tx.set(schoolUserRef, baseEmployeeData);
+      tx.set(employeeRef, {
+        ...baseEmployeeData,
+        password,
+      });
+
+      tx.update(branchRef, {
+        employeeCounter: FieldValue.increment(1),
+      });
+      const metaEntry = {
+        uid,
+        employeeId,
+        name,
+        mobile,
+        roleId,
+        role,
+        status: "pending",
+      };
+
+      if (!metaSnap.exists) {
+        tx.set(metaEmployeesRef, {
+          employees: [metaEntry],
+          count: 1,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        const data = metaSnap.data();
+        const employees = data.employees || [];
+        if (!employees.some((e) => e.uid === uid)) {
+          employees.push(metaEntry);
+        }
+        tx.update(metaEmployeesRef, {
+          employees,
+          count: employees.length,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
     });
-    batch.update(branchRef, {
-      employeeCounter: FieldValue.increment(1),
-    });
-    await batch.commit();
+
     return NextResponse.json({
       success: true,
       message: "Employee admitted successfully",
     });
   } catch (err) {
     console.error("ADMIT EMPLOYEE ERROR:", err);
-    if (authUser && authUser.uid) {
+    if (createdUid) {
       try {
-        await adminAuth.deleteUser(authUser.uid);
-      } catch (delErr) {
-        console.error("FAILED TO ROLLBACK AUTH USER:", delErr);
+        await adminAuth.deleteUser(createdUid);
+      } catch (rollbackErr) {
+        console.error("FAILED TO ROLLBACK AUTH USER:", rollbackErr);
       }
     }
     return NextResponse.json(
-      { message: "Failed: " + err},
+      { message: "Failed: " + err.message },
       { status: 500 }
     );
   }
