@@ -49,7 +49,7 @@ export default function ExamSetupPage() {
   const getSubjectName = id =>
     subjectData.find(s => s.id === id)?.name;
   const getTeacherName = id =>
-    employeeData.find(t => t.id === id)?.name;
+    employeeData.find(t => t.uid === id)?.name;
 
   function mergeSetupWithMapping(mapping, setups) {
     const setupMap = {};

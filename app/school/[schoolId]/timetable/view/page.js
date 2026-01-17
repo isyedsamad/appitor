@@ -44,7 +44,7 @@ export default function ViewTimetablePage() {
   const selectedClass = classData && classData?.find(c => c.id === classId);
   const getSection = (cid, sid) => classData?.find(c => c.id === cid)?.sections.find(s => s.id == sid)?.name;
   const getTeacherName = id =>
-    employeeData.find(t => t.id === id)?.name;
+    employeeData.find(t => t.uid === id)?.name;
   const getSubjectName = id =>
     subjectData.find(s => s.id === id)?.name;
 
