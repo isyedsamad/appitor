@@ -32,12 +32,15 @@ const TABS = [
 ];
 
 export default function PendingAttendancePage() {
-  const { schoolUser, loading, setLoading } = useSchool();
+  const { schoolUser, loading, setLoading, classData } = useSchool();
   const { branchInfo, branch } = useBranch();
   const [session, setSession] = useState("");
   const [sessions, setSessions] = useState([]);
   const [activeTab, setActiveTab] = useState("pending");
   const [data, setData] = useState([]);
+  const getClassName = id => classData.find(c => c.id === id)?.name;
+  const getSectionName = (cid, sid) =>
+    classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
   async function loadData(tab = activeTab) {
     if (!session) {
       toast.error("Select session first");
@@ -188,7 +191,7 @@ export default function PendingAttendancePage() {
               <div>
                 <p className="font-semibold text-md text-(--text)">
                   {r.type === "student"
-                    ? `${r.className} - ${r.section}`
+                    ? `${getClassName(r.className)} - ${getSectionName(r.className, r.section)}`
                     : "Employee Attendance"}
                 </p>
                 <p className="text-sm text-(--text-muted)">

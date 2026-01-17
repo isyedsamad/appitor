@@ -21,6 +21,7 @@ export async function POST(req) {
       .doc(branch)
       .collection("attendance_pending")
       .doc(requestId);
+
     const pendingSnap = await pendingRef.get();
     if (!pendingSnap.exists) {
       return NextResponse.json({ message: "Request not found" }, { status: 404 });
@@ -29,97 +30,119 @@ export async function POST(req) {
     if (pending.status !== "pending") {
       return NextResponse.json({ message: "Already processed" }, { status: 400 });
     }
-    const attendanceDocId =
+
+    const batch = adminDb.batch();
+    const dayDocId =
       pending.type === "student"
         ? `student_${pending.date}_${pending.className}_${pending.section}`
         : `employee_${pending.date}`;
-    const attendanceRef = adminDb
+
+    const dayRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
       .doc(branch)
       .collection("attendance")
-      .doc(attendanceDocId);
-    const batch = adminDb.batch();
+      .doc(dayDocId);
+
     if (pending.mode === "full") {
-      batch.set(attendanceRef, {
-        type: pending.type,
-        date: pending.date,
-        session: pending.session,
-        className: pending.className || null,
-        section: pending.section || null,
-        records: pending.records,
+      batch.set(
+        dayRef,
+        {
+          type: pending.type,
+          date: pending.date,
+          session: pending.session,
+          className: pending.className || null,
+          section: pending.section || null,
+          records: pending.records,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: user.uid,
+        },
+        { merge: true }
+      );
+    }
+
+    if (pending.mode === "diff") {
+      Object.entries(pending.changes).forEach(([uid, c]) => {
+        batch.update(dayRef, {
+          [`records.${uid}`]: c.to,
+        });
+      });
+      batch.update(dayRef, {
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: user.uid,
+      });
+    }
+
+    const [dd, mm, yyyy] = pending.date.split("-");
+    const monthKey = `${yyyy}-${mm}`;
+    const dayNumber = Number(dd);
+
+    const baseCollection =
+      pending.type === "student" ? "students" : "employees";
+
+    const validStatuses =
+      pending.type === "student"
+        ? ["P", "A", "L", "M"]
+        : ["P", "A", "L", "H", "O"];
+
+    const applyRecord = (uid, from, to) => {
+      const baseRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection(baseCollection)
+        .doc(uid);
+
+      const monthRef = baseRef
+        .collection("attendance_month")
+        .doc(monthKey);
+
+      batch.set(
+        monthRef,
+        {
+          month: monthKey,
+          session: pending.session,
+          className: pending.className || null,
+          section: pending.section || null,
+          days: { [dayNumber]: to },
+          ...getStatusDelta(from, to),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      const sessionRef = baseRef
+        .collection("attendance_session")
+        .doc(pending.session);
+
+      batch.set(
+        sessionRef,
+        {
+          session: pending.session,
+          months: {
+            [monthKey]: {
+              ...(from && { [from]: FieldValue.increment(-1) }),
+              ...(to && { [to]: FieldValue.increment(1) }),
+            },
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    };
+    if (pending.mode === "full") {
+      Object.entries(pending.records).forEach(([uid, status]) => {
+        if (validStatuses.includes(status)) {
+          applyRecord(uid, null, status);
+        }
       });
     }
     if (pending.mode === "diff") {
       Object.entries(pending.changes).forEach(([uid, c]) => {
-        batch.update(attendanceRef, {
-          [`records.${uid}`]: c.to,
-        });
+        applyRecord(uid, c.from, c.to);
       });
-      batch.update(attendanceRef, {
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: user.uid,
-      });
-    }
-    if (pending.type === "student") {
-      const [dd, mm, yyyy] = pending.date.split("-");
-      const monthKey = `${yyyy}-${mm}`;
-      const dayNumber = Number(dd);
-      if (pending.mode === "full") {
-        Object.entries(pending.records).forEach(([uid, status]) => {
-          const monthRef = adminDb
-            .collection("schools")
-            .doc(user.schoolId)
-            .collection("branches")
-            .doc(branch)
-            .collection("students")
-            .doc(uid)
-            .collection("attendance_months")
-            .doc(monthKey);
-          batch.set(
-            monthRef,
-            {
-              month: monthKey,
-              session: pending.session,
-              className: pending.className,
-              section: pending.section,
-              days: { [dayNumber]: status },
-              [`total${status}`]: FieldValue.increment(1),
-              updatedAt: FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-        });
-      }
-      if (pending.mode === "diff") {
-        Object.entries(pending.changes).forEach(([uid, c]) => {
-          const monthRef = adminDb
-            .collection("schools")
-            .doc(user.schoolId)
-            .collection("branches")
-            .doc(branch)
-            .collection("students")
-            .doc(uid)
-            .collection("attendance_months")
-            .doc(monthKey);
-          batch.set(
-            monthRef,
-            {
-              month: monthKey,
-              session: pending.session,
-              className: pending.className,
-              section: pending.section,
-              days: { [dayNumber]: c.to },
-              ...getStatusDelta(c.from, c.to),
-              updatedAt: FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-        });
-      }
     }
     batch.update(pendingRef, {
       status: "approved",
@@ -130,7 +153,9 @@ export async function POST(req) {
       },
       reviewedAt: FieldValue.serverTimestamp(),
     });
+
     await batch.commit();
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("APPROVE ATTENDANCE ERROR:", err);

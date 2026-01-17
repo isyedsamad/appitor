@@ -384,7 +384,7 @@ export default function ViewStudentAttendancePage() {
               <div>
                 <p className="font-semibold capitalize">{s.name}</p>
                 <p className="text-xs text-(--text-muted)">
-                  App ID: {s.admissionId}
+                  App ID: {s.appId}
                 </p>
               </div>
               <span
@@ -403,8 +403,8 @@ export default function ViewStudentAttendancePage() {
           <table className="min-w-max text-sm">
             <thead className="sticky top-0 bg-(--bg)">
               <tr>
-                <th className="px-3 py-2">App ID</th>
-                <th className="px-3 py-2">Name</th>
+                <th className="px-3 py-2 text-left">App ID</th>
+                <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-center">%</th>
                 {days.map(d => (
                   <th key={d} className="px-2 py-2 text-center">
@@ -418,10 +418,10 @@ export default function ViewStudentAttendancePage() {
                 const stats = calculateStudentAttendance(s.uid);
                 return (
                   <tr key={s.uid} className="border-t border-(--border)">
-                    <td className="px-3 py-2 font-semibold">
-                      {s.admissionId}
+                    <td className="px-3 py-2 font-semibold text-left">
+                      {s.appId}
                     </td>
-                    <td className="px-3 py-2 font-semibold capitalize">{s.name}</td>
+                    <td className="px-3 py-2 font-semibold capitalize text-left">{s.name}</td>
                     <td className="px-3 py-2 text-center font-semibold">
                       <span
                         className={`px-2 py-1 rounded text-xs

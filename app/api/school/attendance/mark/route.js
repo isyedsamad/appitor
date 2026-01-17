@@ -16,15 +16,14 @@ export async function POST(req) {
       records
     } = await req.json();
     if (!type || !date || !session || !branch || !records) {
-      return NextResponse.json(
-        { message: "Invalid payload" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
     }
+
     const dayDocId =
       type === "student"
         ? `student_${date}_${className}_${section}`
         : `employee_${date}`;
+
     const dayRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -32,7 +31,14 @@ export async function POST(req) {
       .doc(branch)
       .collection("attendance")
       .doc(dayDocId);
-    await dayRef.set(
+
+    const [dd, mm, yyyy] = date.split("-");
+    const monthKey = `${yyyy}-${mm}`;
+    const dayNumber = Number(dd);
+
+    const batch = adminDb.batch();
+    batch.set(
+      dayRef,
       {
         type,
         date,
@@ -46,47 +52,66 @@ export async function POST(req) {
       },
       { merge: true }
     );
-    if (type === "student") {
-      const [dd, mm, yyyy] = date.split("-");
-      const monthKey = `${yyyy}-${mm}`; // 2025-12
-      const dayNumber = Number(dd);
-      const batch = adminDb.batch();
-      for (const [uid, status] of Object.entries(records)) {
-        const monthRef = adminDb
-          .collection("schools")
-          .doc(user.schoolId)
-          .collection("branches")
-          .doc(branch)
-          .collection("students")
-          .doc(uid)
-          .collection("attendance_months")
-          .doc(monthKey);
-        const inc = {
-          P: { totalP: 1 },
-          A: { totalA: 1 },
-          L: { totalL: 1 },
-          M: { totalM: 1 },
-        }[status] || {};
-        batch.set(
-          monthRef,
-          {
-            month: monthKey,
-            session,
-            className,
-            section,
-            days: {
-              [dayNumber]: status,
-            },
-            ...Object.fromEntries(
-              Object.keys(inc).map(k => [k, FieldValue.increment(1)])
-            ),
-            updatedAt: FieldValue.serverTimestamp(),
+
+    for (const [uid, status] of Object.entries(records)) {
+      const baseRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection(type === "student" ? "students" : "employees")
+        .doc(uid);
+
+      const monthRef = baseRef
+        .collection("attendance_month")
+        .doc(monthKey);
+
+      const monthIncMap = {
+        P: "totalP",
+        A: "totalA",
+        L: "totalL",
+        M: "totalM",
+        H: "totalH",
+        O: "totalO",
+      };
+
+      const incField = monthIncMap[status];
+      batch.set(
+        monthRef,
+        {
+          month: monthKey,
+          session,
+          className: className || null,
+          section: section || null,
+          days: {
+            [dayNumber]: status,
           },
-          { merge: true }
-        );
-      }
-      await batch.commit();
+          ...(incField && {
+            [incField]: FieldValue.increment(1),
+          }),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      const sessionRef = baseRef
+        .collection("attendance_session")
+        .doc(session);
+      batch.set(
+        sessionRef,
+        {
+          session,
+          months: {
+            [monthKey]: {
+              [status]: FieldValue.increment(1),
+            },
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
+
+    await batch.commit();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("ATTENDANCE SAVE ERROR:", err);
