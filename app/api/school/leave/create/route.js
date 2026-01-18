@@ -7,10 +7,18 @@ export async function POST(req) {
   try {
     const user = await verifyUser(req, "leavecomplaint.create");
     const body = await req.json();
-    const { branch, session, reason, from, to, days } = body;
-    if (!branch || !session || !reason || !from || !days) {
+    const { type, branch, session, reason, from, to, days, appId } = body;
+
+    if (!type || !branch || !session || !reason || !from || !days || !appId) {
       return NextResponse.json(
         { message: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    if (!["employee", "student"].includes(type)) {
+      return NextResponse.json(
+        { message: "Invalid leave type" },
         { status: 400 }
       );
     }
@@ -19,8 +27,10 @@ export async function POST(req) {
     const leaveId = adminDb.collection("_").doc().id;
     const leaveEntry = {
       id: leaveId,
-      employeeId: user.uid,
-      employeeName: user.name || null,
+      type,
+      uid: user.uid,
+      appId,
+      name: user.name || null,
       reason,
       from,
       to: to || null,
@@ -29,6 +39,7 @@ export async function POST(req) {
       session,
       requestedAt: now,
       createdBy: user.uid,
+      updatedAt: now,
     };
 
     const schoolLeaveRef = adminDb
@@ -41,25 +52,23 @@ export async function POST(req) {
       .collection(session)
       .doc(leaveId);
 
-    const employeeLeaveRef = adminDb
+    const userLeaveRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
       .doc(branch)
-      .collection("employees")
+      .collection(type === "employee" ? "employees" : "students")
       .doc(user.uid)
       .collection("leave")
       .doc(session);
 
     const batch = adminDb.batch();
-    batch.set(schoolLeaveRef, {
-      ...leaveEntry,
-      updatedAt: now,
-    });
+    batch.set(schoolLeaveRef, leaveEntry);
     batch.set(
-      employeeLeaveRef,
+      userLeaveRef,
       {
-        employeeId: user.uid,
+        uid: user.uid,
+        appId,
         session,
         items: FieldValue.arrayUnion({
           id: leaveId,
