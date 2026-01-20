@@ -56,7 +56,7 @@ export async function POST(req) {
       .doc(branch)
       .collection(type === "employee" ? "employees" : "students")
       .doc(user.uid)
-      .collection("complaints")
+      .collection("complaint")
       .doc(session);
 
     const batch = adminDb.batch();
