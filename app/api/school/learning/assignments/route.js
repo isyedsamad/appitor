@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "learning.manage");
+    const user = await verifyUser(req, "learning.create");
     const body = await req.json();
     const {
       branch,
@@ -146,7 +146,7 @@ export async function DELETE(req) {
         { status: 400 }
       );
     }
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all");
+    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all") || user.permissions?.includes("learning.manage");
     const docId = `${classId}_${sectionId}_${sessionId}`;
     const assignmentRef = adminDb
       .collection("schools")

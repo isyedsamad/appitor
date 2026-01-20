@@ -20,7 +20,7 @@ export async function POST(req) {
       { status: 403 }
     );
   }
-  if (user.status !== "active") {
+  if (user.status == "inactive") {
     return NextResponse.json(
       { message: "Account is disabled! Please contact Admin" },
       { status: 403 }

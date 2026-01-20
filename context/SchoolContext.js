@@ -96,7 +96,7 @@ export function SchoolProvider({ schoolId, children }) {
       const schoolData = schoolSnap.data();
       setCurrentSession(schoolData.currentSession);
       const userData = userSnap.data();
-      if (userData.schoolId !== schoolId || userData.status !== "active" || schoolData.status != "active") {
+      if (userData.schoolId !== schoolId || userData.status == "disabled" || schoolData.status != "active") {
         setSchoolUser(null);
         setLoading(false);
         setIsLoaded(true);

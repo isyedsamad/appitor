@@ -35,7 +35,6 @@ export default function SchoolLoginPage() {
       toast.error('Error: ' + error, {
         theme: 'colored'
       })
-    } finally {
       setLoading(false);
     }
   }
