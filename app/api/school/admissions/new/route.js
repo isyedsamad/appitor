@@ -7,7 +7,7 @@ export async function POST(req) {
   let createdUid = null;
   try {
     const user = await verifyUser(req, "admission.create");
-    const { admissionId, name, gender, mobile, dob, className, section, branch, currentSession, branchCode, autoRoll, templateId, templateName } = await req.json();
+    const { admissionId, name, gender, mobile, dob, className, section, branch, branchNames, currentSession, branchCode, autoRoll, templateId, templateName } = await req.json();
     if (!admissionId || !name || !dob || !className || !section || !branch || !currentSession || !branchCode) {
       return NextResponse.json(
         { message: "Missing required fields" },
@@ -65,7 +65,7 @@ export async function POST(req) {
       admissionId,
       appId,
       name,
-      mobile,
+      mobile: mobile || null,
       gender,
       dob,
       className,
@@ -73,6 +73,9 @@ export async function POST(req) {
       email,
       schoolId: user.schoolId,
       branchId: branch,
+      branchIds: [branch],
+      currentBranch: branch,
+      branchNames,
       status: "active",
       rollNo: nextRoll,
       rollAssignedAt: nextRoll ? FieldValue.serverTimestamp() : null,

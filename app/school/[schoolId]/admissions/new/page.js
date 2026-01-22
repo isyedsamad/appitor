@@ -63,6 +63,7 @@ export default function NewAdmissionPage() {
       await secureAxios.post("/api/school/admissions/new", {
         ...form,
         branch,
+        branchNames: [branchInfo.name],
         branchCode,
         autoRoll,
         currentSession,
