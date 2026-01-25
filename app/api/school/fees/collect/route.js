@@ -78,6 +78,18 @@ export async function POST(req) {
       const current = counterSnap.exists ? counterSnap.data().current || 0 : 0;
       const next = current + 1;
 
+      const totalFlexibleAmount = flexibleItems.reduce((s, f) => s + Number(f.amount), 0);
+      const totalMonths = months.reduce(
+        (s, m) => s + Number(m.total),
+        0
+      );
+      const totalFeeToSettle = totalFlexibleAmount + totalMonths;
+      const discountValue = Number(payment.discountValue || 0);
+      const discountAmount =
+        payment.discountType === "percent"
+          ? Math.round((totalFeeToSettle * discountValue) / 100)
+          : discountValue;
+
       const snapshots = await Promise.all(refs.map(ref => tx.get(ref)));
       snapshots.forEach((snap, index) => {
         if (!snap.exists) {
@@ -118,7 +130,8 @@ export async function POST(req) {
             totals: { totalFee: 0, totalPaid: 0, totalDue: 0 },
           };
 
-      let remaining = paidAmount;
+      // let remaining = paidAmount;
+      let remaining = paidAmount + discountAmount;
       const allocations = [];
 
       const totalFlexible = flexibleItems.reduce((s, f) => s + Number(f.amount), 0);
@@ -218,10 +231,40 @@ export async function POST(req) {
         summary.totals.totalPaid += payNow;
       }
 
+      summary.totals.totalDiscount = (summary.totals.totalDiscount || 0) + discountAmount;
+
       summary.totals.totalFee = Object.values(summary.months).reduce((s, m) => s + m.total, 0);
-      summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid;
+      summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid - summary.totals.totalDiscount;
       summary.lastPaymentAt = nowServer;
       summary.updatedAt = nowServer;
+
+      if (discountAmount > 0) {
+        tx.set(
+          branchRef
+            .collection("fees")
+            .doc("ledger")
+            .collection("items")
+            .doc(),
+          {
+            type: "discount",
+            direction: "debit",
+            amount: discountAmount,
+            studentId,
+            appId,
+            sessionId,
+            receiptNo,
+            remark: payment.remark || "Fee Discount",
+            createdAt: nowServer,
+            createdDay: formatDate(),
+            createdMonth: formatMonth(),
+            createdBy: {
+              id: user.uid,
+              name: user.name,
+              role: user.role,
+            },
+          }
+        );
+      }
     
       tx.set(ledgerRef, {
         type: "payment",
@@ -260,6 +303,8 @@ export async function POST(req) {
         discount: {
           type: payment.discountType,
           value: payment.discountValue || 0,
+          amount: discountAmount,
+          baseAmount: totalFeeToSettle,
         },
         remark: payment.remark || "",
         paymentMode: payment.payType || "cash",

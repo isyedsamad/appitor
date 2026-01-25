@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 import { buildMonthsForSession } from "@/lib/school/fees/monthUtil";
 
 export default function FeeCollectionPage() {
-  const { schoolUser, loading, setLoading, sessionList, currentSession } = useSchool();
+  const { schoolUser, loading, setLoading, sessionList, currentSession, classData } = useSchool();
   const { branch, branchInfo } = useBranch();
   const [appIdSearch, setAppIdSearch] = useState('');
   const [sessionId, setSessionId] = useState(null);
@@ -36,6 +36,9 @@ export default function FeeCollectionPage() {
     discountValue: "",
     remark: "",
   });
+  const getClassName = id => classData.find(c => c.id === id)?.name;
+  const getSectionName = (cid, sid) =>
+    classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
   useEffect(() => {
     if(schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
@@ -304,9 +307,9 @@ export default function FeeCollectionPage() {
                   <User size={16} /> Student
                 </div>
                 <div className="text-sm space-y-2 p-4">
-                  <div className="flex justify-between"><span>Name</span><span className="font-medium">{student.name}</span></div>
+                  <div className="flex justify-between"><span>Name</span><span className="font-medium capitalize">{student.name}</span></div>
                   <div className="flex justify-between"><span>App ID</span><span>{student.appId}</span></div>
-                  <div className="flex justify-between"><span>Class</span><span>{student.className} - {student.section}</span></div>
+                  <div className="flex justify-between"><span>Class</span><span>{getClassName(student.className)} - {getSectionName(student.className, student.section)}</span></div>
                 </div>
               </div>
               <div className="bg-(--bg-card) border border-(--border) rounded-xl">

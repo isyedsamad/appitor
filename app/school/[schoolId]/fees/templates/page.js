@@ -39,6 +39,9 @@ export default function FeeTemplatesPage() {
     className: "",
     section: "",
   });
+  const getClassName = id => classData.find(c => c.id === id)?.name;
+  const getSectionName = (cid, sid) =>
+    classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
   const fetchData = async () => {
     if (!schoolUser || !branch) return;
     setLoading(true);
@@ -160,7 +163,7 @@ export default function FeeTemplatesPage() {
               </div>
               <div className="text-sm text-(--text-muted) flex items-center gap-2">
                 <School size={14} />
-                {t.className}{t.section && ` - ${t.section}`}
+                {getClassName(t.className)}{t.section && ` - ${getSectionName(t.className, t.section)}`}
               </div>
               <div className="text-sm flex items-center gap-2">
                 <CalendarRange size={14} />
@@ -234,7 +237,7 @@ export default function FeeTemplatesPage() {
                   >
                     <option value="">Select Class</option>
                     {classData.map(c => (
-                      <option key={c.name} value={c.name}>
+                      <option key={c.name} value={c.id}>
                         {c.name}
                       </option>
                     ))}
@@ -249,9 +252,9 @@ export default function FeeTemplatesPage() {
                   >
                     <option value="">All Sections</option>
                     {classData
-                      .find(c => c.name === form.className)
+                      .find(c => c.id === form.className)
                       ?.sections?.map(sec => (
-                        <option key={sec.id} value={sec.name}>
+                        <option key={sec.id} value={sec.id}>
                           {sec.name}
                         </option>
                       ))}

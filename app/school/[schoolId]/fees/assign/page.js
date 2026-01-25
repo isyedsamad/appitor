@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -38,18 +40,18 @@ export default function StudentFeeAssignmentPage() {
   const [open, setOpen] = useState(false);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState('');
+  const getClassName = id => classData.find(c => c.id === id)?.name;
+  const getSectionName = (cid, sid) =>
+    classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
   const loadStudents = async () => {
     if (!selectedClass || !selectedSection) return;
     setLoading(true);
     try {
       const base = ["schools", schoolUser.schoolId, "branches", branch];
       const [studentSnap, assignSnap] = await Promise.all([
-        getDocs(
-          query(
-            collection(db, ...base, "students"),
-            where("className", "==", selectedClass),
-            where("section", "==", selectedSection)
-          )
+        getDoc(doc(db,
+          "schools", schoolUser.schoolId, "branches", branch,
+          "meta", `${selectedClass}_${selectedSection}`)
         ),
         getDocs(
           query(
@@ -65,13 +67,12 @@ export default function StudentFeeAssignmentPage() {
       assignments.forEach(a => {
         assignmentMap[a.studentId] = a;
       });
-      const studentsWithAssignment = studentSnap.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-        assignment: assignmentMap[d.id] || null,
+      const studentSnapDoc = studentSnap.data().students.sort((a, b) => String(a.appId).localeCompare(String(b.appId)))
+      const studentsWithAssignment = studentSnapDoc.map(d => ({
+        id: d.uid,
+        ...d,
+        assignment: assignmentMap[d.uid] || null,
       }));
-      console.log(studentsWithAssignment);
-      
       setStudents(studentsWithAssignment);
       setSelectedIds([]);  
     } catch(err) {
@@ -230,7 +231,7 @@ export default function StudentFeeAssignmentPage() {
                     </button>
                     </td>
                     <td className="px-4 py-3 text-left">{s.rollNo ? s.rollNo >= 10 ? s.rollNo : '0' + s.rollNo : '-'}</td>
-                    <td className="px-4 py-3 text-left font-semibold">{s.admissionId}</td>
+                    <td className="px-4 py-3 text-left font-semibold">{s.appId}</td>
                     <td className="px-4 py-3 text-left font-semibold capitalize">{s.name}</td>
                     <td className="px-4 py-3 text-left">
                       {s.assignment ? (
@@ -293,7 +294,7 @@ export default function StudentFeeAssignmentPage() {
                   <option value="">Select Fee Template</option>
                   {(templates && selectedClass != '') ? (templates).filter(t => t.className == selectedClass).map(t => (
                     <option key={t.id} value={t.id}>
-                      {t.name} · {t.className}
+                      {t.name} · {getClassName(t.className)}
                     </option>
                   )) : null}
                 </select>
