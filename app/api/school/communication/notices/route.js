@@ -85,6 +85,10 @@ export async function POST(req) {
       .doc(sessionId);
 
     const indexRef = adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(branch)
       .collection("system")
       .doc("notificationIndex");
 

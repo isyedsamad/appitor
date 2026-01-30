@@ -76,7 +76,13 @@ export default function StudentMessagingPage() {
           return;
         }
         setStudents(
-          (snap.data().students || []).filter((s) => s.status === "active")
+          (snap.data().students || [])
+            .filter((s) => s.status === "active")
+            .map((student) => ({
+              ...student,
+              className: snap.data().classId,
+              section: snap.data().sectionId
+            }))
         );
       } else {
         if (!filters.appId) {
@@ -103,6 +109,12 @@ export default function StudentMessagingPage() {
     }
   }
 
+  function sortByNewest(items) {
+    return [...items].sort(
+      (a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)
+    );
+  }
+
   async function openMessage(student) {
     setSelectedStudent(student);
     setOpenModal(true);
@@ -121,7 +133,7 @@ export default function StudentMessagingPage() {
         `${student.uid}_${sessionId}`
       );
       const snap = await getDoc(ref);
-      setHistory(snap.exists() ? snap.data().items || [] : []);
+      setHistory(snap.exists() ? sortByNewest(snap.data().items) || [] : []);
     } finally {
       setLoading(false);
     }
@@ -284,9 +296,7 @@ export default function StudentMessagingPage() {
                     <td className="px-5 py-3 font-medium capitalize">{s.name}</td>
                     <td className="px-5 py-3">{s.appId}</td>
                     <td className="px-5 py-3">
-                      {filters.classId
-                        ? `${getClassName(filters.classId)} ${getSectionName(filters.classId, filters.sectionId)}`
-                        : "-"}
+                      {getClassName(s.className)} {getSectionName(s.className, s.section)}
                     </td>
                     <td className="px-5 py-3 capitalize">{s.status}</td>
                     <td className="px-5 py-3 text-right">
@@ -427,8 +437,9 @@ export default function StudentMessagingPage() {
                               {formatDate(m.createdAt)}
                             </p>
                             {seen && (
-                              <p className="text-xs text-(--text-muted)">
-                                Seen by student
+                              <p className="text-xs text-(--text-muted) flex items-center gap-1">
+                                <Calendar size={12} />
+                                Seen {formatDate(m.readAt)}
                               </p>
                             )}
                           </div>

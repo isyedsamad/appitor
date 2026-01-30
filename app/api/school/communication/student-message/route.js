@@ -81,7 +81,7 @@ export async function POST(req) {
       .doc(studentUid)
       .set(
         {
-          studentMessageAt: now,
+          personalMessageAt: now,
         },
         { merge: true }
       );
