@@ -125,7 +125,7 @@ export function SchoolProvider({ schoolId, children }) {
         schoolName: schoolData.name,
         schoolCode: schoolData.code,
         roleId: userData.roleId,
-        roleName: roleData.name,
+        roleName: roleData.name.toLowerCase(),
         permissions: roleData.permissions || [],
         linkedId: userData.linkedId || null,
       });
