@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {CalendarClock, Save, Search, Plus, Trash2, CheckCircle2, PlusCircle, Layers, BookOpen, User2, AlertTriangle, Book} from "lucide-react";
+import { CalendarClock, Save, Search, Plus, Trash2, CheckCircle2, PlusCircle, Layers, BookOpen, User2, AlertTriangle, Book } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
-import {collection, doc, getDoc, getDocs, query, where} from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import Loading from "@/components/ui/Loading";
@@ -30,7 +30,7 @@ export default function EditTimetablePage() {
   const [DAYS, setDAYS] = useState([]);
   // const [GRID_COLS, setGRID_COLS] = useState('');
   useEffect(() => {
-    if(settings) setDAYS(settings.workingDays);
+    if (settings) setDAYS(settings.workingDays);
   }, [settings])
   // useEffect(() => {
   //   if(settings) {
@@ -67,7 +67,7 @@ export default function EditTimetablePage() {
     const slots = teacherTimetables[teacherId] || [];
     return slots.find(
       s => s.day === day && s.period === period &&
-           !(s.classId === classId && s.sectionId === sectionId)
+        !(s.classId === classId && s.sectionId === sectionId)
     );
   };
   useEffect(() => {
@@ -102,47 +102,27 @@ export default function EditTimetablePage() {
       loadSettings();
     }
   }, [schoolUser?.schoolId, branch]);
-  
-  useEffect(() => {
-    if (employeeData?.length == 0) return;
-    const loadTeacherTimetables = async () => {
-      try {
-        setLoading(true);
-        const base = ["schools", schoolUser.schoolId, "branches", branch];
-        const snaps = await Promise.all(
-          employeeData.map(t =>
-            getDoc(
-              doc(
-                db,
-                ...base,
-                "timetable",
-                "items",
-                "teachers",
-                t.uid
-              )
-            )
-          )
-        );
-        const map = {};
-        snaps.forEach((snap, i) => {
-          map[employeeData[i].uid] = snap.exists()
-            ? snap.data().slots || []
-            : [];
-        });
-        setTeacherTimetables(map);
-      } catch (err) {
-        console.log(err);
-        toast.error("Failed to load teacher availability");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTeacherTimetables();
-  }, [employeeData, branch]);
+
+  const fetchTeacherTimetable = async (tid) => {
+    if (teacherTimetables[tid]) return teacherTimetables[tid];
+    try {
+      setLoading(true);
+      const ref = doc(db, "schools", schoolUser.schoolId, "branches", branch, "timetable", "items", "teachers", tid);
+      const snap = await getDoc(ref);
+      const slots = snap.exists() ? snap.data().slots || [] : [];
+      setTeacherTimetables(prev => ({ ...prev, [tid]: slots }));
+      return slots;
+    } catch {
+      toast.error("Failed to check teacher availability");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if(employeeData) setTeachers(employeeData);
-    if(subjectData) setSubjects(subjectData);
+    if (employeeData) setTeachers(employeeData);
+    if (subjectData) setSubjects(subjectData);
   }, [employeeData, subjectData])
 
   const loadData = async () => {
@@ -348,51 +328,32 @@ export default function EditTimetablePage() {
   //   setSidebar(null);
   // };
 
-  const applySingleMapping = (mapping) => {
+  const applySingleMapping = async (mapping) => {
     const { subjectId, teacherId, periodsPerWeek } = mapping;
     const used = getUsageCount(subjectId, teacherId);
     if (used >= periodsPerWeek) {
       toast.error("Weekly limit reached");
       return;
     }
+
+    const slots = await fetchTeacherTimetable(teacherId);
+    if (!slots) return;
+
     if (sidebar.allDays) {
       const conflicts = [];
-  
       for (const d of DAYS) {
-        const c = findTeacherConflict(teacherId, d, sidebar.period);
-        if (c) {
-          conflicts.push({
-            day: d,
-            classId: c.classId,
-            sectionId: c.sectionId,
-          });
-        }
+        const c = slots.find(s => s.day === d && s.period === sidebar.period && !(s.classId === classId && s.sectionId === sectionId));
+        if (c) conflicts.push({ day: d, classId: c.classId, sectionId: c.sectionId });
       }
       if (conflicts.length > 0) {
-        setConflict({
-          teacherId,
-          subjectId,
-          period: sidebar.period,
-          allDays: true,
-          conflicts,
-        });
+        setConflict({ teacherId, subjectId, period: sidebar.period, allDays: true, conflicts });
         return;
       }
-    }else {
+    } else {
       const { day, period } = sidebar;
-      const c = findTeacherConflict(teacherId, day, period);
+      const c = slots.find(s => s.day === day && s.period === period && !(s.classId === classId && s.sectionId === sectionId));
       if (c) {
-        setConflict({
-          teacherId,
-          subjectId,
-          day,
-          period,
-          from: {
-            classId: c.classId,
-            sectionId: c.sectionId,
-          },
-          allDays: false,
-        });
+        setConflict({ teacherId, subjectId, day, period, from: { classId: c.classId, sectionId: c.sectionId }, allDays: false });
         return;
       }
     }
@@ -401,26 +362,14 @@ export default function EditTimetablePage() {
       if (sidebar.allDays) {
         DAYS.forEach(d => {
           const slot = copy[d].find(p => p.period === sidebar.period);
-          if (slot) {
-            slot.entries.push({ subjectId, teacherId });
-          } else {
-            copy[d].push({
-              period: sidebar.period,
-              entries: [{ subjectId, teacherId }],
-            });
-          }
+          if (slot) slot.entries.push({ subjectId, teacherId });
+          else copy[d].push({ period: sidebar.period, entries: [{ subjectId, teacherId }] });
         });
       } else {
         const { day, period } = sidebar;
         const slot = copy[day].find(p => p.period === period);
-        if (slot) {
-          slot.entries.push({ subjectId, teacherId });
-        } else {
-          copy[day].push({
-            period,
-            entries: [{ subjectId, teacherId }],
-          });
-        }
+        if (slot) slot.entries.push({ subjectId, teacherId });
+        else copy[day].push({ period, entries: [{ subjectId, teacherId }] });
       }
       return copy;
     });
@@ -443,7 +392,7 @@ export default function EditTimetablePage() {
   //   });
   //   setTeacherTimetables(prev => {
   //     if (!prev[teacherId]) return prev;
-  
+
   //     return {
   //       ...prev,
   //       [teacherId]: prev[teacherId].filter(
@@ -507,7 +456,7 @@ export default function EditTimetablePage() {
     }));
     setSidebar(null);
     setConflict(null);
-  };  
+  };
 
   const removeEntry = (day, period, index) => {
     setTimetable((prev) => ({
@@ -536,7 +485,7 @@ export default function EditTimetablePage() {
     }
   };
   const classObj = classData && classData.find((c) => c.id === classId);
-  
+
   return (
     <RequirePermission permission="timetable.edit">
       <div className="space-y-5">
@@ -599,7 +548,7 @@ export default function EditTimetablePage() {
             </select>
           </div>
           <button className="btn-primary gap-2" onClick={() => loadData()}>
-           <Search size={16} />Search
+            <Search size={16} />Search
           </button>
         </div>
 
@@ -681,87 +630,86 @@ export default function EditTimetablePage() {
 
         {sidebar && (
           <>
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
-            <div className="w-full max-w-md bg-(--bg-card) h-full py-4 px-5 space-y-4 overflow-y-auto border-l-3 border-(--primary)">
-              <div className="flex justify-between items-center">
-                <div className="flex justify-start items-center gap-3">
-                  <Layers size={15} />
-                  <h3 className="font-semibold">Assign Subject</h3>
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-end z-50">
+              <div className="w-full max-w-md bg-(--bg-card) h-full py-4 px-5 space-y-4 overflow-y-auto border-l-3 border-(--primary)">
+                <div className="flex justify-between items-center">
+                  <div className="flex justify-start items-center gap-3">
+                    <Layers size={15} />
+                    <h3 className="font-semibold">Assign Subject</h3>
+                  </div>
+                  <button className="p-1 hover:text-red-500" onClick={() => setSidebar(null)}>✕</button>
                 </div>
-                <button className="p-1 hover:text-red-500" onClick={() => setSidebar(null)}>✕</button>
-              </div>
-              {mappings.map((m, i) => {
-                const used = getUsageCount(m.subjectId, m.teacherId);
-                const max = m.periodsPerWeek;
-                const sub = subjects.find(s => s.id === m.subjectId);
-                const t = teachers.find(t => t.uid === m.teacherId);
-                const exhausted = used >= max;
+                {mappings.map((m, i) => {
+                  const used = getUsageCount(m.subjectId, m.teacherId);
+                  const max = m.periodsPerWeek;
+                  const sub = subjects.find(s => s.id === m.subjectId);
+                  const t = teachers.find(t => t.uid === m.teacherId);
+                  const exhausted = used >= max;
 
-                return (
-                  <div
-                    key={i}
-                    onClick={() => !exhausted && applySingleMapping(m)}
-                    className={`
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => !exhausted && applySingleMapping(m)}
+                      className={`
                       relative rounded-lg border border-(--border)
                       bg-(--bg-card)
                       p-4 transition-all
-                      ${
-                        exhausted
+                      ${exhausted
                           ? "opacity-50 cursor-not-allowed"
                           : "cursor-pointer hover:border-(--primary) hover:shadow-sm"
-                      }
+                        }
                     `}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex justify-start items-center gap-3">
-                      <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-                        <Book size={15} />
-                      </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-(--text)">
-                              {sub?.name || "Unknown Subject"}
-                            </span>
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex justify-start items-center gap-3">
+                          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+                            <Book size={15} />
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-(--text-muted)">
-                            <span className="capitalize font-medium">
-                              {t?.name || "Unknown Teacher"}
-                            </span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-(--text)">
+                                {sub?.name || "Unknown Subject"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-(--text-muted)">
+                              <span className="capitalize font-medium">
+                                {t?.name || "Unknown Teacher"}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        {exhausted && (
+                          <div className="flex items-center gap-1 bg-(--status-a-bg) text-(--status-a-text) px-2 py-1 rounded-md text-xs font-medium">
+                            <AlertTriangle size={14} />
+                            Full
+                          </div>
+                        )}
                       </div>
-                      {exhausted && (
-                        <div className="flex items-center gap-1 bg-(--status-a-bg) text-(--status-a-text) px-2 py-1 rounded-md text-xs font-medium">
-                          <AlertTriangle size={14} />
-                          Full
+                      <div className="mt-4 space-y-1.5">
+                        <div className="flex justify-between text-[11px] text-(--text-muted)">
+                          <span>Weekly allocation</span>
+                          <span className={exhausted ? "text-red-600 font-medium" : ""}>
+                            {used} / {max}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="mt-4 space-y-1.5">
-                      <div className="flex justify-between text-[11px] text-(--text-muted)">
-                        <span>Weekly allocation</span>
-                        <span className={exhausted ? "text-red-600 font-medium" : ""}>
-                          {used} / {max}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className={`
+                        <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className={`
                             h-full rounded-full transition-all
                             ${exhausted ? "bg-red-500" : "bg-(--primary)"}
                           `}
-                          style={{
-                            width: `${Math.min((used / max) * 100, 100)}%`,
-                          }}
-                        />
+                            style={{
+                              width: `${Math.min((used / max) * 100, 100)}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          {/* {conflict && (
+            {/* {conflict && (
             <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
               <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
                 <div className="flex items-center gap-3">
@@ -808,82 +756,82 @@ export default function EditTimetablePage() {
               </div>
             </div>
           )} */}
-          {conflict && (
-            <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-(--status-o-bg) text-(--status-o-text)">
-                    <AlertTriangle size={18} />
+            {conflict && (
+              <div className="fixed inset-0 bg-black/50 px-5 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="bg-(--bg-card) rounded-xl p-6 w-full max-w-md space-y-4 border border-(--border)">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-(--status-o-bg) text-(--status-o-text)">
+                      <AlertTriangle size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Teacher Busy</h3>
+                      <p className="text-sm text-(--text-muted)">
+                        Scheduling conflict detected
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Teacher Busy</h3>
-                    <p className="text-sm text-(--text-muted)">
-                      Scheduling conflict detected
+                  <div className="text-sm space-y-2">
+                    <p>
+                      <b className="capitalize">
+                        {teachers.find(t => t.uid === conflict.teacherId)?.name}
+                      </b>{" "}
+                      is already assigned in the following slot(s):
                     </p>
-                  </div>
-                </div>
-                <div className="text-sm space-y-2">
-                  <p>
-                    <b className="capitalize">
-                      {teachers.find(t => t.uid === conflict.teacherId)?.name}
-                    </b>{" "}
-                    is already assigned in the following slot(s):
-                  </p>
-                  {!conflict.allDays && (
-                    <div className="rounded-lg border border-(--border) p-3 bg-(--bg)">
-                      <p className="font-medium">
-                        {classData.find(c => c.id === conflict.from.classId)?.name}{" "}
-                        {getSectionName(conflict.from.classId, conflict.from.sectionId)}
-                      </p>
-                      <p className="text-(--text-muted)">
-                        {conflict.day} • Period {conflict.period}
-                      </p>
-                    </div>
-                  )}
-                  {conflict.allDays && (
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {conflict.conflicts.map((c, i) => (
-                        <div
-                          key={i}
-                          className="rounded-lg border border-(--border) p-3 bg-(--bg) flex justify-between items-center"
-                        >
-                          <div>
-                            <p className="font-medium">
-                              {classData.find(x => x.id === c.classId)?.name}{" "}
-                              {getSectionName(c.classId, c.sectionId)}
-                            </p>
-                            <p className="text-(--text-muted) capitalize">
-                              {c.day} • Period {conflict.period}
-                            </p>
+                    {!conflict.allDays && (
+                      <div className="rounded-lg border border-(--border) p-3 bg-(--bg)">
+                        <p className="font-medium">
+                          {classData.find(c => c.id === conflict.from.classId)?.name}{" "}
+                          {getSectionName(conflict.from.classId, conflict.from.sectionId)}
+                        </p>
+                        <p className="text-(--text-muted)">
+                          {conflict.day} • Period {conflict.period}
+                        </p>
+                      </div>
+                    )}
+                    {conflict.allDays && (
+                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {conflict.conflicts.map((c, i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg border border-(--border) p-3 bg-(--bg) flex justify-between items-center"
+                          >
+                            <div>
+                              <p className="font-medium">
+                                {classData.find(x => x.id === c.classId)?.name}{" "}
+                                {getSectionName(c.classId, c.sectionId)}
+                              </p>
+                              <p className="text-(--text-muted) capitalize">
+                                {c.day} • Period {conflict.period}
+                              </p>
+                            </div>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                              Busy
+                            </span>
                           </div>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
-                            Busy
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <button
-                    className="btn-outline"
-                    onClick={() => setConflict(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn-primary"
-                    onClick={() => {
-                      forceAssign(conflict);
-                    }}
-                  >
-                    Override & Replace
-                  </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      className="btn-outline"
+                      onClick={() => setConflict(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        forceAssign(conflict);
+                      }}
+                    >
+                      Override & Replace
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          </>          
+            )}
+          </>
         )}
       </div>
     </RequirePermission>
