@@ -260,14 +260,14 @@ export default function StudentReportsPage() {
                         disabled={students.length === 0}
                         className="btn-outline flex items-center gap-2"
                     >
-                        <Download size={16} /> Export Excel
+                        <FileText size={16} color="green" /> Export Excel
                     </button>
                     <button
                         onClick={exportToPDF}
                         disabled={students.length === 0}
                         className="btn-outline flex items-center gap-2"
                     >
-                        <FileText size={16} /> Export PDF
+                        <Download size={16} color="red" /> Export PDF
                     </button>
                 </div>
             </div>
