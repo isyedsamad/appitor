@@ -224,9 +224,11 @@ input[type="number"]::-webkit-inner-spin-button {
            hover:bg-[var(--primary)]/80
            active:scale-[0.98];
   }
+  
   .btn-outline {
     @apply border border-[var(--border)]
            px-4 py-2
+           bg-[var(--bg-card)]
            sm:px-5
            rounded-md
            hover:bg-[var(--primary-soft)]

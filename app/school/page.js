@@ -29,10 +29,12 @@ export default function SchoolLoginPage() {
       const data = await loginSchoolUser({ schoolId, email: newMail, password });
       if(data.success) {
         router.replace(`/school/${data.schoolId}/dashboard`);
+      }else {
+        setLoading(false);
       }
     } catch (err) {
       setError(err.message);
-      toast.error('Error: ' + error, {
+      toast.error('Error: ' + err, {
         theme: 'colored'
       })
       setLoading(false);
@@ -42,11 +44,11 @@ export default function SchoolLoginPage() {
   return (
     <>
       {loading && <Loading />}
-      <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--bg)] p-5">
-        <div className="w-full max-w-md bg-[var(--bg-card)] rounded-2xl shadow-xl border border-[var(--border)] p-6 sm:p-8">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-(--bg) p-5">
+        <div className="w-full max-w-md bg-(--bg-card) rounded-2xl shadow-xl border border-(--border) p-6 sm:p-8">
           
           <div className="mb-5 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-(--border)">
                 <Shield className="h-6 w-6 text-(--primary)" />
             </div>
 
