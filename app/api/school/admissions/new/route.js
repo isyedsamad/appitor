@@ -115,14 +115,14 @@ export async function POST(req) {
     const assignmentRef =
       templateId && templateName
         ? adminDb
-            .collection("schools")
-            .doc(user.schoolId)
-            .collection("branches")
-            .doc(branch)
-            .collection("fees")
-            .doc("assignments")
-            .collection("items")
-            .doc()
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection("fees")
+          .doc("assignments")
+          .collection("items")
+          .doc()
         : null;
     await adminDb.runTransaction(async (tx) => {
       const rosterSnap = await tx.get(rosterRef);
@@ -152,6 +152,8 @@ export async function POST(req) {
         appId,
         rollNo: nextRoll,
         status: "active",
+        dob,
+        gender,
       };
       if (!rosterSnap.exists) {
         tx.set(rosterRef, {
