@@ -7,10 +7,12 @@ export async function PUT(req) {
   try {
     const user = await verifyUser(req, "student.manage");
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
-    const schoolSnap = await schoolRef.get();
-    const fromSession = schoolSnap.data().currentSession;
+    const branchRef = adminDb.collection("schools").doc(user.schoolId).collection("branches").doc(user.currentBranch);
+
+    const [branchSnap, schoolSnap] = await Promise.all([branchRef.get(), schoolRef.get()]);
+    const fromSession = branchSnap.data()?.currentSession || schoolSnap.data()?.currentSession;
     // const { searchParams } = new URL(req.url);
-    const {toSession} = await req.json();
+    const { toSession } = await req.json();
     if (!toSession) {
       return NextResponse.json(
         { message: "Target session required" },

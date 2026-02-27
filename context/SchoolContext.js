@@ -25,19 +25,19 @@ export function SchoolProvider({ schoolId, children }) {
   const [currentBranch, setCurrentBranch] = useState('');
   const [sessionList, setSessionList] = useState(null);
   const loadClasses = async (branch) => {
-    if(!branch) return;
+    if (!branch) return;
     setLoading(true);
     const classSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes', 'data'));
-    if(!classSnap.exists()) return; 
+    if (!classSnap.exists()) return;
     const classdata = classSnap.data();
     setClassData(classdata.classData);
     setLoading(false);
   }
   const loadSubjects = async (branch) => {
-    if(!branch) return;
+    if (!branch) return;
     setLoading(true);
     const subSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'subjects', 'branch_subjects'));
-    if(!subSnap.exists()) return; 
+    if (!subSnap.exists()) return;
     const subdata = subSnap.data();
     setSubjectData(subdata.subjects);
     setLoading(false);
@@ -92,10 +92,30 @@ export function SchoolProvider({ schoolId, children }) {
         signOut(auth);
         return;
       }
+      const userData = userSnap.data();
       const schoolSnap = await getDoc(doc(db, "schools", schoolId));
       const schoolData = schoolSnap.data();
-      setCurrentSession(schoolData.currentSession);
-      const userData = userSnap.data();
+
+      let sessionToUse = schoolData.currentSession;
+      let sessionListToUse = schoolData.sessions || [];
+      if (userData.currentBranch) {
+        const branchSettingsSnap = await getDoc(
+          doc(db, "schools", schoolId, "branches", userData.currentBranch, "settings", "academic")
+        );
+        if (branchSettingsSnap.exists()) {
+          const branchSettings = branchSettingsSnap.data();
+          if (branchSettings.currentSession) {
+            sessionToUse = branchSettings.currentSession;
+          }
+          if (branchSettings.sessions) {
+            sessionListToUse = branchSettings.sessions;
+          }
+        }
+      }
+
+      setCurrentSession(sessionToUse);
+      setSessionList(sessionListToUse);
+
       if (userData.schoolId !== schoolId || userData.status == "disabled" || schoolData.status != "active") {
         setSchoolUser(null);
         setLoading(false);
@@ -115,13 +135,13 @@ export function SchoolProvider({ schoolId, children }) {
       const roleData = roleSnap.data();
       const allRolesSnap = await getDocs(collection(db, 'roles'));
       const allRolesData = allRolesSnap.docs;
-      setRoles(allRolesData.map((d) => ({id: d.id, ...d.data()})));
+      setRoles(allRolesData.map((d) => ({ id: d.id, ...d.data() })));
       setSchoolUser({
         ...userData,
         uid: fbUser.uid,
         employeeId: userData.employeeId ? userData.employeeId : '',
         schoolId,
-        currentSession: schoolData.currentSession,
+        currentSession: sessionToUse,
         schoolName: schoolData.name,
         schoolCode: schoolData.code,
         roleId: userData.roleId,
@@ -129,27 +149,26 @@ export function SchoolProvider({ schoolId, children }) {
         permissions: roleData.permissions || [],
         linkedId: userData.linkedId || null,
       });
-      setSessionList(schoolData.sessions);
       if (userData) {
         const currentBranchUser = userData.currentBranch;
-        if(userData.branchIds.length > 1) {
+        if (userData.branchIds.length > 1) {
           const combined = userData.branchIds.map((id, index) => ({
             id,
             name: userData.branchNames[index]
           }));
           setBranches(combined);
           setCurrentBranch(currentBranchUser);
-        }else {
-          if(userData.branchIds[0] == "*") {
+        } else {
+          if (userData.branchIds[0] == "*") {
             const branchRef = query(
               collection(db, 'branches'),
               where('schoolId', '==', userData.schoolId)
             )
             const branchSnap = await getDocs(branchRef);
-            setBranches(branchSnap.docs.map((d) => ({id: d.id, ...d.data()})));
+            setBranches(branchSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
             setCurrentBranch(userData.currentBranch);
-          }else {
-            setBranches([{id: 1, name: userData.branchNames[0]}]);
+          } else {
+            setBranches([{ id: 1, name: userData.branchNames[0] }]);
             setCurrentBranch(userData.branchIds[0]);
           }
         }

@@ -16,12 +16,17 @@ export async function PUT(req) {
 
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
     await adminDb.runTransaction(async (tx) => {
-      const schoolSnap = await tx.get(schoolRef);
-      if (!schoolSnap.exists || !schoolSnap.data().currentSession) {
-        throw new Error("Academic session not configured");
-      }
+      const firstStudentRef = adminDb.collection("schoolUsers").doc(uids[0]);
+      const firstStudentSnap = await tx.get(firstStudentRef);
+      if (!firstStudentSnap.exists) throw new Error("Reference student not found");
+      const branchId = firstStudentSnap.data().branchId;
 
-      const currentSession = schoolSnap.data().currentSession;
+      const branchRef = adminDb.collection("schools").doc(user.schoolId).collection("branches").doc(branchId);
+      const [branchSnap, schoolSnap] = await Promise.all([tx.get(branchRef), tx.get(schoolRef)]);
+
+      const currentSession = branchSnap.data()?.currentSession || schoolSnap.data()?.currentSession;
+      if (!currentSession) throw new Error("Academic session not configured");
+
       const studentEntries = [];
       const rosterSnapshots = new Map();
 
