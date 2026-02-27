@@ -132,6 +132,8 @@ export async function PUT(req) {
             appId: student.appId,
             rollNo: null,
             status: student.status,
+            dob: student.dob || "",
+            gender: student.gender || "",
           });
         }
       }

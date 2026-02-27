@@ -49,10 +49,15 @@ export async function PUT(req) {
     const batch = adminDb.batch();
     batch.update(userRef, updateData);
     batch.update(studentRef, updateData);
-    if (rosterSnap.exists && updates.name) {
+    if (rosterSnap.exists && (updates.name || updates.dob || updates.gender)) {
       const data = rosterSnap.data();
       const students = (data.students || []).map((s) =>
-        s.uid === uid ? { ...s, name: updates.name } : s
+        s.uid === uid ? {
+          ...s,
+          ...(updates.name && { name: updates.name }),
+          ...(updates.dob && { dob: updates.dob }),
+          ...(updates.gender && { gender: updates.gender })
+        } : s
       );
       batch.update(rosterRef, {
         students,
