@@ -224,11 +224,11 @@ export default function ViewTimetablePage() {
             <div className={`p-3 rounded-lg transition-all duration-500 ${liveInfo.isActive ? "bg-green-500/10 text-green-600" : "bg-(--primary-soft) text-(--primary)"}`}>
               {liveInfo.isActive ? <Clock size={20} /> : <Calendar size={20} />}
             </div>
-            <div className="space-y-0">
+            <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-semibold text-(--text)">Timetable Command Center</h1>
+                <h1 className="text-lg font-semibold text-(--text)">View Timetable</h1>
                 {liveInfo.isActive && (
-                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-[9px] font-semibold uppercase tracking-wider border border-green-500/20">
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-green-500/10 text-green-600 text-xs font-semibold uppercase tracking-wider border border-green-500/20">
                     Live
                   </span>
                 )}
@@ -243,14 +243,14 @@ export default function ViewTimetablePage() {
 
           <div className="flex items-center gap-3 relative z-10 w-full md:w-auto px-2">
             <div className="relative w-full md:w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted)" size={16} />
-              <input
+              {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted)" size={16} /> */}
+              {/* <input
                 type="text"
                 placeholder="Universal Search..."
                 value={universalSearch}
                 onChange={(e) => setUniversalSearch(e.target.value)}
                 className="input pl-10 h-10 w-full bg-(--bg) border-(--border) focus:ring-2 focus:ring-(--primary) transition-all"
-              />
+              /> */}
               {searchResults && (
                 <div className="absolute top-full left-0 w-full mt-2 bg-(--bg-card) border border-(--border) rounded-xl shadow-2xl z-50 p-2 space-y-3 max-h-96 overflow-y-auto">
                   {searchResults.teachers.length > 0 && (
@@ -666,13 +666,13 @@ export default function ViewTimetablePage() {
                         {busyEntries.map((e, i) => (
                           <div key={i} className="bg-(--bg-card) border border-(--border) rounded-lg p-3 flex items-center justify-between shadow-sm border-l-4 border-l-red-500">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded uppercase bg-red-50 text-red-600 flex items-center justify-center font-semibold text-xs">{getTeacherName(e.teacherId)?.charAt(0)}</div>
+                              <div className="h-8 w-8 rounded uppercase bg-(--status-a-bg) text-(--status-a-text) flex items-center justify-center font-semibold text-xs">{getTeacherName(e.teacherId)?.charAt(0)}</div>
                               <div>
                                 <p className="font-semibold text-(--text) text-sm capitalize">{getTeacherName(e.teacherId)}</p>
                                 <p className="text-[10px] font-semibold text-(--text-muted)">{getClassName(e.classId)} {getSection(e.classId, e.sectionId)} • {getSubjectName(e.subjectId)}</p>
                               </div>
                             </div>
-                            <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[9px] font-semibold uppercase border border-red-100 italic">Occupied</span>
+                            <span className="px-2 py-0.5 rounded-full bg-(--status-a-bg) text-(--status-a-text) text-[9px] font-semibold uppercase border border-(--status-a-border) italic">Occupied</span>
                           </div>
                         ))}
                       </div>
@@ -688,13 +688,13 @@ export default function ViewTimetablePage() {
                         {freeTeachers.map(t => (
                           <div key={t.uid} className="bg-(--bg-card) border border-(--border) rounded-lg p-3 flex items-center justify-between shadow-sm hover:border-(--primary) transition-all group">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded uppercase bg-green-50 text-green-600 flex items-center justify-center font-semibold text-xs group-hover:bg-(--primary-soft) group-hover:text-(--primary) transition-colors">{t.name?.charAt(0)}</div>
+                              <div className="h-8 w-8 rounded uppercase bg-(--status-p-bg) text-(--status-p-text) flex items-center justify-center font-semibold text-xs group-hover:bg-(--primary-soft) group-hover:text-(--primary) transition-colors">{t.name?.charAt(0)}</div>
                               <div>
                                 <p className="font-semibold text-(--text) text-sm capitalize">{t.name}</p>
                                 <p className="text-[10px] font-semibold text-(--text-muted)">Available • {t.employeeId}</p>
                               </div>
                             </div>
-                            <button className="px-3 py-1 rounded-md bg-green-500/10 text-green-600 text-[9px] font-semibold uppercase hover:bg-green-500 hover:text-white transition-all">Substitute</button>
+                            {/* <button className="px-3 py-1 rounded-md bg-green-500/10 text-green-600 text-[9px] font-semibold uppercase hover:bg-green-500 hover:text-white transition-all">Substitute</button> */}
                           </div>
                         ))}
                       </div>
