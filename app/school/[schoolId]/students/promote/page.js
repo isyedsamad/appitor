@@ -162,7 +162,7 @@ export default function PromoteDemotePage() {
               <ChartNoAxesCombined size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-(--text)">Promotion Control</h1>
+              <h1 className="text-lg font-semibold text-(--text)">Promotion Control</h1>
               <p className="text-xs text-(--text-muted) font-medium">
                 Move students across sessions, classes, or mark as passed out
               </p>

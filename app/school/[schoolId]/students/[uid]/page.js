@@ -307,7 +307,7 @@ export default function StudentProfilePage() {
                     <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
                       <Calendar size={12} /> Current Session
                     </label>
-                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-xl bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
+                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-lg bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
                       {student.currentSession}
                     </div>
                   </div>
@@ -315,16 +315,16 @@ export default function StudentProfilePage() {
                     <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
                       <GraduationCap size={12} /> Class
                     </label>
-                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-xl bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
-                      {classData.find(c => c.id == student.className)?.name}
+                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-lg bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
+                      {classData.find(c => c.id == student.className)?.name || '-'}
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
                       <GraduationCap size={12} /> Section
                     </label>
-                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-xl bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
-                      {classData.find(c => c.id == student.className)?.sections?.find(s => s.id == student.section)?.name}
+                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-lg bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm">
+                      {classData.find(c => c.id == student.className)?.sections?.find(s => s.id == student.section)?.name || '-'}
                     </div>
                   </div>
                 </div>
@@ -346,7 +346,7 @@ export default function StudentProfilePage() {
                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-(--primary-soft) text-(--primary) font-bold uppercase">{h.action}</span>
                           </div>
                           <p className="text-xs font-semibold text-(--text-muted)">
-                            Class: {classData.find(c => c.id == h.className)?.name} – {classData.find(c => c.id == h.className)?.sections?.find(s => s.id == h.section)?.name}
+                            {h.action.toLowerCase() == 'passed_out' ? 'Passed Out' : `Class: ${classData.find(c => c.id == h.className)?.name} – ${classData.find(c => c.id == h.className)?.sections?.find(s => s.id == h.section)?.name}`}
                           </p>
                         </div>
                       </div>
