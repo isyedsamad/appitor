@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, } from "lucide-react";
+import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, } from "lucide-react";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -219,7 +219,7 @@ export default function MarkAttendancePage() {
     }
   }
   return (
-    <div className="max-w-7xl mx-auto space-y-4">
+    <div className="max-w-7xl mx-auto space-y-3">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
@@ -229,7 +229,7 @@ export default function MarkAttendancePage() {
             <h1 className="text-lg font-semibold text-(--text)">
               Mark Attendance
             </h1>
-            <p className="text-sm text-(--text-muted)">
+            <p className="text-xs font-semibold text-(--text-muted)">
               Students & Employees
             </p>
           </div>
@@ -244,8 +244,8 @@ export default function MarkAttendancePage() {
                 setAttendance({});
               }}
               className={`px-4 py-2 text-sm font-medium ${mode === m
-                  ? "bg-(--primary) text-white"
-                  : "text-(--text-muted)"
+                ? "bg-(--primary) text-white"
+                : "text-(--text-muted)"
                 }`}
             >
               {m === "student" ? "Students" : "Employees"}
@@ -253,14 +253,14 @@ export default function MarkAttendancePage() {
           ))}
         </div>
       </div>
-      <div className="border border-(--border) rounded-xl p-4 bg-(--bg-soft)">
+      <div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div>
-            <label className="text-sm text-(--text-muted)">Date</label>
+            <label className="text-sm font-semibold text-(--text-muted)">Date</label>
             <div className="input flex items-center gap-2">
               <input
                 type="date"
-                className="bg-transparent outline-none w-full"
+                className="bg-(--bg-card) outline-none w-full"
                 value={date}
                 onChange={e => setDate(e.target.value)}
               />
@@ -268,38 +268,45 @@ export default function MarkAttendancePage() {
           </div>
           {mode === "student" && (
             <>
-              <select
-                className="input"
-                value={className}
-                onChange={e => {
-                  setClassName(e.target.value);
-                  setSection("");
-                }}
-              >
-                <option value="">Select Class</option>
-                {classData?.map(c => (
-                  <option key={c.name} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <select
-                className="input"
-                disabled={!selectedClass}
-                value={section}
-                onChange={e => setSection(e.target.value)}
-              >
-                <option value="">Select Section</option>
-                {selectedClass?.sections.map(sec => (
-                  <option key={sec.id} value={sec.id}>
-                    {sec.name}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className="text-sm font-semibold text-(--text-muted)">Class</label>
+                <select
+                  className="input"
+                  value={className}
+                  onChange={e => {
+                    setClassName(e.target.value);
+                    setSection("");
+                  }}
+                >
+                  <option value="">Select Class</option>
+                  {classData?.map(c => (
+                    <option key={c.name} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-(--text-muted)">Section</label>
+                <select
+                  className="input"
+                  disabled={!selectedClass}
+                  value={section}
+                  onChange={e => setSection(e.target.value)}
+                >
+                  <option value="">Select Section</option>
+                  {selectedClass?.sections.map(sec => (
+                    <option key={sec.id} value={sec.id}>
+                      {sec.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </>
           )}
           <button
             onClick={mode === "student" ? loadStudents : loadEmployees}
             className="btn-primary w-full"
           >
+            <Search size={15} />
             Load Attendance
           </button>
         </div>
@@ -309,15 +316,15 @@ export default function MarkAttendancePage() {
           <div className="flex gap-2 flex-col sm:flex-row">
             <button
               onClick={markAllPresent}
-              className="btn-outline flex gap-2"
+              className="btn-outline border-[1.5px] hover:bg-(--status-p-bg)/30 border-(--status-p-border) shadow-(--status-p-bg) shadow-sm flex gap-2"
             >
-              <ShieldCheck size={17} className="text-green-500" /> Mark All Present
+              <ShieldCheck size={17} className="text-(--status-p-text)" /> Mark All Present
             </button>
             <button
               onClick={markAllAbsent}
-              className="btn-outline flex gap-2"
+              className="btn-outline border-[1.5px] hover:bg-(--status-a-bg)/30 border-(--status-a-border) shadow-(--status-a-bg) shadow-sm flex gap-2"
             >
-              <ShieldX size={17} className="text-red-500" /> Mark All Absent
+              <ShieldX size={17} className="text-(--status-a-text)" /> Mark All Absent
             </button>
           </div>
           <button
@@ -336,7 +343,7 @@ export default function MarkAttendancePage() {
           `}>{isMarked ? 'Already Marked' : 'Attendance Not Marked'}</span>
           </div>
           <div>
-            <div className="flex flex-wrap gap-3 text-xs">
+            <div className="flex flex-wrap gap-2 text-xs">
               {Object.entries(STATUS).map(([k, cls]) => (
                 <span
                   key={k}
@@ -354,58 +361,87 @@ export default function MarkAttendancePage() {
           </div>
         </div>
       )}
-      <div
-        className="border border-(--border) rounded-xl divide-y"
-        onMouseLeave={() => setDragStatus(null)}
-      >
-        {list.map(item => (
-          <div
-            key={item.uid}
-            className="group  border-(--border) flex flex-col md:flex-row gap-3 items-center justify-between px-4 py-3 hover:bg-(--bg-soft)"
-          >
-            <div className="flex items-center gap-4">
-              {mode === "student" ? (
-                <div className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center
-                  bg-(--primary-soft) text-(--primary) font-semibold text-xs md:text-sm">
-                  {item.rollNo}
-                </div>
+      <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden mt-4">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse" onMouseLeave={() => setDragStatus(null)}>
+            <thead>
+              <tr className="bg-(--bg) border-b border-(--border)">
+                <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider w-16">
+                  {mode === "student" ? "Roll" : "Icon"}
+                </th>
+                <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider">
+                  Details
+                </th>
+                <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider text-right">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-(--border)">
+              {list.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="px-5 py-10 text-center">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-(--bg) flex items-center justify-center text-(--text-muted)">
+                        <Users size={32} />
+                      </div>
+                      <h3 className="text-base mt-4 font-semibold text-(--text)">No records to display</h3>
+                      <p className="text-xs text-(--text-muted)">Load attendance to see the list</p>
+                    </div>
+                  </td>
+                </tr>
               ) : (
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-(--primary) bg-(--primary-soft)">
-                  <User size={16} />
-                </div>
+                list.map((item) => (
+                  <tr
+                    key={item.uid}
+                    className="group transition-colors hover:bg-(--bg-soft)/30"
+                  >
+                    <td className="px-5 py-3">
+                      {mode === "student" ? (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-(--primary-soft) text-(--primary) font-bold text-sm border border-(--primary-soft)">
+                          {item.rollNo}
+                        </div>
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-(--primary-soft) text-(--primary) border border-(--primary-soft)">
+                          <User size={16} />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div>
+                        <p className="font-semibold text-sm text-(--text) capitalize">{item.name}</p>
+                        <div className="flex items-center gap-1 font-semibold text-[10px] text-(--text-muted)">
+                          <BadgeCheck size={12} className="text-(--primary)" />
+                          App ID: {mode === "student" ? item.appId : item.employeeId}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex justify-end gap-1.5 flex-wrap">
+                        {Object.entries(STATUS).map(([code, cls]) => (
+                          <button
+                            key={code}
+                            onMouseDown={() => setDragStatus(code)}
+                            onMouseEnter={() => dragStatus && setStatus(item.uid, dragStatus)}
+                            onMouseUp={() => setDragStatus(null)}
+                            onClick={() => setStatus(item.uid, code)}
+                            className={`px-5 py-2 rounded-md text-xs font-bold border transition-all duration-200
+                              ${attendance[item.uid] === code
+                                ? cls
+                                : `border-(--border) text-(--text-muted) bg-(--bg-card) hover:text-(--primary) hover:bg-(--primary-soft)/30`
+                              }`}
+                          >
+                            {code}
+                          </button>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-              <div>
-                <p className="font-semibold capitalize">{item.name}</p>
-                <div className="flex items-center gap-1 font-medium text-xs text-(--text-muted)">
-                  <BadgeCheck size={12} />
-                  App ID: {mode === "student"
-                    ? item.appId
-                    : item.employeeId}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1 md:gap-2">
-              {Object.entries(STATUS).map(([code, cls]) => (
-                <button
-                  key={code}
-                  onMouseDown={() => setDragStatus(code)}
-                  onMouseEnter={() =>
-                    dragStatus && setStatus(item.uid, dragStatus)
-                  }
-                  onMouseUp={() => setDragStatus(null)}
-                  onClick={() => setStatus(item.uid, code)}
-                  className={`min-w-[36px] h-8 rounded-md text-xs font-semibold border transition
-                    ${attendance[item.uid] === code
-                      ? cls
-                      : "border-(--border) text-(--text-muted)"
-                    }`}
-                >
-                  {code}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       <ReasonModal
         open={showReason}

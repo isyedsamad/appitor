@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { updateAttendanceAnalytics } from "@/lib/school/analyticsUtils";
 
 export async function POST(req) {
   try {
@@ -36,82 +37,74 @@ export async function POST(req) {
     const monthKey = `${yyyy}-${mm}`;
     const dayNumber = Number(dd);
 
-    const batch = adminDb.batch();
-    batch.set(
-      dayRef,
-      {
-        type,
-        date,
-        session,
-        className: className || null,
-        section: section || null,
-        records,
-        locked: true,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: user.uid,
-      },
-      { merge: true }
-    );
+    await adminDb.runTransaction(async (tx) => {
+      // 1. Get existing attendance to calculate diff
+      const existingSnap = await tx.get(dayRef);
+      const oldRecords = existingSnap.exists ? existingSnap.data().records || {} : {};
 
-    for (const [uid, status] of Object.entries(records)) {
-      const baseRef = adminDb
-        .collection("schools")
-        .doc(user.schoolId)
-        .collection("branches")
-        .doc(branch)
-        .collection(type === "student" ? "students" : "employees")
-        .doc(uid);
-
-      const monthRef = baseRef
-        .collection("attendance_month")
-        .doc(monthKey);
-
-      const monthIncMap = {
-        P: "totalP",
-        A: "totalA",
-        L: "totalL",
-        M: "totalM",
-        H: "totalH",
-        O: "totalO",
-      };
-
-      const incField = monthIncMap[status];
-      batch.set(
-        monthRef,
+      // 2. Update Daily Doc
+      tx.set(
+        dayRef,
         {
+          type,
+          date,
+          session,
+          className: className || null,
+          section: section || null,
+          records,
+          locked: true,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: user.uid,
+        },
+        { merge: true }
+      );
+
+      // 3. Update Monthly/Session Logs & Local Counters
+      for (const [uid, status] of Object.entries(records)) {
+        const baseRef = adminDb
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection(type === "student" ? "students" : "employees")
+          .doc(uid);
+
+        const monthRef = baseRef.collection("attendance_month").doc(monthKey);
+        const sessionRef = baseRef.collection("attendance_session").doc(session);
+
+        const monthIncMap = { P: "totalP", A: "totalA", L: "totalL", M: "totalM", H: "totalH", O: "totalO" };
+        const oldStatus = oldRecords[uid];
+        const incField = monthIncMap[status];
+        const decField = oldStatus ? monthIncMap[oldStatus] : null;
+
+        // Monthly breakdown update
+        const monthUpdate = {
           month: monthKey,
           session,
           className: className || null,
           section: section || null,
-          days: {
-            [dayNumber]: status,
-          },
-          ...(incField && {
-            [incField]: FieldValue.increment(1),
-          }),
+          [`days.${dayNumber}`]: status,
           updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      const sessionRef = baseRef
-        .collection("attendance_session")
-        .doc(session);
-      batch.set(
-        sessionRef,
-        {
-          session,
-          months: {
-            [monthKey]: {
-              [status]: FieldValue.increment(1),
-            },
-          },
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    }
+        };
+        if (incField) monthUpdate[incField] = FieldValue.increment(1);
+        if (decField && oldStatus !== status) monthUpdate[decField] = FieldValue.increment(-1);
 
-    await batch.commit();
+        tx.set(monthRef, monthUpdate, { merge: true });
+
+        // Session breakdown update
+        const sessionUpdate = {
+          session,
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        if (status) sessionUpdate[`months.${monthKey}.${status}`] = FieldValue.increment(1);
+        if (oldStatus && oldStatus !== status) sessionUpdate[`months.${monthKey}.${oldStatus}`] = FieldValue.increment(-1);
+
+        tx.set(sessionRef, sessionUpdate, { merge: true });
+      }
+
+      // 4. Update Global Analytics
+      await updateAttendanceAnalytics(tx, adminDb, user.schoolId, branch, type, date, oldRecords, records);
+    });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("ATTENDANCE SAVE ERROR:", err);

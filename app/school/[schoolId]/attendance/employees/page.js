@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {Users, CheckCircle, FileDown, LayoutGrid, List, Search, Download} from "lucide-react";
-import {collection, getDocs, query, where, doc, getDoc} from "firebase/firestore";
+import { Users, CheckCircle, FileDown, LayoutGrid, List, Search, Download } from "lucide-react";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -107,7 +107,7 @@ export default function ViewEmployeeAttendancePage() {
         ? 0
         : Math.round((summary.P / summary.marked) * 100);
     return summary;
-  }  
+  }
   const dateSummary = useMemo(() => {
     if (mode !== "date") return null;
     return calculateDateSummary(employees, dayRecords);
@@ -186,7 +186,7 @@ export default function ViewEmployeeAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }  
+  }
   const avgAttendance = useMemo(() => {
     if (mode !== "month" || !employees.length) return 0;
     let p = 0;
@@ -201,10 +201,10 @@ export default function ViewEmployeeAttendancePage() {
     return m === 0 ? 0 : Math.round((p / m) * 100);
   }, [monthRecords, employees, daysInMonth, mode]);
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex flex-col md:flex-row gap-4 justify-between items-start border-b border-(--border) pb-4">
         <div className="flex gap-3 items-start">
-          <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
+          <div className="p-3 rounded bg-(--primary-soft) text-(--primary)">
             <Users size={20} />
           </div>
           <div>
@@ -219,21 +219,19 @@ export default function ViewEmployeeAttendancePage() {
         <div className="flex border border-(--border) rounded-lg overflow-hidden">
           <button
             onClick={() => setMode("month")}
-            className={`px-4 py-2 text-sm font-semibold ${
-              mode === "month"
+            className={`px-4 py-2 text-sm font-semibold ${mode === "month"
                 ? "bg-(--primary) text-white"
                 : "text-(--text-muted)"
-            }`}
+              }`}
           >
             <LayoutGrid size={16} /> by Month
           </button>
           <button
             onClick={() => setMode("date")}
-            className={`px-4 py-2 text-sm font-semibold ${
-              mode === "date"
+            className={`px-4 py-2 text-sm font-semibold ${mode === "date"
                 ? "bg-(--primary) text-white"
                 : "text-(--text-muted)"
-            }`}
+              }`}
           >
             <List size={16} /> by Date
           </button>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { incrementEmployeeCount } from "@/lib/school/analyticsUtils";
 
 export async function POST(req) {
   let createdUid = null;
@@ -127,6 +128,10 @@ export async function POST(req) {
           count: employees.length,
           updatedAt: FieldValue.serverTimestamp(),
         });
+      }
+
+      if (baseEmployeeData.status === "active") {
+        await incrementEmployeeCount(tx, adminDb, user.schoolId, primaryBranch, 1);
       }
     });
 

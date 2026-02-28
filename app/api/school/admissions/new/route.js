@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 
 export async function POST(req) {
   let createdUid = null;
@@ -177,6 +178,8 @@ export async function POST(req) {
           assignedBy: user.uid,
         });
       }
+
+      await incrementStudentCount(tx, adminDb, user.schoolId, branch, 1, gender);
     });
 
     return NextResponse.json({

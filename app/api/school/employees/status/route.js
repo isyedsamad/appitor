@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { incrementEmployeeCount } from "@/lib/school/analyticsUtils";
 
 export async function PUT(req) {
   try {
@@ -31,31 +32,42 @@ export async function PUT(req) {
       .collection("meta")
       .doc("employees");
 
-    const metaSnap = await metaRef.get();
-    const batch = adminDb.batch();
+    await adminDb.runTransaction(async (tx) => {
+      const metaSnap = await tx.get(metaRef);
+      const currentSnap = await tx.get(userRef);
+      const currentData = currentSnap.data();
+      const oldStatus = currentData.status;
 
-    batch.update(userRef, {
-      status,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    batch.update(employeeRef, {
-      status,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
-    if (metaSnap.exists) {
-      const data = metaSnap.data();
-      const employees = (data.employees || []).map((e) =>
-        e.uid === employeeId ? { ...e, status } : e
-      );
-      batch.update(metaRef, {
-        employees,
+      tx.update(userRef, {
+        status,
         updatedAt: FieldValue.serverTimestamp(),
       });
-    }
 
-    await batch.commit();
+      tx.update(employeeRef, {
+        status,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      if (metaSnap.exists) {
+        const data = metaSnap.data();
+        const employees = (data.employees || []).map((e) =>
+          e.uid === employeeId ? { ...e, status } : e
+        );
+        tx.update(metaRef, {
+          employees,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Sync Analytics
+      if (oldStatus !== status) {
+        if (status === "active" && oldStatus !== "active") {
+          await incrementEmployeeCount(tx, adminDb, user.schoolId, branch, 1);
+        } else if (oldStatus === "active" && status !== "active") {
+          await incrementEmployeeCount(tx, adminDb, user.schoolId, branch, -1);
+        }
+      }
+    });
 
     await adminAuth.updateUser(employeeId, {
       disabled: status !== "active",

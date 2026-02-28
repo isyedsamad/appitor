@@ -183,10 +183,10 @@ export default function ViewStudentAttendancePage() {
     setMonthRecords({});
   }, [mode]);
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
+    <div className="max-w-7xl mx-auto space-y-4">
       <div className="flex justify-between items-center flex-col md:flex-row gap-4">
         <div className="flex gap-3 items-start">
-          <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
+          <div className="p-3 rounded bg-(--primary-soft) text-(--primary)">
             <Users size={20} />
           </div>
           <div>
@@ -202,8 +202,8 @@ export default function ViewStudentAttendancePage() {
           <button
             onClick={() => setMode("month")}
             className={`px-4 py-2 text-sm font-semibold ${mode === "month"
-                ? "bg-(--primary) text-white"
-                : "text-(--text-muted)"
+              ? "bg-(--primary) text-white"
+              : "bg-(--bg-card) text-(--text-muted)"
               }`}
           >
             <LayoutGrid size={16} /> by Month
@@ -211,16 +211,16 @@ export default function ViewStudentAttendancePage() {
           <button
             onClick={() => setMode("date")}
             className={`px-4 py-2 text-sm font-semibold ${mode === "date"
-                ? "bg-(--primary) text-white"
-                : "text-(--text-muted)"
+              ? "bg-(--primary) text-white"
+              : "bg-(--bg-card) text-(--text-muted)"
               }`}
           >
             <List size={16} /> by Date
           </button>
         </div>
       </div>
-      <div className="border border-(--border) rounded-xl p-4 bg-(--bg-soft)">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+      <div className="">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
           {mode === "month" ? (
             <div className="flex flex-col">
               <label className="text-sm text-(--text-muted)">Month</label>
@@ -285,7 +285,7 @@ export default function ViewStudentAttendancePage() {
       </div>
       {students.length > 0 && (
         <div className="flex justify-between items-end flex-col md:flex-row">
-          <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex flex-wrap gap-2 text-xs">
             {Object.entries(STATUS_CLASS).map(([k, cls]) => (
               <span
                 key={k}

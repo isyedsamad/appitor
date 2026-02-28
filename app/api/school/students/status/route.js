@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 
 export async function PUT(req) {
   try {
@@ -40,22 +41,36 @@ export async function PUT(req) {
       .collection("meta")
       .doc(`${student.className}_${student.section}_${student.currentSession}`);
 
-    const rosterSnap = await rosterRef.get();
+    await adminDb.runTransaction(async (tx) => {
+      const rosterSnap = await tx.get(rosterRef);
+      const currentSnap = await tx.get(userRef);
+      const currentData = currentSnap.data();
+      const oldStatus = currentData.status;
 
-    const batch = adminDb.batch();
-    batch.update(userRef, { status });
-    batch.update(studentRef, { status });
-    if (rosterSnap.exists) {
-      const data = rosterSnap.data();
-      const students = (data.students || []).map((s) =>
-        s.uid === uid ? { ...s, status } : s
-      );
-      batch.update(rosterRef, {
-        students,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    }
-    await batch.commit();
+      tx.update(userRef, { status, updatedAt: FieldValue.serverTimestamp() });
+      tx.update(studentRef, { status, updatedAt: FieldValue.serverTimestamp() });
+
+      if (rosterSnap.exists) {
+        const data = rosterSnap.data();
+        const students = (data.students || []).map((s) =>
+          s.uid === uid ? { ...s, status } : s
+        );
+        tx.update(rosterRef, {
+          students,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Sync Analytics
+      if (oldStatus !== status) {
+        if (status === "active") {
+          await incrementStudentCount(tx, adminDb, student.schoolId, branch, 1, student.gender);
+        } else if (oldStatus === "active") {
+          await incrementStudentCount(tx, adminDb, student.schoolId, branch, -1, student.gender);
+        }
+      }
+    });
+
     await adminAuth.updateUser(uid, {
       disabled: status !== "active",
     });
