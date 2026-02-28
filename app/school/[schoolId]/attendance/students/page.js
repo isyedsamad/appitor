@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {Calendar, LayoutGrid, List, Users, Search, Download} from "lucide-react";
-import {collection, doc, getDoc, getDocs, query, where} from "firebase/firestore";
+import { Calendar, LayoutGrid, List, Users, Search, Download } from "lucide-react";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -48,7 +48,7 @@ export default function ViewStudentAttendancePage() {
         "branches",
         branch,
         "meta",
-        `${className}_${section}`
+        `${className}_${section}_${schoolUser.currentSession}`
       );
       const snap = await getDoc(rosterRef);
       let data = [];
@@ -81,7 +81,7 @@ export default function ViewStudentAttendancePage() {
     try {
       await loadStudents();
       const formattedDate = formatInputDate(date);
-      const docId = `student_${formattedDate}_${className}_${section}`;
+      const docId = `student_${formattedDate}_${className}_${section}_${schoolUser.currentSession}`;
       const snap = await getDoc(
         doc(
           db,
@@ -94,7 +94,7 @@ export default function ViewStudentAttendancePage() {
         )
       );
       setDateRecords(snap.exists() ? snap.data().records || {} : {});
-    } catch(err) {
+    } catch (err) {
       toast.error('Error: ' + err);
     } finally {
       setLoading(false);
@@ -115,7 +115,7 @@ export default function ViewStudentAttendancePage() {
       const promises = dList.map(async (d) => {
         const day = String(d).padStart(2, "0");
         const formattedDate = `${day}-${m}-${year}`;
-        const docId = `student_${formattedDate}_${className}_${section}`;
+        const docId = `student_${formattedDate}_${className}_${section}_${schoolUser.currentSession}`;
         const snap = await getDoc(doc(db, "schools", schoolUser.schoolId, "branches", branch, "attendance", docId));
         if (snap.exists()) {
           const rec = snap.data().records || {};
@@ -132,7 +132,7 @@ export default function ViewStudentAttendancePage() {
         });
       });
       setMonthRecords(matrix);
-    } catch(err) {
+    } catch (err) {
       toast.error('Error: ' + err);
     } finally {
       setLoading(false);
@@ -176,12 +176,12 @@ export default function ViewStudentAttendancePage() {
       };
     });
     return summary;
-  }  
+  }
   useEffect(() => {
     setStudents([]);
     setDateRecords({});
     setMonthRecords({});
-  }, [mode]);  
+  }, [mode]);
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex justify-between items-center flex-col md:flex-row gap-4">
@@ -201,21 +201,19 @@ export default function ViewStudentAttendancePage() {
         <div className="flex border border-(--border) rounded-lg overflow-hidden">
           <button
             onClick={() => setMode("month")}
-            className={`px-4 py-2 text-sm font-semibold ${
-              mode === "month"
+            className={`px-4 py-2 text-sm font-semibold ${mode === "month"
                 ? "bg-(--primary) text-white"
                 : "text-(--text-muted)"
-            }`}
+              }`}
           >
             <LayoutGrid size={16} /> by Month
           </button>
           <button
             onClick={() => setMode("date")}
-            className={`px-4 py-2 text-sm font-semibold ${
-              mode === "date"
+            className={`px-4 py-2 text-sm font-semibold ${mode === "date"
                 ? "bg-(--primary) text-white"
                 : "text-(--text-muted)"
-            }`}
+              }`}
           >
             <List size={16} /> by Date
           </button>
@@ -225,56 +223,56 @@ export default function ViewStudentAttendancePage() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           {mode === "month" ? (
             <div className="flex flex-col">
-            <label className="text-sm text-(--text-muted)">Month</label>
-            <input
-              type="month"
-              className="input"
-              value={month}
-              onChange={e => setMonth(e.target.value)}
-            />
+              <label className="text-sm text-(--text-muted)">Month</label>
+              <input
+                type="month"
+                className="input"
+                value={month}
+                onChange={e => setMonth(e.target.value)}
+              />
             </div>
           ) : (
             <div className="flex flex-col">
-            <label className="text-sm text-(--text-muted)">Date</label>
-            <input
-              type="date"
-              className="input"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-            />
+              <label className="text-sm text-(--text-muted)">Date</label>
+              <input
+                type="date"
+                className="input"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+              />
             </div>
           )}
           <div className="flex flex-col">
-          <label className="text-sm text-(--text-muted)">Class</label>
-          <select
-            className="input"
-            value={className}
-            onChange={e => {
-              setClassName(e.target.value);
-              setSection("");
-            }}
-          >
-            <option value="">Select Class</option>
-            {classData?.map(c => (
-              <option key={c.name} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <label className="text-sm text-(--text-muted)">Class</label>
+            <select
+              className="input"
+              value={className}
+              onChange={e => {
+                setClassName(e.target.value);
+                setSection("");
+              }}
+            >
+              <option value="">Select Class</option>
+              {classData?.map(c => (
+                <option key={c.name} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-col">
-          <label className="text-sm text-(--text-muted)">Section</label>
-          <select
-            className="input"
-            disabled={!selectedClass}
-            value={section}
-            onChange={e => setSection(e.target.value)}
-          >
-            <option value="">Select Section</option>
-            {selectedClass?.sections.map(sec => (
-              <option key={sec.id} value={sec.id}>
-                {sec.name}
-              </option>
-            ))}
-          </select>
+            <label className="text-sm text-(--text-muted)">Section</label>
+            <select
+              className="input"
+              disabled={!selectedClass}
+              value={section}
+              onChange={e => setSection(e.target.value)}
+            >
+              <option value="">Select Section</option>
+              {selectedClass?.sections.map(sec => (
+                <option key={sec.id} value={sec.id}>
+                  {sec.name}
+                </option>
+              ))}
+            </select>
           </div>
           <button
             onClick={mode === "month" ? loadByMonth : loadByDate}
@@ -303,21 +301,21 @@ export default function ViewStudentAttendancePage() {
             ))}
           </div>
           <div>
-          {mode === "month" && students.length > 0 && (
-            <div className="flex justify-end">
-              <button
-                onClick={() =>
-                  studentMonthlyReport({
-                    students, days, monthRecords, className, section, month
-                  })
-                }
-                className="btn-outline flex items-center gap-2"
-              >
-                <Download size={16} className="text-green-500" />
-                Export to Excel
-              </button>
-            </div>
-          )}
+            {mode === "month" && students.length > 0 && (
+              <div className="flex justify-end">
+                <button
+                  onClick={() =>
+                    studentMonthlyReport({
+                      students, days, monthRecords, className, section, month
+                    })
+                  }
+                  className="btn-outline flex items-center gap-2"
+                >
+                  <Download size={16} className="text-green-500" />
+                  Export to Excel
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -425,10 +423,9 @@ export default function ViewStudentAttendancePage() {
                     <td className="px-3 py-2 text-center font-semibold">
                       <span
                         className={`px-2 py-1 rounded text-xs
-                          ${
-                            stats.percent >= 75
-                              ? STATUS_CLASS['P']
-                              : stats.percent >= 60
+                          ${stats.percent >= 75
+                            ? STATUS_CLASS['P']
+                            : stats.percent >= 60
                               ? STATUS_CLASS['L']
                               : STATUS_CLASS['A']
                           }`}
@@ -477,10 +474,9 @@ export default function ViewStudentAttendancePage() {
                     <td className="px-3 py-3 text-center">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-bold
-                          ${
-                            percent >= 75
-                              ? "bg-(--status-p-bg) text-(--status-p-text)"
-                              : percent >= 60
+                          ${percent >= 75
+                            ? "bg-(--status-p-bg) text-(--status-p-text)"
+                            : percent >= 60
                               ? "bg-(--status-l-bg) text-(--status-l-text)"
                               : "bg-(--status-a-bg) text-(--status-a-text)"
                           }`}

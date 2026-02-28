@@ -38,7 +38,7 @@ export async function PUT(req) {
       .collection("branches")
       .doc(branch)
       .collection("meta")
-      .doc(`${student.className}_${student.section}`);
+      .doc(`${student.className}_${student.section}_${student.currentSession}`);
 
     const rosterSnap = await rosterRef.get();
     const updateData = {

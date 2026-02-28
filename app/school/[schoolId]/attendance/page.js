@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck,} from "lucide-react";
-import {collection, doc, getDoc, getDocs, query, where} from "firebase/firestore";
+import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, } from "lucide-react";
+import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -65,7 +65,7 @@ export default function MarkAttendancePage() {
         "branches",
         branch,
         "meta",
-        `${className}_${section}`
+        `${className}_${section}_${schoolUser.currentSession}`
       );
       const rosterSnap = await getDoc(rosterRef);
       let data = [];
@@ -191,7 +191,7 @@ export default function MarkAttendancePage() {
       });
       toast.success("Attendance saved");
       setIsMarked(true);
-    } catch(err) {
+    } catch (err) {
       toast.error("Failed: " + err.response.data.message);
     } finally {
       setLoading(false);
@@ -212,7 +212,7 @@ export default function MarkAttendancePage() {
       });
       toast.success("Sent for admin approval");
       setShowReason(false);
-    } catch(err) {
+    } catch (err) {
       toast.error("Failed: " + err.response.data.message);
     } finally {
       setLoading(false);
@@ -243,11 +243,10 @@ export default function MarkAttendancePage() {
                 setList([]);
                 setAttendance({});
               }}
-              className={`px-4 py-2 text-sm font-medium ${
-                mode === m
+              className={`px-4 py-2 text-sm font-medium ${mode === m
                   ? "bg-(--primary) text-white"
                   : "text-(--text-muted)"
-              }`}
+                }`}
             >
               {m === "student" ? "Students" : "Employees"}
             </button>
@@ -332,26 +331,26 @@ export default function MarkAttendancePage() {
       {list.length > 0 && (
         <div className="flex flex-col md:flex-row gap-4 justify-start md:justify-between items-start md:items-center">
           <div>
-          <span className={`px-3 py-1 text-xs rounded-md uppercase font-semibold border 
+            <span className={`px-3 py-1 text-xs rounded-md uppercase font-semibold border 
             ${isMarked ? STUDENT_STATUS['P'] : STUDENT_STATUS['A']}
           `}>{isMarked ? 'Already Marked' : 'Attendance Not Marked'}</span>
           </div>
           <div>
-              <div className="flex flex-wrap gap-3 text-xs">
-                {Object.entries(STATUS).map(([k, cls]) => (
-                  <span
-                    key={k}
-                    className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
-                  >
-                    {k == 'P' && 'Present'}
-                    {k == 'A' && 'Absent'}
-                    {k == 'L' && 'Leave'}
-                    {k == 'M' && 'Medical'}
-                    {k == 'H' && 'Half-Day'}
-                    {k == 'O' && 'Overtime'}
-                  </span>
-                ))}
-              </div>
+            <div className="flex flex-wrap gap-3 text-xs">
+              {Object.entries(STATUS).map(([k, cls]) => (
+                <span
+                  key={k}
+                  className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
+                >
+                  {k == 'P' && 'Present'}
+                  {k == 'A' && 'Absent'}
+                  {k == 'L' && 'Leave'}
+                  {k == 'M' && 'Medical'}
+                  {k == 'H' && 'Half-Day'}
+                  {k == 'O' && 'Overtime'}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -396,10 +395,9 @@ export default function MarkAttendancePage() {
                   onMouseUp={() => setDragStatus(null)}
                   onClick={() => setStatus(item.uid, code)}
                   className={`min-w-[36px] h-8 rounded-md text-xs font-semibold border transition
-                    ${
-                      attendance[item.uid] === code
-                        ? cls
-                        : "border-(--border) text-(--text-muted)"
+                    ${attendance[item.uid] === code
+                      ? cls
+                      : "border-(--border) text-(--text-muted)"
                     }`}
                 >
                   {code}

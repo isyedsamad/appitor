@@ -6,174 +6,113 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function PUT(req) {
   try {
     const user = await verifyUser(req, "student.manage");
-    const { uids, toClass, toSection } = await req.json();
-    if (!uids?.length || !toClass || !toSection) {
-      return NextResponse.json(
-        { message: "Invalid payload" },
-        { status: 400 }
-      );
+    const { uids, toClass, toSection, toSession: manualToSession } = await req.json();
+    const toSession = manualToSession;
+    if (!uids?.length || !toClass || !toSection || !toSession) {
+      return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
     }
 
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
     await adminDb.runTransaction(async (tx) => {
       const firstStudentRef = adminDb.collection("schoolUsers").doc(uids[0]);
-      const firstStudentSnap = await tx.get(firstStudentRef);
-      if (!firstStudentSnap.exists) throw new Error("Reference student not found");
-      const branchId = firstStudentSnap.data().branchId;
+      const firstSnap = await tx.get(firstStudentRef);
+      if (!firstSnap.exists) throw new Error("Student not found");
 
-      const branchRef = adminDb.collection("schools").doc(user.schoolId).collection("branches").doc(branchId);
-      const [branchSnap, schoolSnap] = await Promise.all([tx.get(branchRef), tx.get(schoolRef)]);
+      const { branchId } = firstSnap.data();
+      const branchRef = schoolRef.collection("branches").doc(branchId);
 
-      const currentSession = branchSnap.data()?.currentSession || schoolSnap.data()?.currentSession;
-      if (!currentSession) throw new Error("Academic session not configured");
+      const rosterState = new Map();
+      const getRoster = async (classId, secId, sessId) => {
+        const id = `${classId}_${secId}_${sessId}`;
+        if (rosterState.has(id)) return rosterState.get(id);
+        const ref = branchRef.collection("meta").doc(id);
+        const snap = await tx.get(ref);
+        const state = {
+          ref,
+          exists: snap.exists,
+          students: snap.exists ? (snap.data().students || []) : [],
+          classId,
+          sectionId: secId,
+          sessionId: sessId
+        };
+        rosterState.set(id, state);
+        return state;
+      };
 
-      const studentEntries = [];
-      const rosterSnapshots = new Map();
+      const targetRoster = await getRoster(toClass, toSection, toSession);
+      const updatesToProcess = [];
 
       for (const uid of uids) {
         const userRef = adminDb.collection("schoolUsers").doc(uid);
-        const userSnap = await tx.get(userRef);
-        if (!userSnap.exists) continue;
-        const student = userSnap.data();
-        const branchRef = adminDb
-          .collection("schools")
-          .doc(student.schoolId)
-          .collection("branches")
-          .doc(student.branchId)
-          .collection("students")
-          .doc(uid);
+        const branchStudentRef = branchRef.collection("students").doc(uid);
+        const studentSnap = await tx.get(userRef);
 
-        const oldRosterId = `${student.className}_${student.section}`;
-        const newRosterId = `${toClass}_${toSection}`;
-        const oldRosterRef = adminDb
-          .collection("schools")
-          .doc(student.schoolId)
-          .collection("branches")
-          .doc(student.branchId)
-          .collection("meta")
-          .doc(oldRosterId);
+        if (!studentSnap.exists) continue;
+        const s = studentSnap.data();
 
-        const newRosterRef = adminDb
-          .collection("schools")
-          .doc(student.schoolId)
-          .collection("branches")
-          .doc(student.branchId)
-          .collection("meta")
-          .doc(newRosterId);
+        const oldRoster = await getRoster(s.className, s.section, s.currentSession);
+        oldRoster.students = oldRoster.students.filter(st => st.uid !== uid);
 
-        if (!rosterSnapshots.has(oldRosterId)) {
-          rosterSnapshots.set(oldRosterId, {
-            ref: oldRosterRef,
-            snap: await tx.get(oldRosterRef),
-          });
-        }
-        if (!rosterSnapshots.has(newRosterId)) {
-          rosterSnapshots.set(newRosterId, {
-            ref: newRosterRef,
-            snap: await tx.get(newRosterRef),
-          });
-        }
-        studentEntries.push({
-          uid,
-          student,
-          userRef,
-          branchRef,
-          oldRosterId,
-          newRosterId,
-        });
-      }
-
-      const rosterState = new Map();
-      for (const [id, { ref, snap }] of rosterSnapshots.entries()) {
-        rosterState.set(id, {
-          ref,
-          exists: snap.exists,
-          students: snap.exists ? [...(snap.data().students || [])] : [],
-        });
-      }
-
-      const removals = new Map();
-      for (const entry of studentEntries) {
-        const {
-          uid,
-          student,
-          userRef,
-          branchRef,
-          oldRosterId,
-          newRosterId,
-        } = entry;
-
+        const isPassedOut = toClass === "passed_out";
         const historyEntry = {
-          session: student.currentSession,
-          className: student.className,
-          section: student.section,
-          action:
-            toClass === student.className
-              ? "section-change"
-              : "promoted",
+          session: s.currentSession,
+          className: s.className,
+          section: s.section,
+          at: Date.now(),
+          action: isPassedOut ? "passed_out" : (toClass === s.className ? "section-change" : "promoted"),
         };
 
-        const updatePayload = {
-          academicHistory: FieldValue.arrayUnion(historyEntry),
+        const updates = {
           className: toClass,
           section: toSection,
-          currentSession,
+          currentSession: toSession,
+          status: isPassedOut ? "passed_out" : s.status,
           rollNo: null,
-          rollAssignedAt: null,
-          rollAssignedBy: null,
+          academicHistory: FieldValue.arrayUnion(historyEntry),
           updatedAt: FieldValue.serverTimestamp(),
         };
-        tx.update(userRef, updatePayload);
-        tx.update(branchRef, updatePayload);
-        if (!removals.has(oldRosterId)) {
-          removals.set(oldRosterId, new Set());
-        }
-        removals.get(oldRosterId).add(uid);
-        const newState = rosterState.get(newRosterId);
-        if (newState && !newState.students.some((s) => s.uid === uid)) {
-          newState.students.push({
+
+        updatesToProcess.push({ userRef, branchStudentRef, updates });
+
+        if (!targetRoster.students.find(st => st.uid === uid)) {
+          targetRoster.students.push({
             uid,
-            name: student.name,
-            appId: student.appId,
+            name: s.name,
+            appId: s.appId,
             rollNo: null,
-            status: student.status,
-            dob: student.dob || "",
-            gender: student.gender || "",
+            status: isPassedOut ? "passed_out" : s.status,
+            dob: s.dob || "",
+            gender: s.gender || "",
           });
         }
       }
-      for (const [oldRosterId, uidSet] of removals.entries()) {
-        const state = rosterState.get(oldRosterId);
-        if (!state) continue;
-        state.students = state.students.filter(
-          (s) => !uidSet.has(s.uid)
-        );
+
+      // WRITE PHASE: Now perform all writes after all reads are done
+      for (const { userRef, branchStudentRef, updates } of updatesToProcess) {
+        tx.update(userRef, updates);
+        tx.update(branchStudentRef, updates);
       }
-      for (const [_, state] of rosterState.entries()) {
-        if (!state.exists && state.students.length) {
-          tx.set(state.ref, {
-            classId: toClass,
-            sectionId: toSection,
-            students: state.students,
-            count: state.students.length,
-            updatedAt: FieldValue.serverTimestamp(),
-          });
+
+      for (const [id, state] of rosterState.entries()) {
+        const payload = {
+          classId: state.classId,
+          sectionId: state.sectionId,
+          sessionId: state.sessionId,
+          students: state.students,
+          count: state.students.length,
+          updatedAt: FieldValue.serverTimestamp()
+        };
+        if (!state.exists) {
+          tx.set(state.ref, payload);
         } else {
-          tx.update(state.ref, {
-            students: state.students,
-            count: state.students.length,
-            updatedAt: FieldValue.serverTimestamp(),
-          });
+          tx.update(state.ref, payload);
         }
       }
     });
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("PROMOTION ERROR:", err);
-    return NextResponse.json(
-      { message: err.message || "Promotion failed" },
-      { status: 500 }
-    );
+    console.error("MANUAL PROMOTION ERROR:", err);
+    return NextResponse.json({ message: err.message || "Promotion failed" }, { status: 500 });
   }
 }

@@ -30,7 +30,7 @@ export default function AssignRollPage() {
         "branches",
         branch,
         "meta",
-        `${className}_${section}`
+        `${className}_${section}_${schoolUser.currentSession}`
       );
       const snap = await getDoc(rosterRef);
       if (!snap.exists()) {
@@ -94,6 +94,7 @@ export default function AssignRollPage() {
         className,
         section,
         branch,
+        session: schoolUser.currentSession,
         updates: students.map(s => ({
           uid: s.uid,
           rollNo: s.rollNo ?? null,

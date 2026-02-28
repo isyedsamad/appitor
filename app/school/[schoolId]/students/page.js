@@ -31,16 +31,25 @@ import Link from "next/link";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function StudentsListPage() {
-  const { classData, schoolUser } = useSchool();
+  const { classData, schoolUser, sessionList, currentSession } = useSchool();
   const { branchInfo } = useBranch();
   const { theme } = useTheme();
   const router = useRouter();
 
+  const [session, setSession] = useState(currentSession || "");
   const [className, setClassName] = useState("");
   const [section, setSection] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Sync session when currentSession is available
+  useMemo(() => {
+    if (currentSession && !session) {
+      setSession(currentSession);
+    }
+  }, [currentSession]);
+
   const selectedClass = classData?.find(c => c.id === className);
   const metrics = useMemo(() => {
     return {
@@ -60,8 +69,8 @@ export default function StudentsListPage() {
   }, [students, searchTerm]);
 
   async function fetchStudents() {
-    if (!className) {
-      toast.error("Please select a class");
+    if (!session || !className) {
+      toast.error("Please select session and class");
       return;
     }
     setLoading(true);
@@ -75,7 +84,7 @@ export default function StudentsListPage() {
       ];
       let results = [];
       if (section) {
-        const rosterRef = doc(db, ...basePath, `${className}_${section}`);
+        const rosterRef = doc(db, ...basePath, `${className}_${section}_${session}`);
         const snap = await getDoc(rosterRef);
         if (snap.exists()) {
           const data = snap.data();
@@ -91,7 +100,9 @@ export default function StudentsListPage() {
         const snaps = await getDocs(metaColRef);
         snaps.forEach(d => {
           const data = d.data();
-          if (data.classId === className && Array.isArray(data.students)) {
+          // Match class and session in ID: [class]_[section]_[session]
+          const [idClass, idSection, idSession] = d.id.split("_");
+          if (idClass === className && idSession === session && Array.isArray(data.students)) {
             const { classId, sectionId } = data;
             results.push(...data.students.map(s => ({
               ...s,
@@ -151,6 +162,20 @@ export default function StudentsListPage() {
         </div>
         <div className="">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Session</label>
+              <select
+                className="input w-full"
+                value={session}
+                onChange={e => setSession(e.target.value)}
+              >
+                <option value="">Select Session</option>
+                {sessionList?.map(s => (
+                  <option key={s.id} value={s.id}>{s.id}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="md:col-span-3 space-y-1.5">
               <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Class</label>
               <select
@@ -186,7 +211,7 @@ export default function StudentsListPage() {
             <div className="md:col-span-3">
               <button
                 onClick={fetchStudents}
-                disabled={loading || !className}
+                disabled={loading || !className || !session}
                 className="btn-primary"
               >
                 <SearchIcon size={16} className="group-hover:rotate-12 transition-transform" />

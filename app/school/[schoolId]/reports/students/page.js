@@ -13,11 +13,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function StudentReportsPage() {
-    const { classData, schoolUser } = useSchool();
+    const { classData, schoolUser, sessionList, currentSession } = useSchool();
     const { branchInfo } = useBranch();
     const { theme } = useTheme();
 
     const [filters, setFilters] = useState({
+        sessionId: currentSession || "",
         className: "",
         section: "",
         status: "",
@@ -45,6 +46,11 @@ export default function StudentReportsPage() {
 
         setLoading(true);
         try {
+            if (!filters.sessionId) {
+                toast.error("Please select a session.");
+                return;
+            }
+
             const basePath = [
                 "schools",
                 branchInfo.schoolId,
@@ -56,7 +62,7 @@ export default function StudentReportsPage() {
             let fetchedStudents = [];
 
             if (filters.section) {
-                const rosterRef = doc(db, ...basePath, `${filters.className}_${filters.section}`);
+                const rosterRef = doc(db, ...basePath, `${filters.className}_${filters.section}_${filters.sessionId}`);
                 const snap = await getDoc(rosterRef);
                 if (snap.exists()) {
                     const data = snap.data();
@@ -73,7 +79,9 @@ export default function StudentReportsPage() {
                 const snaps = await getDocs(metaColRef);
                 snaps.forEach((d) => {
                     const data = d.data();
-                    if (data.classId === filters.className && Array.isArray(data.students)) {
+                    const docId = d.id;
+                    // Check if docId ends with current session or matches filters.sessionId
+                    if (data.classId === filters.className && docId.endsWith(`_${filters.sessionId}`) && Array.isArray(data.students)) {
                         const classId = data.classId;
                         const sectionId = data.sectionId;
                         fetchedStudents.push(
@@ -275,7 +283,21 @@ export default function StudentReportsPage() {
             {/* Filter Card */}
             <div className="">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div>
+                        <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Session <span className="text-red-500">*</span></label>
+                        <select
+                            className="input w-full"
+                            value={filters.sessionId}
+                            onChange={e => handleFilterChange('sessionId', e.target.value)}
+                        >
+                            <option value="">Select Session</option>
+                            {sessionList?.map(s => (
+                                <option key={s.id} value={s.id}>{s.id}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div>
                         <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Class <span className="text-red-500">*</span></label>
                         <select

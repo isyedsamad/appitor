@@ -51,13 +51,14 @@ export default function StudentFeeAssignmentPage() {
       const [studentSnap, assignSnap] = await Promise.all([
         getDoc(doc(db,
           "schools", schoolUser.schoolId, "branches", branch,
-          "meta", `${selectedClass}_${selectedSection}`)
+          "meta", `${selectedClass}_${selectedSection}_${schoolUser.currentSession}`)
         ),
         getDocs(
           query(
             collection(db, ...base, "fees", "assignments", "items"),
             where("className", "==", selectedClass),
             where("section", "==", selectedSection),
+            where("session", "==", schoolUser.currentSession),
             where("status", "==", "active")
           )
         )
@@ -74,8 +75,8 @@ export default function StudentFeeAssignmentPage() {
         assignment: assignmentMap[d.uid] || null,
       }));
       setStudents(studentsWithAssignment);
-      setSelectedIds([]);  
-    } catch(err) {
+      setSelectedIds([]);
+    } catch (err) {
       toast.error('Failed: ' + err);
     } finally {
       setLoading(false);
@@ -102,6 +103,7 @@ export default function StudentFeeAssignmentPage() {
     try {
       await secureAxios.post("/api/school/fees/assignments", {
         branch,
+        session: schoolUser.currentSession,
         students: students.filter(s => selectedIds.includes(s.id)),
         templateId,
         templateName
@@ -109,7 +111,7 @@ export default function StudentFeeAssignmentPage() {
       setOpen(false);
       setSelectedIds([]);
       toast.success('Fee Assigned to students!')
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err.response.data.message);
     } finally {
       setLoading(false);
@@ -127,9 +129,9 @@ export default function StudentFeeAssignmentPage() {
     <RequirePermission permission="fee.manage">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <Users size={20} />
-            </div>
+          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+            <Users size={20} />
+          </div>
           <div>
             <h1 className="text-lg font-semibold">Student Fee Assignment</h1>
             <p className="text-sm text-(--text-muted)">
@@ -182,79 +184,79 @@ export default function StudentFeeAssignmentPage() {
         {students.length > 0 && (
           <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-(--bg) text-(--text-muted)">
-                <tr>
-                  <th className="px-4 py-3 text-left">
-                    <button onClick={toggleSelectAll}>
-                      {selectedIds.length === students.length ? (
-                        <CheckSquare size={16} />
-                      ) : (
-                        <Square size={16} />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3 text-left">Roll</th>
-                  <th className="px-4 py-3 text-left">Admission ID</th>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Assignment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students && students.map(s => (
-                  <tr key={s.id} className="border-t border-(--border)">
-                    <td className="px-4 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedIds(prev =>
-                          prev.includes(s.id)
-                            ? prev.filter(id => id !== s.id)
-                            : [...prev, s.id]
-                        )
-                      }
-                      className="inline-flex items-center justify-center
-                                hover:bg-(--bg) rounded-md"
-                      aria-pressed={selectedIds.includes(s.id)}
-                    >
-                      {selectedIds.includes(s.id) ? (
-                        <CheckSquare
-                          size={16}
-                          className="text-(--primary)"
-                        />
-                      ) : (
-                        <Square
-                          size={16}
-                          className="text-(--text-muted)"
-                        />
-                      )}
-                    </button>
-                    </td>
-                    <td className="px-4 py-3 text-left">{s.rollNo ? s.rollNo >= 10 ? s.rollNo : '0' + s.rollNo : '-'}</td>
-                    <td className="px-4 py-3 text-left font-semibold">{s.appId}</td>
-                    <td className="px-4 py-3 text-left font-semibold capitalize">{s.name}</td>
-                    <td className="px-4 py-3 text-left">
-                      {s.assignment ? (
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2
-                            size={16}
-                            className="text-(--accent)"
-                          />
-                          <span className="text-sm">
-                            {s.assignment.templateName}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-(--text-muted)">
-                          <XCircle size={16} />
-                          <span className="text-sm">Not Assigned</span>
-                        </div>
-                      )}
-                    </td>
+              <table className="w-full text-sm">
+                <thead className="bg-(--bg) text-(--text-muted)">
+                  <tr>
+                    <th className="px-4 py-3 text-left">
+                      <button onClick={toggleSelectAll}>
+                        {selectedIds.length === students.length ? (
+                          <CheckSquare size={16} />
+                        ) : (
+                          <Square size={16} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-left">Roll</th>
+                    <th className="px-4 py-3 text-left">Admission ID</th>
+                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left">Assignment</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {students && students.map(s => (
+                    <tr key={s.id} className="border-t border-(--border)">
+                      <td className="px-4 py-3 text-left">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedIds(prev =>
+                              prev.includes(s.id)
+                                ? prev.filter(id => id !== s.id)
+                                : [...prev, s.id]
+                            )
+                          }
+                          className="inline-flex items-center justify-center
+                                hover:bg-(--bg) rounded-md"
+                          aria-pressed={selectedIds.includes(s.id)}
+                        >
+                          {selectedIds.includes(s.id) ? (
+                            <CheckSquare
+                              size={16}
+                              className="text-(--primary)"
+                            />
+                          ) : (
+                            <Square
+                              size={16}
+                              className="text-(--text-muted)"
+                            />
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-left">{s.rollNo ? s.rollNo >= 10 ? s.rollNo : '0' + s.rollNo : '-'}</td>
+                      <td className="px-4 py-3 text-left font-semibold">{s.appId}</td>
+                      <td className="px-4 py-3 text-left font-semibold capitalize">{s.name}</td>
+                      <td className="px-4 py-3 text-left">
+                        {s.assignment ? (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2
+                              size={16}
+                              className="text-(--accent)"
+                            />
+                            <span className="text-sm">
+                              {s.assignment.templateName}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-(--text-muted)">
+                            <XCircle size={16} />
+                            <span className="text-sm">Not Assigned</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

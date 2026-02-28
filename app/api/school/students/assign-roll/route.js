@@ -6,8 +6,8 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function PUT(req) {
   try {
     const user = await verifyUser(req, "student.manage");
-    const { className, section, branch, updates } = await req.json();
-    if (!className || !section || !updates?.length || !branch) {
+    const { className, section, branch, updates, session } = await req.json();
+    if (!className || !section || !updates?.length || !branch || !session) {
       return NextResponse.json(
         { message: "Invalid payload" },
         { status: 400 }
@@ -21,7 +21,7 @@ export async function PUT(req) {
       .collection("branches")
       .doc(branch)
       .collection("meta")
-      .doc(`${className}_${section}`);
+      .doc(`${className}_${section}_${session}`);
 
     const rosterSnap = await rosterRef.get();
     updates.forEach((item) => {

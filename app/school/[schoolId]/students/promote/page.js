@@ -1,49 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Users,
   CheckSquare,
   Square,
   ArrowUp,
   ChevronDown,
-  TrainTrack,
-  ChartNoAxesColumn,
+  RefreshCw,
+  Search,
+  Hash,
+  CheckCircle2,
+  ArrowRight,
   ChartNoAxesCombined,
+  ChevronRight,
+  Check
 } from "lucide-react";
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  query,
-  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
-import PromotionPreviewModal from "@/components/school/students/PromotionPreviewModal";
+import RequirePermission from "@/components/school/RequirePermission";
 
 export default function PromoteDemotePage() {
-  const { classData, setLoading } = useSchool();
+  const { classData, setLoading, loading, sessionList, currentSession } = useSchool();
   const { branchInfo } = useBranch();
+
+  const [fromSession, setFromSession] = useState(currentSession || "");
   const [fromClass, setFromClass] = useState("");
   const [fromSection, setFromSection] = useState("");
   const [students, setStudents] = useState([]);
   const [selected, setSelected] = useState([]);
+  const [toSession, setToSession] = useState("");
   const [toClass, setToClass] = useState("");
   const [toSection, setToSection] = useState("");
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const sourceClass = classData?.find(c => c.id === fromClass);
   const targetClass = classData?.find(c => c.id === toClass);
+
+  // Sync fromSession when currentSession is available
+  useMemo(() => {
+    if (currentSession && !fromSession) {
+      setFromSession(currentSession);
+    }
+  }, [currentSession]);
+
+  const filteredStudents = useMemo(() => {
+    if (!searchTerm) return students;
+    const lower = searchTerm.toLowerCase();
+    return students.filter(s =>
+      s.name.toLowerCase().includes(lower) ||
+      s.appId.toLowerCase().includes(lower) ||
+      (s.rollNo && s.rollNo.toString().includes(lower))
+    );
+  }, [students, searchTerm]);
+
   async function loadStudents() {
-    if (!fromClass || !fromSection) {
-      toast.error("Select class and section");
+    if (!fromSession || !fromClass || !fromSection) {
+      toast.error("Select session, class and section");
       return;
     }
-    setLoading(true);
+    setLoadingList(true);
     try {
       const rosterRef = doc(
         db,
@@ -52,31 +78,36 @@ export default function PromoteDemotePage() {
         "branches",
         branchInfo.id,
         "meta",
-        `${fromClass}_${fromSection}`
+        `${fromClass}_${fromSection}_${fromSession}`
       );
-  
+
       const snap = await getDoc(rosterRef);
       if (!snap.exists()) {
         setStudents([]);
+        toast.info("No students found for selected session");
       } else {
         const data = snap.data();
-        const classId = data.classId;
-        const sectionId = data.sectionId;
-        const students = (data.students || []).map((s) => ({
+        const results = (data.students || []).map((s) => ({
           ...s,
-          classId,
-          sectionId,
+          classId: data.classId,
+          sectionId: data.sectionId,
         }));
-        setStudents(students);
+        results.sort((a, b) => {
+          const rA = parseInt(a.rollNo) || 999;
+          const rB = parseInt(b.rollNo) || 999;
+          return rA - rB;
+        });
+        setStudents(results);
       }
       setSelected([]);
     } catch (err) {
-      console.error("LOAD STUDENTS META ERROR:", err);
+      console.error("LOAD STUDENTS ERROR:", err);
       toast.error("Failed to load students");
     } finally {
-      setLoading(false);
+      setLoadingList(false);
     }
   }
+
   function toggle(uid) {
     setSelected(prev =>
       prev.includes(uid)
@@ -84,20 +115,22 @@ export default function PromoteDemotePage() {
         : [...prev, uid]
     );
   }
+
   function toggleAll() {
-    if (selected.length === students.length) {
+    if (selected.length === filteredStudents.length && filteredStudents.length > 0) {
       setSelected([]);
     } else {
-      setSelected(students.map(s => s.uid));
+      setSelected(filteredStudents.map(s => s.uid));
     }
   }
+
   async function promote() {
     if (!selected.length) {
       toast.error("Select students");
       return;
     }
-    if (!toClass || !toSection) {
-      toast.error("Select target class & section");
+    if (!toSession || !toClass || !toSection) {
+      toast.error("Select target session, class & section");
       return;
     }
     setLoading(true);
@@ -106,199 +139,267 @@ export default function PromoteDemotePage() {
         uids: selected,
         toClass,
         toSection,
+        toSession,
       });
-      toast.success("Students promoted");
+      toast.success(`${selected.length} students moved successfully`);
       loadStudents();
-    } catch(err) {
-      toast.error("failed: " + err.response.data.message);
+      setToClass("");
+      setToSection("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Promotion failed");
     } finally {
       setLoading(false);
     }
   }
-  async function handleSessionPromotion(toSession) {
-    const sure = confirm('Promote ALL students to next class? Cannot be undone!');
-    if(!sure) return;
-    setLoading(true);
-    try {
-      await secureAxios.put(
-        "/api/school/students/promote-session", 
-        { toSession }
-      );
-      toast.success("Session promoted successfully");
-      setPreviewOpen(false);
-    } catch (err) {
-      toast.error(
-        'Error: ' + err?.response?.data?.message ||
-          "Promotion failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }  
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row justify-start md:justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-          <ChartNoAxesCombined size={20} />
+    <RequirePermission permission="student.manage">
+      <div className="space-y-5 pb-32 text-sm">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+              <ChartNoAxesCombined size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-(--text)">Promotion Control</h1>
+              <p className="text-xs text-(--text-muted) font-medium">
+                Move students across sessions, classes, or mark as passed out
+              </p>
+            </div>
+          </div>
         </div>
+
         <div>
-          <h1 className="text-lg font-semibold text-(--text)">
-            Promote / Demote Students
-          </h1>
-          <p className="text-sm text-(--text-muted)">
-            Load students, select them, then move to a new class
-          </p>
-        </div>
-      </div>
-      <button
-        onClick={() => setPreviewOpen(true)}
-        className="btn-outline flex items-center gap-2"
-      >
-        <ArrowUp size={16} />
-        Promote Entire Session
-      </button>
-      </div>
-      <div className="flex flex-wrap gap-3 items-end">
-        <select
-          className="input w-40"
-          value={fromClass}
-          onChange={e => {
-            setFromClass(e.target.value);
-            setFromSection("");
-          }}
-        >
-          <option value="">Class</option>
-          {classData?.map(c => (
-            <option key={c.name} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        <select
-          className="input w-32"
-          value={fromSection}
-          disabled={!sourceClass}
-          onChange={e => setFromSection(e.target.value)}
-        >
-          <option value="">Section</option>
-          {sourceClass?.sections.map(sec => (
-            <option key={sec.id} value={sec.id}>
-              {sec.name}
-            </option>
-          ))}
-        </select>
-        <button onClick={loadStudents} className="btn-primary">
-          Load Students
-        </button>
-      </div>
-      <div className="border border-(--border) rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-(--bg-soft)">
-            <tr>
-              <th className="px-4 py-3 w-10">
-                <button onClick={toggleAll}>
-                  {selected.length === students.length &&
-                  students.length > 0 ? (
-                    <CheckSquare size={16} />
-                  ) : (
-                    <Square size={16} />
-                  )}
-                </button>
-              </th>
-              <th className="px-4 py-3">Admission ID</th>
-              <th className="px-4 py-3">Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map(s => {
-              const isSelected = selected.includes(s.uid);
-              return (
-                <tr
-                  key={s.uid}
-                  onClick={() => toggle(s.uid)}
-                  className={`border-t border-(--border) cursor-pointer ${
-                    isSelected
-                      ? "bg-primary/10"
-                      : "hover:bg-(--bg-soft)"
-                  }`}
-                >
-                  <td className="px-4">
-                    {isSelected ? (
-                      <CheckSquare size={16} />
-                    ) : (
-                      <Square size={16} />
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center font-medium">
-                    {s.appId}
-                  </td>
-                  <td className="text-center px-4 py-3 font-semibold capitalize">{s.name}</td>
-                </tr>
-              );
-            })}
-            {!students.length && (
-              <tr>
-                <td
-                  colSpan="3"
-                  className="py-10 text-center text-(--text-muted)"
-                >
-                  No students loaded
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {selected.length > 0 && (
-        <div className="sticky bottom-4 z-20">
-          <div className="max-w-4xl mx-auto bg-(--bg) border border-(--border) rounded-xl p-4 shadow-lg flex flex-wrap gap-3 items-center justify-between">
-            <span className="text-sm text-(--text-muted)">
-              {selected.length} selected
-            </span>
-            <div className="flex flex-wrap gap-3 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Session</label>
               <select
-                className="input w-36"
-                value={toClass}
+                className="input w-full bg-(--bg-card)"
+                value={fromSession}
+                onChange={e => setFromSession(e.target.value)}
+              >
+                <option value="">Select</option>
+                {sessionList?.map(s => (
+                  <option key={s.id} value={s.id}>{s.id}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-3 space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">From Class</label>
+              <select
+                className="input w-full bg-(--bg-card)"
+                value={fromClass}
                 onChange={e => {
-                  setToClass(e.target.value);
-                  setToSection("");
+                  setFromClass(e.target.value);
+                  setFromSection("");
                 }}
               >
-                <option value="">Target Class</option>
+                <option value="">Select Class</option>
                 {classData?.map(c => (
-                  <option key={c.name} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="md:col-span-2 space-y-1.5">
+              <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">From Section</label>
               <select
-                className="input w-32"
-                disabled={!targetClass}
-                value={toSection}
-                onChange={e => setToSection(e.target.value)}
+                className="input w-full bg-(--bg-card)"
+                value={fromSection}
+                disabled={!sourceClass}
+                onChange={e => setFromSection(e.target.value)}
               >
-                <option value="">Section</option>
-                {targetClass?.sections.map(sec => (
-                  <option key={sec.id} value={sec.id}>
-                    {sec.name}
-                  </option>
+                <option value="">Select Section</option>
+                {sourceClass?.sections.map(sec => (
+                  <option key={sec.id} value={sec.id}>{sec.name}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="md:col-span-3 relative group">
+              <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Search Loaded</label>
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted)" />
+                <input
+                  type="text"
+                  placeholder="Roll, Name, ID..."
+                  className="input pl-9 w-full bg-(--bg-card)"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
               <button
-                onClick={promote}
-                className="btn-primary flex items-center gap-2"
+                onClick={loadStudents}
+                disabled={loadingList || !fromSection || !fromSession}
+                className="btn-primary w-full flex items-center justify-center gap-2"
               >
-                <ArrowUp size={16} />
-                Promote
+                {loadingList ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
+                Search
               </button>
             </div>
           </div>
         </div>
-      )}
-      {previewOpen && (
-        <PromotionPreviewModal
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          onConfirm={handleSessionPromotion}
-        />
-      )}
-    </div>
+
+        <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-(--bg) border-b border-(--border)">
+                  <th className="px-5 py-3 w-12">
+                    <button
+                      onClick={toggleAll}
+                      className="w-5 h-5 rounded border border-(--border) flex items-center justify-center bg-(--bg)"
+                    >
+                      {selected.length === filteredStudents.length && filteredStudents.length > 0 ? (
+                        <Check size={14} className="text-(--primary)" />
+                      ) : (
+                        <Square size={14} className="text-(--text-muted)" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted)">Roll No</th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted)">App ID</th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted)">Name</th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted) text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-(--border)">
+                {loadingList ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan="5" className="px-5 py-6">
+                        <div className="h-4 bg-(--bg) rounded-full w-3/4"></div>
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-5 py-10 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 rounded-full bg-(--bg) flex items-center justify-center text-(--text-muted)">
+                          <Users size={32} />
+                        </div>
+                        <h3 className="text-base mt-4 font-semibold text-(--text)">No students to display</h3>
+                        <p className="text-xs text-(--text-muted)">Select a class and section to load students for promotion</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student) => {
+                    const isSelected = selected.includes(student.uid);
+                    return (
+                      <tr
+                        key={student.uid}
+                        onClick={() => toggle(student.uid)}
+                        className={`group cursor-pointer transition-colors ${isSelected ? 'bg-(--primary-soft)/20' : 'hover:bg-(--bg-soft)/30'}`}
+                      >
+                        <td className="px-5 py-3">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center bg-(--bg) ${isSelected ? 'border-(--primary)' : 'border-(--text-muted)'}`}>
+                            {isSelected ? <Check size={14} className="text-(--primary)" /> : null}
+                          </div>
+                        </td>
+                        <td className={`px-5 py-3 font-semibold text-xs ${isSelected ? 'text-(--primary)' : 'text-(--text-muted)'}`}>
+                          {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
+                        </td>
+                        <td className="px-5 py-3 uppercase font-semibold">
+                          {student.appId}
+                        </td>
+                        <td className="px-5 py-3 font-semibold text-(--text) capitalize">
+                          {student.name}
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${student.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                            {student.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {selected.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-40 animate-in slide-in-from-bottom-8 duration-300">
+            <div className="bg-(--bg) border border-(--border) rounded-2xl p-4 shadow-2xl flex flex-col lg:flex-row gap-4 items-center justify-between ring-4 ring-black/5 dark:ring-white/5">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-(--primary) text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
+                  <span className="font-bold text-lg">{selected.length}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-(--text)">Students Selected</p>
+                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase tracking-wider">Target Selection</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 items-center flex-1 justify-center lg:justify-end">
+                <div className="flex items-center gap-2">
+                  <select
+                    className="input w-36 bg-(--bg-soft)"
+                    value={toSession}
+                    onChange={e => setToSession(e.target.value)}
+                  >
+                    <option value="">To Session</option>
+                    {sessionList?.map(s => (
+                      <option key={s.id} value={s.id}>{s.id}</option>
+                    ))}
+                  </select>
+                  <ArrowRight size={16} className="text-(--text-muted)" />
+                  <select
+                    className="input w-36 bg-(--bg-soft)"
+                    value={toClass}
+                    onChange={e => {
+                      setToClass(e.target.value);
+                      setToSection("");
+                    }}
+                  >
+                    <option value="">Target Class</option>
+                    <optgroup label="Academic Classes">
+                      {classData?.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Exit Options">
+                      <option value="passed_out">Passed Out / Alumni</option>
+                    </optgroup>
+                  </select>
+                  <ArrowRight size={16} className="text-(--text-muted)" />
+                  <select
+                    className="input w-32 bg-(--bg-soft)"
+                    disabled={!toClass}
+                    value={toSection}
+                    onChange={e => setToSection(e.target.value)}
+                  >
+                    <option value="">Section</option>
+                    {toClass === "passed_out" ? (
+                      <option value="All">All</option>
+                    ) : (
+                      targetClass?.sections.map(sec => (
+                        <option key={sec.id} value={sec.id}>{sec.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                <button
+                  onClick={promote}
+                  disabled={!toSection || !toSession || loading}
+                  className="btn-primary flex items-center gap-2 py-2.5 px-6 shadow-xl shadow-orange-500/10"
+                >
+                  <ArrowUp size={16} />
+                  Promote Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </RequirePermission>
   );
 }

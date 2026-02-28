@@ -103,8 +103,8 @@ export default function MarksEntryPage() {
         "branches",
         branch,
         "meta",
-        `${classId}_${sectionId}`
-      ); 
+        `${classId}_${sectionId}_${session}`
+      );
       const snap = await getDoc(rosterRef);
       let stuData = [];
       if (snap.exists()) {
@@ -124,7 +124,7 @@ export default function MarksEntryPage() {
       const existingMarks = await loadExistingMarks(stuData, termId);
       setMarks(existingMarks);
       setSearched(true);
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err);
     } finally {
       setLoading(false);
@@ -164,7 +164,7 @@ export default function MarksEntryPage() {
     });
     return loadedMarks;
   }
-  
+
   function updateMark(studentId, setupId, value) {
     setMarks(prev => ({
       ...prev,
@@ -188,7 +188,7 @@ export default function MarksEntryPage() {
         marks
       });
       toast.success("Marks saved successfully");
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err);
     } finally {
       setLoading(false);
@@ -318,11 +318,11 @@ export default function MarksEntryPage() {
                     if (finalPercentage !== null) {
                       derivedGrade =
                         finalPercentage >= 90 ? "A" :
-                        finalPercentage >= 75 ? "B" :
-                        finalPercentage >= 60 ? "C" :
-                        finalPercentage >= 45 ? "D" :
-                        "E";
-                    }                    
+                          finalPercentage >= 75 ? "B" :
+                            finalPercentage >= 60 ? "C" :
+                              finalPercentage >= 45 ? "D" :
+                                "E";
+                    }
 
                     return (
                       <tr
@@ -386,24 +386,23 @@ export default function MarksEntryPage() {
                           );
                         })}
                         <td className="px-3 py-2 text-center font-semibold">
-                        {maxTotal > 0
-                          ? `${totalMarks}/${maxTotal}`
-                          : gradeCount > 0
-                          ? "Grade Based"
-                          : "-"
-                        }
+                          {maxTotal > 0
+                            ? `${totalMarks}/${maxTotal}`
+                            : gradeCount > 0
+                              ? "Grade Based"
+                              : "-"
+                          }
                         </td>
                         <td className="px-3 py-2 text-center">
                           <span
                             className={`px-2 py-1 rounded text-xs font-semibold
-                              ${
-                                derivedGrade === "A"
-                                  ? "bg-(--status-p-bg) text-(--status-p-text)"
-                                  : derivedGrade === "B"
+                              ${derivedGrade === "A"
+                                ? "bg-(--status-p-bg) text-(--status-p-text)"
+                                : derivedGrade === "B"
                                   ? "bg-(--status-m-bg) text-(--status-m-text)"
                                   : derivedGrade === "C"
-                                  ? "bg-(--status-l-bg) text-(--status-l-text)"
-                                  : "bg-(--status-a-bg) text-(--status-a-text)"
+                                    ? "bg-(--status-l-bg) text-(--status-l-text)"
+                                    : "bg-(--status-a-bg) text-(--status-a-text)"
                               }
                             `}
                           >

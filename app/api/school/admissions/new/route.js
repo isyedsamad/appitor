@@ -24,7 +24,7 @@ export async function POST(req) {
       .collection("branches")
       .doc(branch)
       .collection("meta")
-      .doc(`${className}_${section}`);
+      .doc(`${className}_${section}_${currentSession}`);
 
     let appId = "";
     let nextRoll = null;

@@ -68,7 +68,7 @@ export default function StudentMessagingPage() {
           "branches",
           branch,
           "meta",
-          `${filters.classId}_${filters.sectionId}`
+          `${filters.classId}_${filters.sectionId}_${schoolUser.currentSession}`
         );
         const snap = await getDoc(ref);
         if (!snap.exists()) {
@@ -140,10 +140,10 @@ export default function StudentMessagingPage() {
   }
 
   useEffect(() => {
-    if(!selectedStudent) return;
+    if (!selectedStudent) return;
     loadSessionNotice();
   }, [sessionId])
-  
+
   async function loadSessionNotice() {
     setLoading(true);
     try {
@@ -277,40 +277,40 @@ export default function StudentMessagingPage() {
         {students.length > 0 && (
           <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-(--bg)">
-                <tr className="text-left">
-                  <th className="px-5 py-3">Student</th>
-                  <th className="px-5 py-3">App ID</th>
-                  <th className="px-5 py-3">Class</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((s) => (
-                  <tr
-                    key={s.uid}
-                    className="border-t border-(--border) hover:bg-(--bg)"
-                  >
-                    <td className="px-5 py-3 font-medium capitalize">{s.name}</td>
-                    <td className="px-5 py-3">{s.appId}</td>
-                    <td className="px-5 py-3">
-                      {getClassName(s.className)} {getSectionName(s.className, s.section)}
-                    </td>
-                    <td className="px-5 py-3 capitalize">{s.status}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => openMessage(s)}
-                        className="btn-primary text-sm"
-                      >
-                        <MessageCircle size={15} /> Message
-                      </button>
-                    </td>
+              <table className="w-full text-sm">
+                <thead className="bg-(--bg)">
+                  <tr className="text-left">
+                    <th className="px-5 py-3">Student</th>
+                    <th className="px-5 py-3">App ID</th>
+                    <th className="px-5 py-3">Class</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {students.map((s) => (
+                    <tr
+                      key={s.uid}
+                      className="border-t border-(--border) hover:bg-(--bg)"
+                    >
+                      <td className="px-5 py-3 font-medium capitalize">{s.name}</td>
+                      <td className="px-5 py-3">{s.appId}</td>
+                      <td className="px-5 py-3">
+                        {getClassName(s.className)} {getSectionName(s.className, s.section)}
+                      </td>
+                      <td className="px-5 py-3 capitalize">{s.status}</td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => openMessage(s)}
+                          className="btn-primary text-sm"
+                        >
+                          <MessageCircle size={15} /> Message
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}

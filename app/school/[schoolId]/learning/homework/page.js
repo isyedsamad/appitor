@@ -84,7 +84,7 @@ export default function HomeworkPage() {
 
   useEffect(() => {
     if (!openAdd || isAdmin) return;
-    if(timetableOptions.length > 0) return;
+    if (timetableOptions.length > 0) return;
     async function fetchTeacherTimetable() {
       setLoading(true);
       try {
@@ -155,7 +155,7 @@ export default function HomeworkPage() {
         }
         const options = [];
         for (const segment of dayEntries) {
-          for(const element of segment.entries) {
+          for (const element of segment.entries) {
             options.push({
               period: segment.period,
               subjectId: element.subjectId,
@@ -167,7 +167,7 @@ export default function HomeworkPage() {
           }
         }
         setTimetableOptions(options);
-      } catch(err) {
+      } catch (err) {
         toast.error('Failed: ' + err);
       } finally {
         setLoading(false);
@@ -175,7 +175,7 @@ export default function HomeworkPage() {
     }
     fetchClassSectionTimetable();
   }, [openAdd, form.classId, form.sectionId, form.date]);
-  
+
   async function saveHomework() {
     if (!form.timetableKey || !form.content) {
       alert("Please fill all fields");
@@ -186,6 +186,7 @@ export default function HomeworkPage() {
       await secureAxios.post("/api/school/learning/homework", {
         branch,
         date: isAdmin ? formatInputDate(form.date) : formatInputDate(filters.date),
+        session: schoolUser.currentSession,
         classId: isAdmin ? form.classId : undefined,
         sectionId: isAdmin ? form.sectionId : undefined,
         timetable: JSON.parse(form.timetableKey),
@@ -201,7 +202,7 @@ export default function HomeworkPage() {
       });
       searchHomework();
       toast.success('Homework saved successfully!');
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err.response.data.message);
     } finally {
       setLoading(false);
@@ -313,7 +314,7 @@ export default function HomeworkPage() {
         "learning",
         "items",
         "homework",
-        `${filters.classId}_${filters.sectionId}_${formatInputDate(filters.date)}`
+        `${filters.classId}_${filters.sectionId}_${schoolUser.currentSession}_${formatInputDate(filters.date)}`
       );
       const snap = await getDoc(ref);
       setHomeworkDoc(snap.exists() ? snap.data() : null);
@@ -321,7 +322,7 @@ export default function HomeworkPage() {
       setLoading(false);
     }
   }
-  
+
   return (
     <RequirePermission permission="learning.manage">
       <div className="space-y-5">
