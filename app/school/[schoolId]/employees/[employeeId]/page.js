@@ -508,7 +508,7 @@ export default function EmployeeProfilePage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-2 bg-(--bg-soft) rounded-lg border border-(--border)">
                   <span className="text-xs text-(--text-muted)">Login Status</span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${isActive ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
                     {employee.status === 'pending' ? 'active' : employee.status}
                   </span>
                 </div>
