@@ -267,7 +267,7 @@ export default function StudentsListPage() {
                   filteredStudents.map((student) => (
                     <tr key={student.uid} className="group hover:bg-(--bg)/50 transition-colors">
                       <td className="px-5 py-2 font-medium text-(--text-muted)">
-                        {student.rollNo || "N/A"}
+                        {student.rollNo.toString().padStart(2, "0") || "N/A"}
                       </td>
                       <td className="px-5 py-2 uppercase tracking-tight font-semibold">
                         {student.appId}

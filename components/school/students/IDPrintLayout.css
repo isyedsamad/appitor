@@ -1,0 +1,110 @@
+/* IDPrintLayout.css */
+
+:root {
+    --id-width: 2.125in;
+    --id-height: 3.375in;
+    --id-grid-cols: 2;
+    --id-grid-rows: 4;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #id-card-print-container,
+    #id-card-print-container * {
+        visibility: visible;
+    }
+
+    #id-card-print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+
+    .id-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--id-grid-cols), 1fr);
+        gap: 8mm;
+        padding: 5mm;
+        justify-items: center;
+    }
+
+    .id-card-wrapper {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Screen Preview Styles */
+.id-grid-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--id-width), 1fr));
+    gap: 1.5rem;
+    justify-items: center;
+}
+
+.id-card-base {
+    width: var(--id-width);
+    height: var(--id-height);
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.id-card-base.flex-row {
+    flex-direction: row !important;
+}
+
+.id-card-base p {
+    margin: 0;
+    line-height: 1.2;
+}
+
+.id-photo-frame {
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #f9fafb;
+}
+
+/* Scrollbar for student list */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e5e7eb;
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #d1d5db;
+}

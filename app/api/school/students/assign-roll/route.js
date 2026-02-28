@@ -24,41 +24,52 @@ export async function PUT(req) {
       .doc(`${className}_${section}_${session}`);
 
     const rosterSnap = await rosterRef.get();
-    updates.forEach((item) => {
-      const userRef = adminDb.collection("schoolUsers").doc(item.uid);
-      const branchRef = adminDb
-        .collection("schools")
-        .doc(user.schoolId)
-        .collection("branches")
-        .doc(branch)
-        .collection("students")
-        .doc(item.uid);
-
-      const data = {
-        rollNo: item.rollNo,
-        rollAssignedAt: FieldValue.serverTimestamp(),
-        rollAssignedBy: user.uid,
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      batch.update(userRef, data);
-      batch.update(branchRef, data);
-    });
-
     if (rosterSnap.exists) {
       const data = rosterSnap.data();
       let students = data.students || [];
-      const rollMap = new Map(
-        updates.map((u) => [u.uid, u.rollNo])
-      );
+      const rosterUids = new Set(students.map(s => s.uid));
+
+      const rollMap = new Map();
+      updates.forEach((item) => {
+        if (!rosterUids.has(item.uid)) return; // Skip if not in roster
+
+        rollMap.set(item.uid, item.rollNo);
+
+        const userRef = adminDb.collection("schoolUsers").doc(item.uid);
+        const branchRef = adminDb
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection("students")
+          .doc(item.uid);
+
+        const data = {
+          rollNo: item.rollNo,
+          rollAssignedAt: FieldValue.serverTimestamp(),
+          rollAssignedBy: user.uid,
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        batch.update(userRef, data);
+        batch.update(branchRef, data);
+      });
+
+      // Update roster students array
       students = students.map((s) =>
         rollMap.has(s.uid)
           ? { ...s, rollNo: rollMap.get(s.uid) }
           : s
       );
+
       batch.update(rosterRef, {
         students,
         updatedAt: FieldValue.serverTimestamp(),
       });
+    } else {
+      return NextResponse.json(
+        { message: "Roster not found" },
+        { status: 404 }
+      );
     }
 
     await batch.commit();

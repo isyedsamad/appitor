@@ -19,7 +19,8 @@ import {
   MapPin,
   TrendingUp,
   History,
-  Briefcase
+  Briefcase,
+  Hash
 } from "lucide-react";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -303,6 +304,14 @@ export default function StudentProfilePage() {
                   <GraduationCap size={14} className="text-(--primary)" /> Academic Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
+                      <Hash size={12} /> Roll Number
+                    </label>
+                    <div className="py-2 px-3 border-[1.5px] border-(--border) rounded-lg bg-(--bg-soft) opacity-80 cursor-not-allowed text-sm font-mono font-bold">
+                      {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
+                    </div>
+                  </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
                       <Calendar size={12} /> Current Session
