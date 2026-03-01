@@ -27,7 +27,8 @@ import {
   Timer,
   TimerOff,
   ArrowRight,
-  Search
+  Search,
+  Calendar
 } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -57,6 +58,7 @@ export default function SchoolDashboard() {
   const [selectedDateSearch, setSelectedDateSearch] = useState(todayIso);
   const [analytics, setAnalytics] = useState(null);
   const [dayAnalytics, setDayAnalytics] = useState(null);
+  const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,6 +102,22 @@ export default function SchoolDashboard() {
     return () => unsubDay();
   }, [branch, schoolUser?.schoolId, selectedDateSearch]);
 
+  useEffect(() => {
+    if (!branch || !schoolUser?.schoolId || !branchInfo?.currentSession) return;
+    const unsubHoliday = onSnapshot(
+      doc(db, "schools", schoolUser.schoolId, "branches", branch, "holidays", branchInfo.currentSession),
+      (docSnap) => {
+        if (docSnap.exists() && docSnap.data().items) {
+          setHolidays(docSnap.data().items);
+        } else {
+          setHolidays([]);
+        }
+      },
+      (err) => console.error("Holiday Snapshot Error:", err)
+    );
+    return () => unsubHoliday();
+  }, [branch, schoolUser?.schoolId, branchInfo?.currentSession]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -123,12 +141,17 @@ export default function SchoolDashboard() {
       absent: (data.student?.A || 0) + (data.employee?.A || 0)
     })) : [];
 
+  const upcomingHolidays = (Array.isArray(holidays) ? holidays : [])
+    .filter(h => h && (h.to || h.from) >= todayIso)
+    .sort((a, b) => (a?.from || "").localeCompare(b?.from || ""))
+    .slice(0, 3);
+
   const quickActions = [
     { label: "Student Profile", icon: LayoutDashboard, path: "/students", color: "p" },
     { label: "Attendance", icon: CalendarCheck, path: "/attendance", color: "m" },
     { label: "Homework", icon: BookOpen, path: "/academics/homework", color: "o" },
-    { label: "Fee Portal", icon: Receipt, path: "/fees", color: "l" },
-    { label: "Notifications", icon: Bell, path: "/communications/notifications", color: "a" },
+    { label: "Fee Dues", icon: Receipt, path: "/fees/dues", color: "l" },
+    { label: "Noticeboard", icon: Bell, path: "/communications/noticeboard", color: "a" },
   ];
 
   return (
@@ -200,23 +223,21 @@ export default function SchoolDashboard() {
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-semibold text-(--text-muted) uppercase">Student Desk</h2>
-            <span className="text-xs text-(--primary) font-semibold uppercase">{new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+            <h2 className="text-xs font-bold text-(--text-muted) uppercase">Student Attendance</h2>
+            <span className="text-xs text-(--primary) font-semibold uppercase">{new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <SummaryCard label="Attendance Total" value={studentStats.Total || 0} icon={Activity} s="basic" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+            <SummaryCard label="Att. Total" value={studentStats.Total || 0} icon={Activity} s="basic" />
             <SummaryCard label="Present" value={studentStats.P || 0} icon={CheckCircle2} s="p" />
             <SummaryCard label="Absent" value={studentStats.A || 0} icon={XCircle} s="a" />
             <SummaryCard label="Leave" value={studentStats.L || 0} icon={Plane} s="l" />
             <SummaryCard label="Medical" value={studentStats.M || 0} icon={Stethoscope} s="m" />
           </div>
         </div>
-
-        {/* ROW 4: Staff Desk (Attendance) */}
         <div className="space-y-3">
-          <h2 className="text-xs font-semibold text-(--text-muted) uppercase">Staff Desk</h2>
+          <h2 className="text-xs font-bold text-(--text-muted) uppercase">Employee Attendance</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            <SummaryCard label="Employee Att." value={employeeStats.Total || 0} icon={Briefcase} s="basic" />
+            <SummaryCard label="Att. Total" value={employeeStats.Total || 0} icon={Briefcase} s="basic" />
             <SummaryCard label="Present" value={employeeStats.P || 0} icon={CheckCircle2} s="p" />
             <SummaryCard label="Absent" value={employeeStats.A || 0} icon={XCircle} s="a" />
             <SummaryCard label="Leave" value={employeeStats.L || 0} icon={Plane} s="l" />
@@ -228,7 +249,7 @@ export default function SchoolDashboard() {
         {/* ROW 5+: Visuals */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Velocity Chart */}
-          <div className="lg:col-span-12 xl:col-span-8 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm h-[300px] flex flex-col">
+          <div className="lg:col-span-12 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm h-[300px] flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-semibold flex items-center gap-2">
                 <TrendingUp size={16} className="text-(--primary)" /> Attendance Velocity
@@ -260,58 +281,135 @@ export default function SchoolDashboard() {
               )}
             </div>
           </div>
-          <div className="lg:col-span-12 xl:col-span-4 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-xs font-semibold flex items-center gap-2">
-                <GraduationCap size={16} className="text-(--primary)" /> Classes Overview
-              </h3>
-              <button onClick={() => router.push(`/school/${schoolUser.schoolId}/academics/classes`)} className="text-xs font-semibold text-(--primary) hover:underline">
-                All Classes
-              </button>
+          <div className="lg:col-span-12 xl:col-span-6 grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="lg:col-span-6 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm overflow-hidden flex flex-col h-[300px]">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs font-semibold flex items-center gap-2">
+                  <GraduationCap size={16} className="text-(--primary)" /> Classes Overview
+                </h3>
+                <button onClick={() => router.push(`/school/${schoolUser.schoolId}/academics/classes`)} className="text-xs font-semibold text-(--primary) hover:underline">
+                  All Classes
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-xs font-semibold text-(--text-muted) uppercase border-b border-(--border)">
+                      <th className="pb-3 pr-2">Class</th>
+                      <th className="pb-3 px-2 text-center">Sections</th>
+                      <th className="pb-3 pl-2 text-right">Capacity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border)">
+                    {(classData || [])
+                      .map(cls => {
+                        let totalCapacity = 0;
+                        let numSections = 0;
+
+                        if (cls.sections && Array.isArray(cls.sections)) {
+                          numSections = cls.sections.length;
+                          cls.sections.forEach(sec => {
+                            totalCapacity += parseInt(sec.capacity) || 40;
+                          });
+                        } else {
+                          totalCapacity = parseInt(cls.capacity) || 40;
+                        }
+
+                        return { ...cls, totalCapacity, numSections };
+                      })
+                      .sort((a, b) => b.totalCapacity - a.totalCapacity)
+                      .slice(0, 5)
+                      .map((cls) => (
+                        <tr key={cls.id} className="text-xs font-semibold hover:bg-(--bg)/50 transition-colors">
+                          <td className="py-3 pr-2 text-(--text)">{cls.name}</td>
+                          <td className="py-3 px-2 text-center">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-(--bg) text-(--text-muted) border border-(--border)/50 text-[10px]">
+                              {cls.numSections}
+                            </span>
+                          </td>
+                          <td className="py-3 pl-2 text-right">
+                            <span className="text-[11px] font-bold text-(--text)">{cls.totalCapacity}</span>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-xs font-semibold text-(--text-muted) uppercase border-b border-(--border)">
-                    <th className="pb-3 pr-2">Class</th>
-                    <th className="pb-3 px-2 text-center">Sections</th>
-                    <th className="pb-3 pl-2 text-right">Students</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-(--border)">
-                  {(classData || [])
-                    .map(cls => {
-                      let totalStudents = 0;
-                      let numSections = 0;
+            <div className="lg:col-span-6 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm overflow-hidden flex flex-col h-[300px]">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs font-semibold flex items-center gap-2">
+                  <Calendar size={16} className="text-(--primary)" /> Upcoming Holidays
+                </h3>
+                <button onClick={() => router.push(`/school/${schoolUser.schoolId}/academics/holidays`)} className="text-xs font-semibold text-(--primary) hover:underline">
+                  All Holidays
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+                {upcomingHolidays.length > 0 ? (
+                  upcomingHolidays.map(hol => {
+                    const effectiveToDate = hol.to || hol.from;
+                    const fromDate = new Date(hol.from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    const toDate = new Date(effectiveToDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    const isOngoing = todayIso >= hol.from && todayIso <= effectiveToDate;
+                    const visibleDays = hol.daysList ? hol.daysList.slice(0, 3) : [];
+                    const remaining = hol.daysList ? hol.daysList.length - visibleDays.length : 0;
 
-                      if (cls.sections && Array.isArray(cls.sections)) {
-                        numSections = cls.sections.length;
-                        cls.sections.forEach(sec => {
-                          totalStudents += parseInt(sec.studentCount) || 0;
-                        });
-                      } else {
-                        totalStudents = parseInt(cls.studentCount) || 0;
-                      }
-
-                      return { ...cls, totalStudents, numSections };
-                    })
-                    .sort((a, b) => b.totalStudents - a.totalStudents) // Sort by most students
-                    .slice(0, 5)
-                    .map((cls) => (
-                      <tr key={cls.id} className="text-xs font-semibold hover:bg-(--bg)/50 transition-colors">
-                        <td className="py-3 pr-2 text-(--text)">{cls.name}</td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-(--bg) text-(--text-muted) border border-(--border)/50 text-[10px]">
-                            {cls.numSections}
+                    return (
+                      <div key={hol.id} className="relative rounded-xl px-4 py-3 border bg-(--bg-card) border-(--border)">
+                        <div className="flex justify-between items-center gap-2">
+                          <h4 className="font-semibold text-sm flex items-center gap-2 text-(--text)">
+                            {hol.title}
+                            <div className="px-1.5 py-0.5 rounded-md bg-(--status-m-bg) text-(--status-m-text)">
+                              <p className="text-[10px] font-semibold">
+                                {hol.days} Day{hol.days > 1 ? "s" : ""}
+                              </p>
+                            </div>
+                          </h4>
+                          <div className="flex justify-between items-center">
+                            {isOngoing ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)">
+                                ONGOING
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-(--primary-soft) text-(--primary) border border-(--primary)">
+                                UPCOMING
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-(--text-muted) mt-1 mb-2">
+                          <Calendar size={12} />
+                          <span>
+                            {(!hol.to || hol.from === hol.to) ? fromDate : `${fromDate} → ${toDate}`}
                           </span>
-                        </td>
-                        <td className="py-3 pl-2 text-right">
-                          <span className="text-[11px] font-bold text-(--text)">{cls.totalStudents}</span>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {visibleDays.map((day, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-(--bg) border-(--border) text-(--text-muted)"
+                            >
+                              {day}
+                            </span>
+                          ))}
+                          {remaining > 0 && (
+                            <span
+                              className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-(--bg) border border-(--border) text-(--text-muted)"
+                            >
+                              +{remaining} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="h-full flex items-center justify-center p-4 text-center border border-dashed border-(--border) rounded-lg bg-(--bg)/30">
+                    <p className="text-xs font-semibold text-(--text-muted) uppercase">No upcoming holidays scheduled</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -339,19 +437,29 @@ function SummaryCard({ label, value, icon: Icon, s }) {
   const bg = `var(--status-${s}-bg)`;
   const txt = `var(--status-${s}-text)`;
   const brd = `var(--status-${s}-border)`;
-  const { theme } = useTheme();
 
   return (
     <div
-      className="p-4 rounded-xl border flex items-center gap-3 transition-all hover:scale-[1.001] hover:shadow-md shadow-sm"
-      style={{ backgroundColor: bg, borderColor: brd, color: txt }}
+      className="relative overflow-hidden rounded-xl border px-4 py-4 shadow-sm transition-all hover:shadow-md group hover:-translate-y-0.5"
+      style={{
+        backgroundColor: "var(--bg-card)",
+        backgroundImage: `linear-gradient(to bottom right, ${bg}, transparent)`,
+        borderColor: brd,
+      }}
     >
-      <div className={`p-2 rounded-lg backdrop-blur-sm ${theme === 'dark' ? 'bg-black/50' : 'bg-white/50'}`}>
-        <Icon size={16} />
-      </div>
-      <div className="overflow-hidden">
-        <p className="text-xs font-semibold leading-none opacity-80">{label}</p>
-        <h4 className="text-lg font-semibold mt-1 leading-none">{value > 0 ? String(value).padStart(2, '0') : '--'}</h4>
+      <div className="flex justify-between items-start relative z-10">
+        <div>
+          <p className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider opacity-90">{label}</p>
+          <h4 className="text-2xl font-bold transition-colors group-hover:scale-[1.02] transform origin-left" style={{ color: txt }}>
+            {value > 0 ? String(value).padStart(2, '0') : '--'}
+          </h4>
+        </div>
+        <div
+          className="p-2.5 rounded-xl flex items-center justify-center shadow-sm"
+          style={{ backgroundColor: bg, color: txt, border: `1px solid ${brd}` }}
+        >
+          <Icon size={15} />
+        </div>
       </div>
     </div>
   );

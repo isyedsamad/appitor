@@ -7,7 +7,7 @@ import { formatDate, formatMonth } from "@/lib/dateUtils";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "fee.manage");
-    const {branch, paymentId, receiptNo, appId, studentId, sessionId, refundItems, totalRefund, remark, payType} = await req.json();
+    const { branch, paymentId, receiptNo, appId, studentId, sessionId, refundItems, totalRefund, remark, payType } = await req.json();
 
     if (!branch || !paymentId || !studentId || !sessionId || !refundItems || totalRefund <= 0 || !payType) {
       return NextResponse.json({ message: "Invalid refund payload" }, { status: 400 });
@@ -22,7 +22,7 @@ export async function POST(req) {
     const paymentRef = branchRef.collection("fees").doc("payments").collection("items").doc(paymentId);
     const refundRef = branchRef.collection("fees").doc("refunds").collection("items").doc();
     const summaryRef = branchRef.collection("fees").doc("session_summaries").collection("items").doc(`${studentId}_${sessionId}`);
-    
+
     const dayId = formatDate();
     const monthId = formatMonth();
     const dayRef = branchRef.collection("fees").doc("day_book").collection("items").doc(dayId);
@@ -58,49 +58,84 @@ export async function POST(req) {
         }
       });
 
+      const paymentData = paymentSnap.data();
+      const paymentItems = paymentData.items || [];
       const summary = summarySnap.data();
-      for (const [period, refundAmount] of Object.entries(refundItems)) {
-        if (refundAmount <= 0) continue;
 
-        const duesRef = branchRef
-          .collection("fees")
-          .doc("dues")
-          .collection("items")
-          .doc(`${studentId}_${sessionId}_${period}`);
+      let calculatedTotalRefund = 0;
 
-        const duesSnap = await tx.get(duesRef);
-        if (duesSnap.exists) {
-          const dues = duesSnap.data();
-          tx.set(
-            duesRef,
-            {
-              paid: Math.max((dues.paid || 0) - refundAmount, 0),
-              due: (dues.due || 0) + refundAmount,
-              status: "due",
-              updatedAt: nowServer,
-            },
-            { merge: true }
-          );
+      for (const [itemKey, refundAmountRaw] of Object.entries(refundItems)) {
+        const refundAmount = Number(refundAmountRaw);
+        if (isNaN(refundAmount) || refundAmount <= 0) continue;
+
+        const pItem = paymentItems.find(i => (i.type === "month" ? i.period === itemKey : i.id?.toString() === itemKey));
+
+        if (!pItem) {
+          throw new Error(`INVALID_ITEM: ${itemKey} not found in this payment.`);
         }
 
-        if (summary.months?.[period]) {
-          summary.months[period].paid =
-            Math.max(summary.months[period].paid - refundAmount, 0);
-          summary.months[period].status = "due";
-          summary.months[period].lastRefundAt = nowTs;
+        const maxRefundable = pItem.amount - (pItem.refundedAmount || 0);
+        if (refundAmount > maxRefundable) {
+          throw new Error(`OVER_REFUND: Cannot refund more than ₹${maxRefundable} for ${itemKey}`);
+        }
+
+        pItem.refundedAmount = (pItem.refundedAmount || 0) + refundAmount;
+        calculatedTotalRefund += refundAmount;
+
+        if (pItem.type === "month") {
+          const duesRef = branchRef
+            .collection("fees")
+            .doc("dues")
+            .collection("items")
+            .doc(`${studentId}_${sessionId}_${itemKey}`);
+
+          const duesSnap = await tx.get(duesRef);
+          if (duesSnap.exists) {
+            const dues = duesSnap.data();
+            tx.set(
+              duesRef,
+              {
+                paid: Math.max((dues.paid || 0) - refundAmount, 0),
+                due: (dues.due || 0) + refundAmount,
+                status: "due",
+                updatedAt: nowServer,
+              },
+              { merge: true }
+            );
+          }
+
+          if (summary.months?.[itemKey]) {
+            summary.months[itemKey].paid =
+              Math.max(summary.months[itemKey].paid - refundAmount, 0);
+            summary.months[itemKey].status = "due";
+            summary.months[itemKey].lastRefundAt = nowTs;
+          }
+        }
+        else if (pItem.type === "flexible") {
+          const flexIdx = summary.flexible?.findIndex(f => f.id?.toString() === itemKey);
+          if (flexIdx !== undefined && flexIdx !== -1 && summary.flexible) {
+            summary.flexible[flexIdx].refundedAmount = (summary.flexible[flexIdx].refundedAmount || 0) + refundAmount;
+          }
         }
 
         summary.totals.totalPaid -= refundAmount;
-        summary.totals.totalDue += refundAmount;
       }
 
+      if (calculatedTotalRefund <= 0) {
+        throw new Error("INVALID_REFUND_AMOUNT");
+      }
+
+      const totalMonthFees = Object.values(summary.months || {}).reduce((s, m) => s + m.total, 0);
+      const totalFlexFees = (summary.flexible || []).reduce((s, f) => s + f.amount, 0);
+      summary.totals.totalFee = totalMonthFees + totalFlexFees;
+      summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid;
       summary.updatedAt = nowServer;
 
       for (const ref of refs) {
         tx.update(ref, {
-          "refunds.total": FieldValue.increment(Number(totalRefund)),
-          [`refunds.${payType}`]: FieldValue.increment(Number(totalRefund)),
-          net: FieldValue.increment(-Number(totalRefund)),
+          "refunds.total": FieldValue.increment(calculatedTotalRefund),
+          [`refunds.${payType}`]: FieldValue.increment(calculatedTotalRefund),
+          net: FieldValue.increment(-calculatedTotalRefund),
           transactions: FieldValue.increment(1),
           transactionsRefund: FieldValue.increment(1),
           updatedAt: FieldValue.serverTimestamp(),
@@ -111,7 +146,7 @@ export async function POST(req) {
       tx.set(refundLedgerRef, {
         type: "refund",
         direction: "debit",
-        amount: Number(totalRefund),
+        amount: calculatedTotalRefund,
         studentId,
         appId,
         sessionId,
@@ -135,7 +170,8 @@ export async function POST(req) {
       tx.set(
         paymentRef,
         {
-          refundedAmount: FieldValue.increment(totalRefund),
+          items: paymentItems,
+          refundedAmount: FieldValue.increment(calculatedTotalRefund),
           lastRefundAt: nowServer,
         },
         { merge: true }
@@ -148,7 +184,7 @@ export async function POST(req) {
         appId,
         sessionId,
         refundItems,
-        totalRefund,
+        totalRefund: calculatedTotalRefund,
         remark,
         payType,
         refundedBy: {
@@ -168,6 +204,9 @@ export async function POST(req) {
     }
     if (err.message === "SUMMARY_NOT_FOUND") {
       return NextResponse.json({ message: "Session summary missing" }, { status: 400 });
+    }
+    if (err.message === "INVALID_REFUND_AMOUNT" || err.message.startsWith("INVALID_ITEM") || err.message.startsWith("OVER_REFUND")) {
+      return NextResponse.json({ message: err.message }, { status: 400 });
     }
 
     console.error("Refund API error:", err);

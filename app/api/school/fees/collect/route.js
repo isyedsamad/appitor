@@ -24,7 +24,10 @@ export async function POST(req) {
 
     const nowTs = Timestamp.now();
     const nowServer = FieldValue.serverTimestamp();
-    const paidAmount = Number(payment.paidAmount);
+    let paidAmount = Number(payment.paidAmount);
+    if (isNaN(paidAmount) || paidAmount <= 0) {
+      return NextResponse.json({ message: "Invalid payment amount detected, transactions blocked to protect the ledger." }, { status: 400 });
+    }
     let receiptNo = "";
 
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
@@ -78,13 +81,22 @@ export async function POST(req) {
       const current = counterSnap.exists ? counterSnap.data().current || 0 : 0;
       const next = current + 1;
 
-      const totalFlexibleAmount = flexibleItems.reduce((s, f) => s + Number(f.amount), 0);
-      const totalMonths = months.reduce(
-        (s, m) => s + Number(m.total),
-        0
-      );
+      const totalFlexibleAmount = flexibleItems.reduce((s, f) => {
+        const amt = Number(f.amount);
+        if (isNaN(amt) || amt < 0) throw new Error("Invalid flexible fee amount");
+        return s + amt;
+      }, 0);
+
+      const totalMonths = months.reduce((s, m) => {
+        const amt = Number(m.amount);
+        if (isNaN(amt) || amt <= 0) throw new Error(`Invalid amount for month: ${m.key || m.period}`);
+        return s + amt;
+      }, 0);
+
       const totalFeeToSettle = totalFlexibleAmount + totalMonths;
       const discountValue = Number(payment.discountValue || 0);
+      if (isNaN(discountValue) || discountValue < 0) throw new Error("Invalid discount value");
+
       const discountAmount =
         payment.discountType === "percent"
           ? Math.round((totalFeeToSettle * discountValue) / 100)
@@ -122,13 +134,13 @@ export async function POST(req) {
       const summary = summarySnap.exists
         ? summarySnap.data()
         : {
-            studentId,
-            appId,
-            sessionId,
-            months: {},
-            flexible: [],
-            totals: { totalFee: 0, totalPaid: 0, totalDue: 0 },
-          };
+          studentId,
+          appId,
+          sessionId,
+          months: {},
+          flexible: [],
+          totals: { totalFee: 0, totalPaid: 0, totalDue: 0 },
+        };
 
       // let remaining = paidAmount;
       let remaining = paidAmount + discountAmount;
@@ -161,25 +173,33 @@ export async function POST(req) {
       }
 
       const normalizedMonths = months
-        .map(m => ({
-          period: m.key,
-          total: Number(m.total),
-          headsSnapshot: m.breakdown || [],
-        }))
+        .map(m => {
+          const amt = Number(m.amount);
+          if (isNaN(amt) || amt <= 0) throw new Error(`Invalid amount for month period`);
+          return {
+            period: m.key || m.period,
+            amount: amt,
+            headsSnapshot: m.headsSnapshot || [],
+          };
+        })
         .sort((a, b) => a.period.localeCompare(b.period));
 
-      for (const { period, total, headsSnapshot } of normalizedMonths) {
+      for (const { period, amount, headsSnapshot } of normalizedMonths) {
         if (remaining <= 0) break;
 
+        // If the month wasn't in summary before, this means it's the first time it's being paid.
+        // We initialize its total using the 'amount' which is effectively 'total due' right now.
         const existing = summary.months[period] || {
-          total,
+          total: amount,
           paid: 0,
           status: "due",
           lastPaidAt: null,
           headsSnapshot,
         };
 
-        existing.total = total;
+        // Note: we do NOT intentionally blindly overwrite 'existing.total = amount' because 'amount' 
+        // sent from frontend is simply the remainder due mapped from 'step2Items'. The existing 
+        // month total should be preserved.
         if (!existing.headsSnapshot || !existing.headsSnapshot.length) {
           existing.headsSnapshot = headsSnapshot;
         }
@@ -233,8 +253,11 @@ export async function POST(req) {
 
       summary.totals.totalDiscount = (summary.totals.totalDiscount || 0) + discountAmount;
 
-      summary.totals.totalFee = Object.values(summary.months).reduce((s, m) => s + m.total, 0);
-      summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid - summary.totals.totalDiscount;
+      const totalMonthFees = Object.values(summary.months).reduce((s, m) => s + m.total, 0);
+      const totalFlexFees = summary.flexible.reduce((s, f) => s + f.amount, 0);
+
+      summary.totals.totalFee = totalMonthFees + totalFlexFees;
+      summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid;
       summary.lastPaymentAt = nowServer;
       summary.updatedAt = nowServer;
 
@@ -265,7 +288,7 @@ export async function POST(req) {
           }
         );
       }
-    
+
       tx.set(ledgerRef, {
         type: "payment",
         direction: "credit",
