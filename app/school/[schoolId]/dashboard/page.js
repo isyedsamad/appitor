@@ -428,7 +428,7 @@ export default function SchoolDashboard() {
 
 function VitalCard({ label, value, icon: Icon }) {
   return (
-    <div className="bg-(--bg-card) px-6 py-3 rounded-xl border border-(--border) shadow-sm flex items-center justify-between hover:shadow-md transition-all">
+    <div className="bg-(--bg-card) px-6 py-4 rounded-xl border border-(--border) shadow-sm flex items-center justify-between hover:shadow-md transition-all">
       <div>
         <p className="text-xs font-bold text-(--text-muted) uppercase">{label}</p>
         <h3 className="text-2xl font-bold mt-1 text-(--text)">{value}</h3>

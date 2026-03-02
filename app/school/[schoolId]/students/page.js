@@ -140,7 +140,7 @@ export default function StudentsListPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 hidden md:flex">
             <div className="relative group">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted) group-focus-within:text-(--primary) transition-colors" />
               <input
@@ -161,7 +161,7 @@ export default function StudentsListPage() {
           </div>
         </div>
         <div className="">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
             <div className="md:col-span-2 space-y-1.5">
               <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Session</label>
               <select
@@ -208,11 +208,11 @@ export default function StudentsListPage() {
               </select>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <button
                 onClick={fetchStudents}
                 disabled={loading || !className || !session}
-                className="btn-primary"
+                className="btn-primary w-full"
               >
                 <SearchIcon size={16} className="group-hover:rotate-12 transition-transform" />
                 Search

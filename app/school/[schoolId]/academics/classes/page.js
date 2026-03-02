@@ -12,27 +12,29 @@ import secureAxios from "@/lib/secureAxios";
 import { canManage } from "@/lib/school/permissionUtils";
 
 export default function ClassesPage() {
-  const { schoolUser, loading, setLoading, isLoaded, loadClasses, classData } = useSchool();
+  const { schoolUser, loading, setLoading, isLoaded, classData } = useSchool();
   const { branch, branchInfo } = useBranch();
-  const [classes, setClasses] = useState([]);
+  const [localClasses, setLocalClasses] = useState([]);
   const [isOrderingMode, setIsOrderingMode] = useState(false);
   const [openClassModal, setOpenClassModal] = useState(false);
   const [openSectionModal, setOpenSectionModal] = useState(null);
   const [classToEdit, setClassToEdit] = useState(null);
   const [sectionToEdit, setSectionToEdit] = useState(null);
 
-  useEffect(() => {
-    if (classData) setClasses([...classData]);
-  }, [classData]);
+  const classesToDisplay = isOrderingMode ? localClasses : (classData || []);
 
+  const startOrdering = () => {
+    setLocalClasses([...(classData || [])]);
+    setIsOrderingMode(true);
+  };
 
   const moveClass = (index, direction) => {
-    const newClasses = [...classes];
+    const newClasses = [...localClasses];
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= newClasses.length) return;
     [newClasses[index], newClasses[targetIndex]] = [newClasses[targetIndex], newClasses[index]];
     const finalized = newClasses.map((cls, idx) => ({ ...cls, order: idx }));
-    setClasses(finalized);
+    setLocalClasses(finalized);
   };
 
   const saveOrder = async () => {
@@ -40,7 +42,7 @@ export default function ClassesPage() {
     try {
       await secureAxios.patch('/api/school/academics/classes', {
         branch,
-        classData: classes
+        classData: localClasses
       });
       toast.success("Display order saved successfully");
       setIsOrderingMode(false);
@@ -108,7 +110,6 @@ export default function ClassesPage() {
                   <div className="flex items-center gap-2 w-full">
                     <button
                       onClick={() => {
-                        setClasses([...classData]);
                         setIsOrderingMode(false);
                       }}
                       className="btn-outline"
@@ -124,8 +125,8 @@ export default function ClassesPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 w-full">
-                    {classes.length > 0 && <button
-                      onClick={() => setIsOrderingMode(true)}
+                    {classesToDisplay.length > 0 && <button
+                      onClick={startOrdering}
                       className="btn-outline"
                     >
                       <Settings2 size={16} /> Edit Order
@@ -146,7 +147,7 @@ export default function ClassesPage() {
           </div>
         </div>
 
-        {!loading && classes.length === 0 ? (
+        {!loading && classesToDisplay.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-(--bg-card) border border-(--border) border-dashed rounded-3xl">
             <div className="p-4 rounded-full bg-(--bg-soft) text-(--text-muted) mb-4">
               <Layers size={32} />
@@ -163,7 +164,7 @@ export default function ClassesPage() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {classes.map((cls, idx) => (
+            {classesToDisplay.map((cls, idx) => (
               <div
                 key={cls.id}
                 className={`group relative bg-(--bg-card) border border-(--border) rounded-2xl overflow-hidden transition-all duration-300 ${isOrderingMode ? 'ring-2 ring-(--primary-soft) ring-offset-4 ring-offset-(--bg)' : 'hover:shadow-xl hover:shadow-(--primary-soft)/5'}`}
@@ -179,7 +180,7 @@ export default function ClassesPage() {
                     </button>
                     <button
                       onClick={() => moveClass(idx, 1)}
-                      disabled={idx === classes.length - 1}
+                      disabled={idx === classesToDisplay.length - 1}
                       className="p-1.5 rounded-lg bg-white/90 text-slate-800 shadow-sm disabled:opacity-30 hover:bg-white"
                     >
                       <ArrowDown size={14} />
@@ -270,7 +271,7 @@ export default function ClassesPage() {
           open={openClassModal}
           data={classToEdit}
           onClose={() => { setClassToEdit(null); setOpenClassModal(false); }}
-          onSuccess={fetchClasses}
+          onSuccess={() => { }}
         />
 
         <SectionModal
@@ -278,7 +279,7 @@ export default function ClassesPage() {
           classDataPage={openSectionModal}
           sectionData={sectionToEdit}
           onClose={() => { setSectionToEdit(null); setOpenSectionModal(null); }}
-          onSuccess={fetchClasses}
+          onSuccess={() => { }}
         />
       </div>
     </RequirePermission>
