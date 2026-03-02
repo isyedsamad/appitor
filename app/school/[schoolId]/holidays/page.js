@@ -26,7 +26,7 @@ export default function SchoolHolidayPage() {
   });
   const [holidays, setHolidays] = useState([]);
   const [openAdd, setOpenAdd] = useState(false);
-  
+
   async function fetchHolidays() {
     if (!filters.session) return;
     setLoading(true);
@@ -72,8 +72,8 @@ export default function SchoolHolidayPage() {
     } finally {
       setLoading(false);
     }
-  }  
-  
+  }
+
   const filtered = useMemo(() => {
     if (filters.status === "all") return holidays;
     return holidays.filter(h => h.status === filters.status);
@@ -146,22 +146,22 @@ export default function SchoolHolidayPage() {
           </div>
         ) : (
           Object.entries(grouped).map(([month, items]) => (
-          <div key={month} className="space-y-2">
-            <h2 className="text-sm font-semibold text-(--text-muted) uppercase">
-              {month}
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {items.map(h => (
-                <HolidayCard
-                  key={h.id}
-                  holiday={h}
-                  onDelete={id =>
-                    setHolidays(prev => prev.filter(x => x.id !== id))
-                  }
-                />
-              ))}
+            <div key={month} className="space-y-2">
+              <h2 className="text-sm font-semibold text-(--text-muted) uppercase">
+                {month}
+              </h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map(h => (
+                  <HolidayCard
+                    key={h.id}
+                    holiday={h}
+                    onDelete={id =>
+                      setHolidays(prev => prev.filter(x => x.id !== id))
+                    }
+                  />
+                ))}
+              </div>
             </div>
-          </div>
           )))
         }
         {openAdd && (
@@ -196,7 +196,7 @@ function groupByMonth(holidays) {
 
 function HolidayCard({ holiday, onDelete }) {
   const { schoolUser, setLoading } = useSchool();
-  const canDelete = hasPermission(schoolUser, "holiday.create", false);
+  const canDelete = hasPermission(schoolUser, "holiday.manage", false);
   const STATUS_UI = {
     ongoing: {
       bg: "bg-(--status-p-bg)",

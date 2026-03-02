@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "admission.manage");
+    const user = await verifyUser(req, "admission.import.manage");
     const { branch, sessionId, classId, sectionId } = await req.json();
     if (!branch || !sessionId || !classId || !sectionId) {
       return NextResponse.json({ message: "Missing fields" }, { status: 400 });

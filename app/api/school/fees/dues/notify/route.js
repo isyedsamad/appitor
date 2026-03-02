@@ -32,7 +32,7 @@ async function sendExpoPush({ tokens, title, body, studentUids }) {
 
 export async function POST(req) {
     try {
-        const user = await verifyUser(req, "fee.manage");
+        const user = await verifyUser(req, "fee.operations.manage");
         const body = await req.json();
         const { branch, studentUids, period, schoolName } = body;
 

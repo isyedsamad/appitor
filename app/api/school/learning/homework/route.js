@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "learning.create");
+    const user = await verifyUser(req, "learning.homework.manage");
     const body = await req.json();
     const {
       branch,
@@ -25,7 +25,7 @@ export async function POST(req) {
 
     const isAdmin =
       user.permissions?.includes("*") ||
-      user.permissions?.includes("learning.all");
+      user.permissions?.includes("learning.homework.manage");
 
     let classId, sectionId, teacherId;
 
@@ -56,14 +56,14 @@ export async function POST(req) {
         .collection("timetableSettings")
         .doc('global').get();
 
-      if(!ttSettingsSnap.exists) {
+      if (!ttSettingsSnap.exists) {
         return NextResponse.json(
           { message: "School setup is not completed!" },
           { status: 440 }
         );
       }
       const ttSettingsData = ttSettingsSnap.data();
-      if(ttSettingsData.status == 'active') {
+      if (ttSettingsData.status == 'active') {
         const teacherRef = adminDb
           .collection("schools")
           .doc(user.schoolId)
@@ -95,7 +95,7 @@ export async function POST(req) {
         }
 
       }
-    }else {
+    } else {
       classId = bodyClassId;
       sectionId = bodySectionId;
       teacherId = timetable.teacherId;

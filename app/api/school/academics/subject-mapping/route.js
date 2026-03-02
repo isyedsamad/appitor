@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "timetable.mapping.manage");
     const { schoolId, uid } = user;
     const body = await req.json();
     const {
@@ -77,9 +77,9 @@ export async function POST(req) {
         ...(id
           ? {}
           : {
-              createdBy: uid,
-              createdAt: FieldValue.serverTimestamp(),
-            }),
+            createdBy: uid,
+            createdAt: FieldValue.serverTimestamp(),
+          }),
       },
       { merge: true }
     );
@@ -105,7 +105,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "timetable.mapping.manage");
     const { schoolId, uid } = user;
     const body = await req.json();
     const { id, branch } = body;

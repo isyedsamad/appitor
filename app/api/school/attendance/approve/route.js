@@ -12,7 +12,7 @@ function getStatusDelta(from, to) {
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "attendance.modify");
+    const user = await verifyUser(req, "attendance.mark.manage");
     const { requestId, branch } = await req.json();
     const pendingRef = adminDb
       .collection("schools")

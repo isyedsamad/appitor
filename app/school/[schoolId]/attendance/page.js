@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 import ReasonModal from "@/components/school/attendance/ReasonModal";
 import { formatInputDate, todayDDMMYYYY, toInputDate } from "@/lib/dateUtils";
 import RequirePermission from "@/components/school/RequirePermission";
-import { canManage } from "@/lib/school/permissionUtils";
+import { canManage, hasPermission } from "@/lib/school/permissionUtils";
 const STUDENT_STATUS = {
   P: "bg-[var(--status-p-bg)] text-[var(--status-p-text)] border-[var(--status-p-border)]",
   A: "bg-[var(--status-a-bg)] text-[var(--status-a-text)] border-[var(--status-a-border)]",
@@ -43,7 +43,7 @@ export default function MarkAttendancePage() {
   const [dragStatus, setDragStatus] = useState(null);
   const selectedClass = classData?.find(c => c.id === className);
   const isPastDate = date < toInputDate(today);
-  const canModifyPast = hasPermission(schoolUser, 'attendance.modify', false);
+  const canModifyPast = hasPermission(schoolUser, 'attendance.mark.manage', false);
   const STATUS = mode === "student" ? STUDENT_STATUS : EMPLOYEE_STATUS;
   function getAttendanceDocId() {
     if (mode === "student") {

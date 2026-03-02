@@ -47,7 +47,7 @@ async function sendExpoPush({ title, body, schoolId, branchId, roles, classId, s
 
 export async function POST(req) {
     try {
-        const user = await verifyUser(req, "timetable.edit");
+        const user = await verifyUser(req, "timetable.substitute.manage");
         const body = await req.json();
         const { branch, classId, sectionId, date, substitutions, day, sessionId, schoolName, shouldNotify } = body;
 

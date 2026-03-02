@@ -29,7 +29,7 @@ async function sendExpoPush({ token, title, body, studentUid }) {
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "communication.manage");
+    const user = await verifyUser(req, "communication.student.manage");
     const body = await req.json();
     const { branch, sessionId, studentUid, title, body: messageBody, sendPush, schoolName } = body;
     if (!branch || !sessionId || !studentUid || !title || !messageBody) {

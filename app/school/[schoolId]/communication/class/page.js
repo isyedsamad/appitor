@@ -16,8 +16,8 @@ export default function ClassNoticePage() {
   const { theme } = useTheme();
   const { schoolUser, classData, sessionList, setLoading } = useSchool();
   const { branch } = useBranch();
-  const canManage = hasPermission(schoolUser, "communication.manage", false);
-  const canDelete = hasPermission(schoolUser, "communication.all", false);
+  const canManage = hasPermission(schoolUser, "communication.class.manage", false);
+  const canDelete = hasPermission(schoolUser, "communication.class.manage", false);
   const [sendPush, setSendPush] = useState(true);
   const [filters, setFilters] = useState({
     sessionId: schoolUser?.currentSession || "",

@@ -6,7 +6,7 @@ import { incrementEmployeeCount } from "@/lib/school/analyticsUtils";
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "employee.manage");
+    const user = await verifyUser(req, "employee.profile.manage");
     const { employeeId, status, branch } = await req.json();
     if (!branch || !employeeId || !["active", "disabled", "pending"].includes(status)) {
       return NextResponse.json(

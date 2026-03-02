@@ -5,9 +5,9 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "attendance.modify");
+    const user = await verifyUser(req, "attendance.pending.manage");
     const data = await req.json();
-    const {type, date, session, className, section, branch, records, reason} = data;
+    const { type, date, session, className, section, branch, records, reason } = data;
     const attendanceDocId =
       type === "student"
         ? `student_${date}_${className}_${section}`
@@ -46,7 +46,7 @@ export async function POST(req) {
     else {
       const actualRecords = attSnap.data().records || {};
       const changes = {};
-      if(type == 'student') {
+      if (type == 'student') {
         await Promise.all(
           Object.entries(records).map(async ([uid, newStatus]) => {
             const oldStatus = actualRecords[uid];

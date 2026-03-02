@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
+    const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
     const {
       branch,
@@ -52,7 +52,7 @@ export async function POST(req) {
 
 export async function PATCH(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
+    const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
     const { branch, headId, updates } = body;
     if (!branch || !headId || !updates) {

@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "student.manage");
+    const user = await verifyUser(req, "student.promote.manage");
     const { uids, toClass, toSection, toSession: manualToSession } = await req.json();
     const toSession = manualToSession;
     if (!uids?.length || !toClass || !toSection || !toSession) {

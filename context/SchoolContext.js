@@ -31,7 +31,8 @@ export function SchoolProvider({ schoolId, children }) {
     const classSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes', 'data'));
     if (!classSnap.exists()) return;
     const classdata = classSnap.data();
-    setClassData(classdata.classData);
+    const sortedClasses = (classdata.classData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+    setClassData(sortedClasses);
     setLoading(false);
   }
   const loadSubjects = async (branch) => {

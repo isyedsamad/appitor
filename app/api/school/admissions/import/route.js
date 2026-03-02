@@ -6,7 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   const createdUids = [];
   try {
-    const user = await verifyUser(req, "admission.create");
+    const user = await verifyUser(req, "admission.import.manage");
     const body = await req.json();
     const { branch, sessionId, classId, sectionId, students, branchCode } = body;
     if (!branchCode || !branch || !sessionId || !classId || !sectionId || !Array.isArray(students)) {

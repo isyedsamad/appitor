@@ -82,13 +82,19 @@ export default function AcademicSessionSettingsPage() {
       toast.error("Session ID already exists");
       return;
     }
-    setSessions(prev => [
-      ...prev,
-      {
-        ...newSession,
-        status: "Upcoming",
-      },
-    ]);
+    setSessions(prev => {
+      const updated = [
+        ...prev,
+        {
+          ...newSession,
+          status: "Upcoming",
+        },
+      ];
+      if (updated.length === 1 && !activeSession) {
+        setActiveSession(newSession.id);
+      }
+      return updated;
+    });
     setNewSession({
       id: "",
       startDate: "",

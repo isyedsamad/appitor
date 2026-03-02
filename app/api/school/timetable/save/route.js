@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "timetable.edit");
+    const user = await verifyUser(req, "timetable.edit.manage");
     const { branch, classId, sectionId, days } = await req.json();
 
     if (!branch || !classId || !sectionId || !days) {

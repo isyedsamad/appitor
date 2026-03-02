@@ -5,7 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.create");
+    const user = await verifyUser(req, ["leave.manage", "complaint.manage"]);
     const body = await req.json();
     const { type, branch, session, complaintId } = body;
     if (!type || !branch || !session || !complaintId) {

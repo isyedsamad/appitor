@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "exam.create");
+    const user = await verifyUser(req, "exam.setup.manage");
     const isAdmin =
       user.permissions?.includes("*") ||
       user.permissions?.includes("exam.create");
@@ -90,7 +90,7 @@ export async function POST(req) {
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "exam.create");
+    const user = await verifyUser(req, "exam.setup.manage");
     const isAdmin =
       user.permissions?.includes("*") ||
       user.permissions?.includes("exam.create");
@@ -158,7 +158,7 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "exam.create");
+    const user = await verifyUser(req, "exam.setup.manage");
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const branch = searchParams.get("branch");

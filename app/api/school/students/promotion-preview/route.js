@@ -5,7 +5,7 @@ import { buildNextClassMap } from "@/lib/school/students/academic";
 
 export async function GET(req) {
   try {
-    const user = await verifyUser(req, "student.manage");
+    const user = await verifyUser(req, "student.promote.manage");
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
     const branchRef = adminDb.collection("schools").doc(user.schoolId).collection("branches").doc(user.currentBranch);
 

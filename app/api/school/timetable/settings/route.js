@@ -5,7 +5,7 @@ import { verifyUser } from "@/lib/verifyUser";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "timetable.edit");
+    const user = await verifyUser(req, "timetable.settings.manage");
     const body = await req.json();
     const { branch, startTime, periodDuration, totalPeriods, workingDays, breaks } = body;
     if (!branch) {

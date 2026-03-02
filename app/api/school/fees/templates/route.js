@@ -5,15 +5,15 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
+    const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
-    const {branch, name, className, section, academicYear, items} = body;
+    const { branch, name, className, section, academicYear, items } = body;
     if (!branch || !name || !className || !academicYear ||
       !Array.isArray(items) || items.length === 0) {
-        return NextResponse.json(
-          { message: "Invalid or missing data" },
-          { status: 400 }
-        );
+      return NextResponse.json(
+        { message: "Invalid or missing data" },
+        { status: 400 }
+      );
     }
     const cleanItems = items.map(i => ({
       headId: i.headId,
@@ -51,7 +51,7 @@ export async function POST(req) {
 
 export async function PATCH(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
+    const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
     const {
       branch,

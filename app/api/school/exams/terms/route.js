@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "exam.create");
+    const user = await verifyUser(req, "exam.terms.manage");
     const body = await req.json();
     const { branch, session, name, startDate, endDate } = body;
     if (!branch || !session || !name || !startDate || !endDate) {
@@ -67,7 +67,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "exam.create");
+    const user = await verifyUser(req, "exam.terms.manage");
     const { searchParams } = new URL(req.url);
     const termId = searchParams.get("id");
     const branch = searchParams.get("branch");

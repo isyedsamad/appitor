@@ -5,7 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "holiday.create");
+    const user = await verifyUser(req, "holiday.manage");
     const body = await req.json();
     const { branch, session, holidayId } = body;
     if (!branch || !session || !holidayId) {

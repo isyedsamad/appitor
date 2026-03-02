@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "learning.create");
+    const user = await verifyUser(req, "learning.assignments.manage");
     const body = await req.json();
     const {
       branch,
@@ -25,7 +25,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all");
+    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.assignments.manage");
     let classId, sectionId;
     // , teacherId;
     if (!isAdmin) {
@@ -66,7 +66,7 @@ export async function POST(req) {
           { status: 403 }
         );
       }
-    }else {
+    } else {
       classId = bodyClassId;
       sectionId = bodySectionId;
       // teacherId = bodyTeacherId;
@@ -131,7 +131,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "learning.manage");
+    const user = await verifyUser(req, "learning.assignments.manage");
     const body = await req.json();
     const {
       branch,
@@ -146,7 +146,7 @@ export async function DELETE(req) {
         { status: 400 }
       );
     }
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.all") || user.permissions?.includes("learning.manage");
+    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.assignments.manage");
     const docId = `${classId}_${sectionId}_${sessionId}`;
     const assignmentRef = adminDb
       .collection("schools")

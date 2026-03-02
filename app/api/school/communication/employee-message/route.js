@@ -19,7 +19,7 @@ async function sendExpoPush({ token, title, body, employeeUid }) {
 }
 
 export async function POST(req) {
-  const user = await verifyUser(req, "communication.manage");
+  const user = await verifyUser(req, "communication.employee.manage");
   const body = await req.json();
 
   const {

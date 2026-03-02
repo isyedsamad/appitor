@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "exam.manage");
+    const user = await verifyUser(req, "exam.marks.manage");
     const isAllowed =
       user.permissions?.includes("*") ||
       user.permissions?.includes("exam.manage");

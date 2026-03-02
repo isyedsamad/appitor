@@ -5,7 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.manage");
+    const user = await verifyUser(req, ["leave.manage", "complaint.manage"]);
     const body = await req.json();
     const { branch, session, leaveId, status } = body;
     if (!branch || !session || !leaveId || !status) {
@@ -72,10 +72,10 @@ export async function POST(req) {
     const updatedItems = items.map(item =>
       item.id === leaveId
         ? {
-            ...item,
-            status,
-            updatedAt: now,
-          }
+          ...item,
+          status,
+          updatedAt: now,
+        }
         : item
     );
 

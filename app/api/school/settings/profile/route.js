@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function GET(req) {
     try {
-        const user = await verifyUser(req, "system.manage");
+        const user = await verifyUser(req, "system.profile.view");
         const { searchParams } = new URL(req.url);
         const branchId = searchParams.get("branch");
 
@@ -36,7 +36,7 @@ export async function GET(req) {
 
 export async function PUT(req) {
     try {
-        const user = await verifyUser(req, "system.manage");
+        const user = await verifyUser(req, "system.profile.manage");
         const { branchId, ...updateData } = await req.json();
 
         if (!branchId) {

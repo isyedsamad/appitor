@@ -5,7 +5,7 @@ import { verifyUser } from "@/lib/verifyUser";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const body = await req.json();
     const { branch, classId, name, order } = body;
     if (!name) {
@@ -49,7 +49,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const { searchParams } = new URL(req.url);
     const classId = searchParams.get("classId");
     const branch = searchParams.get("branch");

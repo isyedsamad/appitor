@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "admission.manage");
+    const user = await verifyUser(req, "admission.enquiry.manage");
     const { branch, enquiryId, remark, nextFollowUpDate } = await req.json();
     if (!branch || !enquiryId || !remark || !nextFollowUpDate) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });

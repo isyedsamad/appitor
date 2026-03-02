@@ -25,7 +25,7 @@ export default function AssignmentPage() {
   const { theme } = useTheme();
   const { schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading } = useSchool();
   const { branch } = useBranch();
-  const isAdmin = hasPermission(schoolUser, "learning.all", false);
+  const isAdmin = hasPermission(schoolUser, "learning.assignments.manage", false);
   const [filters, setFilters] = useState({
     sessionId: currentSession?.id || "",
     classId: "",
@@ -287,7 +287,7 @@ export default function AssignmentPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {(assignmentDoc.items || []).map((a) => {
               const expired = isExpired(a.dueDate);
-              const canDelete = hasPermission(schoolUser, "learning.all", false);
+              const canDelete = hasPermission(schoolUser, "learning.assignments.manage", false);
 
               return (
                 <div

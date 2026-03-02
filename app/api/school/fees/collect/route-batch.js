@@ -6,8 +6,8 @@ import { formatDate, formatMonth } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
-    const {branch, branchInfo, studentId, appId, sessionId, months, flexibleItems, payment} = await req.json();
+    const user = await verifyUser(req, "fee.operations.manage");
+    const { branch, branchInfo, studentId, appId, sessionId, months, flexibleItems, payment } = await req.json();
     if (!branch || !studentId || !appId || !sessionId || !payment?.paidAmount || !branchInfo) {
       return NextResponse.json(
         { message: "Invalid payload" },
@@ -52,13 +52,13 @@ export async function POST(req) {
     const summary = summarySnap.exists
       ? summarySnap.data()
       : {
-          studentId,
-          appId,
-          sessionId,
-          months: {},
-          flexible: [],
-          totals: { totalFee: 0, totalPaid: 0, totalDue: 0 },
-        };
+        studentId,
+        appId,
+        sessionId,
+        months: {},
+        flexible: [],
+        totals: { totalFee: 0, totalPaid: 0, totalDue: 0 },
+      };
     const allocations = [];
     const totalFlexible = flexibleItems.reduce(
       (s, f) => s + Number(f.amount),

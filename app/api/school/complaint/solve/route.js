@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.manage");
+    const user = await verifyUser(req, ["leave.manage", "complaint.manage"]);
     const body = await req.json();
     const { branch, session, complaintId } = body;
     if (!branch || !session || !complaintId) {
@@ -50,23 +50,23 @@ export async function POST(req) {
     const userComplaintRef =
       type === "employee"
         ? adminDb
-            .collection("schools")
-            .doc(user.schoolId)
-            .collection("branches")
-            .doc(branch)
-            .collection("employees")
-            .doc(uid)
-            .collection("complaint")
-            .doc(session)
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection("employees")
+          .doc(uid)
+          .collection("complaint")
+          .doc(session)
         : adminDb
-            .collection("schools")
-            .doc(user.schoolId)
-            .collection("branches")
-            .doc(branch)
-            .collection("students")
-            .doc(uid)
-            .collection("complaint")
-            .doc(session);
+          .collection("schools")
+          .doc(user.schoolId)
+          .collection("branches")
+          .doc(branch)
+          .collection("students")
+          .doc(uid)
+          .collection("complaint")
+          .doc(session);
 
     const userSnap = await userComplaintRef.get();
     const userItems = userSnap.exists ? userSnap.data().items || [] : [];

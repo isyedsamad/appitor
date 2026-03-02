@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const body = await req.json();
     const { branch, classId, sectionId, name, capacity } = body;
     if (!branch || !classId || !name) {
@@ -71,7 +71,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const { searchParams } = new URL(req.url);
     const branch = searchParams.get("branch");
     const classId = searchParams.get("classId");

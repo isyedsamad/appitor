@@ -244,7 +244,7 @@ export default function FeeCollectionPage() {
     }
   };
   const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
-  const editable = canManage(schoolUser, "fee.collect", currentPlan);
+  const editable = canManage(schoolUser, "fee.operations", currentPlan);
 
   return (
     <RequirePermission permission="fee.operations.view">

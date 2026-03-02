@@ -6,7 +6,7 @@ import { formatDate, formatMonth } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.manage");
+    const user = await verifyUser(req, "fee.operations.manage");
     const { branch, paymentId, receiptNo, appId, studentId, sessionId, refundItems, totalRefund, remark, payType } = await req.json();
 
     if (!branch || !paymentId || !studentId || !sessionId || !refundItems || totalRefund <= 0 || !payType) {

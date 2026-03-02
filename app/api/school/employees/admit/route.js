@@ -7,7 +7,7 @@ import { incrementEmployeeCount } from "@/lib/school/analyticsUtils";
 export async function POST(req) {
   let createdUid = null;
   try {
-    const user = await verifyUser(req, "employee.manage");
+    const user = await verifyUser(req, "employee.admit.manage");
     const body = await req.json();
     const { name, mobile, email, gender, roleId, role, salary, branchIds, branchNames } = body;
     if (!name || !mobile || !roleId || !branchIds?.length) {

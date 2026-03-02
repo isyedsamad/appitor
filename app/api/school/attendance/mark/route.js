@@ -6,7 +6,7 @@ import { updateAttendanceAnalytics } from "@/lib/school/analyticsUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "attendance.mark");
+    const user = await verifyUser(req, "attendance.mark.manage");
     const {
       type,
       date,

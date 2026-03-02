@@ -7,7 +7,7 @@ import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 export async function POST(req) {
   let createdUid = null;
   try {
-    const user = await verifyUser(req, "admission.create");
+    const user = await verifyUser(req, "admission.new.manage");
     const { name, gender, mobile, dob, className, section, branch, branchNames, currentSession, autoRoll, templateId, templateName, admissionId } = await req.json();
 
     if (!name || !dob || !className || !section || !branch || !currentSession || !admissionId) {

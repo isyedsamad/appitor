@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const body = await req.json();
     const { branch, classId, name, order } = body;
     if (!branch || !name) {
@@ -67,7 +67,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.classes.manage");
     const { searchParams } = new URL(req.url);
     const classId = searchParams.get("classId");
     const branch = searchParams.get("branch");
@@ -105,6 +105,41 @@ export async function DELETE(req) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE CLASS ERROR:", err);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req) {
+  try {
+    const user = await verifyUser(req, "academic.classes.manage");
+    const { branch, classData } = await req.json();
+
+    if (!branch || !Array.isArray(classData)) {
+      return NextResponse.json(
+        { message: "branch and valid classData array are required" },
+        { status: 400 }
+      );
+    }
+
+    const metaRef = adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(branch)
+      .collection("classes")
+      .doc("data");
+
+    await metaRef.update({
+      classData,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("BULK CLASS UPDATE ERROR:", err);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

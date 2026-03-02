@@ -47,7 +47,7 @@ async function sendExpoPush({ title, body, schoolId, branchId, roles, classId, s
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "communication.manage");
+    const user = await verifyUser(req, "communication.class.manage");
     const body = await req.json();
     const { branch, sessionId, classId, sectionId, title, description, roles, priority = "normal", expiresAt, sendPush, schoolName } = body;
     if (!branch || !sessionId || !classId || !sectionId || !title || !description || !roles?.length) {
@@ -142,7 +142,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "communication.all");
+    const user = await verifyUser(req, "communication.class.manage");
     const body = await req.json();
     const { branch, sessionId, classId, sectionId, noticeId } = body;
     if (!branch || !sessionId || !classId || !sectionId || !noticeId) {

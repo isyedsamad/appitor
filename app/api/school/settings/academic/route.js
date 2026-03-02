@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function GET(req) {
   try {
-    const user = await verifyUser(req, "system.manage");
+    const user = await verifyUser(req, "system.academic.view");
     const { searchParams } = new URL(req.url);
     const branch = searchParams.get("branch");
 
@@ -46,24 +46,26 @@ export async function GET(req) {
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "system.manage");
+    const user = await verifyUser(req, "system.academic.manage");
     const { currentSession, sessions, branch } = await req.json();
 
-    if (!currentSession || !Array.isArray(sessions)) {
+    if (!Array.isArray(sessions)) {
       return NextResponse.json(
-        { message: "Invalid payload" },
+        { message: "Invalid payload: sessions must be an array" },
         { status: 400 }
       );
     }
 
-    const sessionExists = sessions.some(
-      s => s.id === currentSession
-    );
-    if (!sessionExists) {
-      return NextResponse.json(
-        { message: "Current session must exist in sessions list" },
-        { status: 400 }
+    if (currentSession) {
+      const sessionExists = sessions.some(
+        s => s.id === currentSession
       );
+      if (!sessionExists) {
+        return NextResponse.json(
+          { message: "Current session must exist in sessions list" },
+          { status: 400 }
+        );
+      }
     }
 
     if (branch) {

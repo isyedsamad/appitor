@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "employee.manage");
+    const user = await verifyUser(req, "employee.profile.manage");
     const { branch, employeeId, newBranchId } = await req.json();
     if (!branch || !employeeId || !newBranchId) {
       return NextResponse.json(

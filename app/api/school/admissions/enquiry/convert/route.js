@@ -5,7 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "admission.manage");
+    const user = await verifyUser(req, "admission.enquiry.manage");
     const { branch, enquiryId } = await req.json();
 
     if (!branch || !enquiryId) {

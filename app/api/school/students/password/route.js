@@ -4,7 +4,7 @@ import { verifyUser } from "@/lib/verifyUser";
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "student.manage");
+    const user = await verifyUser(req, "student.profile.manage");
     const { uid, password } = await req.json();
     if (!uid || !password) {
       return NextResponse.json(

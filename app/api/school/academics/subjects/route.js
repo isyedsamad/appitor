@@ -5,7 +5,7 @@ import { verifyUser } from "@/lib/verifyUser";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.subjects.manage");
     const body = await req.json();
     const { branch, subjectId, name } = body;
     if (!name) {
@@ -63,7 +63,7 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = await verifyUser(req, "academic.manage");
+    const user = await verifyUser(req, "academic.subjects.manage");
     const { searchParams } = new URL(req.url);
     const subjectId = searchParams.get("subjectId");
     const branch = searchParams.get("branch");

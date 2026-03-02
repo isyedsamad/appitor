@@ -6,7 +6,7 @@ import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 
 export async function PUT(req) {
   try {
-    const user = await verifyUser(req, "student.manage");
+    const user = await verifyUser(req, "student.profile.manage");
     const { uid, status, branch } = await req.json();
     if (!uid || !["active", "disabled"].includes(status) || !branch) {
       return NextResponse.json(

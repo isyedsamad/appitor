@@ -30,7 +30,7 @@ export default function HomeworkPage() {
   } = useSchool();
 
   const { branch } = useBranch();
-  const isAdmin = hasPermission(schoolUser, "learning.all", false);
+  const isAdmin = hasPermission(schoolUser, "learning.homework.manage", false);
   const [filters, setFilters] = useState({
     classId: "",
     sectionId: "",
