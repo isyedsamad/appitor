@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, doc, FieldValue, getDoc, getDocs, orderBy, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { collection, doc, FieldValue, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import Loading from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
@@ -29,7 +29,11 @@ export function SchoolProvider({ schoolId, children }) {
     if (!branch) return;
     setLoading(true);
     const classSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes', 'data'));
-    if (!classSnap.exists()) return;
+    if (!classSnap.exists()) {
+      setClassData([]);
+      setLoading(false);
+      return;
+    }
     const classdata = classSnap.data();
     const sortedClasses = (classdata.classData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
     setClassData(sortedClasses);
@@ -39,9 +43,13 @@ export function SchoolProvider({ schoolId, children }) {
     if (!branch) return;
     setLoading(true);
     const subSnap = await getDoc(doc(db, 'schools', schoolUser.schoolId, 'branches', branch, 'subjects', 'branch_subjects'));
-    if (!subSnap.exists()) return;
+    if (!subSnap.exists()) {
+      setSubjectData([]);
+      setLoading(false);
+      return;
+    }
     const subdata = subSnap.data();
-    setSubjectData(subdata.subjects);
+    setSubjectData(subdata.subjects || []);
     setLoading(false);
   }
   const loadEmployee = async (branch) => {
@@ -73,6 +81,55 @@ export function SchoolProvider({ schoolId, children }) {
       setLoading(false);
     }
   }
+  useEffect(() => {
+    if (!schoolUser?.schoolId || !currentBranch || currentBranch === '*') {
+      setClassData(null);
+      setSubjectData(null);
+      return;
+    }
+
+    const unsubClasses = onSnapshot(
+      doc(db, 'schools', schoolUser.schoolId, 'branches', currentBranch, 'classes', 'data'),
+      (snap) => {
+        if (snap.exists()) {
+          const classdata = snap.data();
+          const sortedClasses = (classdata.classData || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+          setClassData(sortedClasses);
+        } else {
+          setClassData([]);
+        }
+      }
+    );
+
+    const unsubSubjects = onSnapshot(
+      doc(db, 'schools', schoolUser.schoolId, 'branches', currentBranch, 'subjects', 'branch_subjects'),
+      (snap) => {
+        if (snap.exists()) {
+          setSubjectData(snap.data().subjects || []);
+        } else {
+          setSubjectData([]);
+        }
+      }
+    );
+
+    const unsubSessions = onSnapshot(
+      doc(db, 'schools', schoolUser.schoolId, 'branches', currentBranch, 'settings', 'academic'),
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.sessions) setSessionList(data.sessions);
+          if (data.currentSession) setCurrentSession(data.currentSession);
+        }
+      }
+    );
+
+    return () => {
+      unsubClasses();
+      unsubSubjects();
+      unsubSessions();
+    };
+  }, [schoolUser?.schoolId, currentBranch]);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setLoading(true);

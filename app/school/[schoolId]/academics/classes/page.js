@@ -25,17 +25,6 @@ export default function ClassesPage() {
     if (classData) setClasses([...classData]);
   }, [classData]);
 
-  async function fetchClasses() {
-    if (!branch) return;
-    try {
-      setLoading(true);
-      await loadClasses(branch);
-    } catch (err) {
-      toast.error("Failed to refresh classes");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const moveClass = (index, direction) => {
     const newClasses = [...classes];
@@ -55,7 +44,6 @@ export default function ClassesPage() {
       });
       toast.success("Display order saved successfully");
       setIsOrderingMode(false);
-      await fetchClasses();
     } catch (error) {
       toast.error("Failed to save order");
     } finally {
@@ -71,7 +59,6 @@ export default function ClassesPage() {
         params: { classId, branch }
       });
       toast.success("Class deleted");
-      await fetchClasses();
     } catch (error) {
       toast.error("Error deleting class");
     } finally {
@@ -87,7 +74,6 @@ export default function ClassesPage() {
         params: { classId, secId, branch }
       });
       toast.success("Section deleted");
-      await fetchClasses();
     } catch (error) {
       toast.error("Error deleting section");
     } finally {

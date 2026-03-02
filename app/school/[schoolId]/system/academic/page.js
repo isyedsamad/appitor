@@ -148,7 +148,65 @@ export default function AcademicSessionSettingsPage() {
         </div>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-5">
-          <div className="space-y-5">
+          <div className="space-y-4">
+            {/* Entry Section */}
+            <div className="bg-(--bg-card) border border-(--border) rounded-xl px-5 py-4 shadow-sm space-y-2">
+              <div className="flex items-center gap-2 pb-2">
+                <Plus size={16} className="text-(--primary)" />
+                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-(--text-muted)">
+                  Define New Session
+                </h2>
+              </div>
+              <div className="grid md:grid-cols-4 gap-2">
+                <div>
+                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">Session ID</p>
+                  <select
+                    className="input h-10 text-xs font-semibold"
+                    value={newSession.id}
+                    onChange={e => setNewSession(p => ({ ...p, id: e.target.value }))}
+                  >
+                    <option value="">Select Session...</option>
+                    {Array.from({ length: 16 }, (_, i) => {
+                      const startYear = 2025 + i;
+                      const endYear = (startYear + 1).toString().slice(-2);
+                      const id = `${startYear}-${endYear}`;
+                      return (
+                        <option key={id} value={id}>
+                          {id}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">Start Date</p>
+                  <input
+                    type="date"
+                    className="input h-10 text-xs font-semibold"
+                    value={toInputDate(newSession.startDate)}
+                    onChange={e => setNewSession(p => ({ ...p, startDate: e.target.value ? formatInputDate(e.target.value) : '' }))}
+                  />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">End Date</p>
+                  <input
+                    type="date"
+                    className="input h-10 text-xs font-semibold"
+                    value={toInputDate(newSession.endDate)}
+                    onChange={e => setNewSession(p => ({ ...p, endDate: e.target.value ? formatInputDate(e.target.value) : '' }))}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={addSession}
+                    className="btn-primary h-10 w-full flex items-center justify-center gap-2 font-semibold text-xs"
+                  >
+                    <Plus size={14} /> Add to List
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Session List Table */}
             <div className="rounded-xl bg-(--bg-card) border border-(--border) overflow-hidden shadow-sm">
               <div className="bg-(--bg-soft) px-5 py-4 border-b border-(--border) flex items-center justify-between">
@@ -214,64 +272,6 @@ export default function AcademicSessionSettingsPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-
-            {/* Entry Section */}
-            <div className="bg-(--bg-card) border border-(--border) rounded-xl px-5 py-4 shadow-sm space-y-2">
-              <div className="flex items-center gap-2 pb-2">
-                <Plus size={16} className="text-(--primary)" />
-                <h2 className="text-[11px] font-semibold uppercase tracking-wide text-(--text-muted)">
-                  Define New Session
-                </h2>
-              </div>
-              <div className="grid md:grid-cols-4 gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">Session ID</p>
-                  <select
-                    className="input h-10 text-xs font-semibold"
-                    value={newSession.id}
-                    onChange={e => setNewSession(p => ({ ...p, id: e.target.value }))}
-                  >
-                    <option value="">Select Session...</option>
-                    {Array.from({ length: 16 }, (_, i) => {
-                      const startYear = 2025 + i;
-                      const endYear = (startYear + 1).toString().slice(-2);
-                      const id = `${startYear}-${endYear}`;
-                      return (
-                        <option key={id} value={id}>
-                          {id}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">Start Date</p>
-                  <input
-                    type="date"
-                    className="input h-10 text-xs font-semibold"
-                    value={toInputDate(newSession.startDate)}
-                    onChange={e => setNewSession(p => ({ ...p, startDate: e.target.value ? formatInputDate(e.target.value) : '' }))}
-                  />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-(--text-muted) uppercase px-1 tracking-wider">End Date</p>
-                  <input
-                    type="date"
-                    className="input h-10 text-xs font-semibold"
-                    value={toInputDate(newSession.endDate)}
-                    onChange={e => setNewSession(p => ({ ...p, endDate: e.target.value ? formatInputDate(e.target.value) : '' }))}
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={addSession}
-                    className="btn-primary h-10 w-full flex items-center justify-center gap-2 font-semibold text-xs"
-                  >
-                    <Plus size={14} /> Add to List
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -66,10 +66,11 @@ export async function POST(req) {
       const email = `${appId}@${user.schoolCode.toLowerCase()}.appitor`;
       const [y, m, d] = s.dob.split("-");
       const password = `${y}${m}${d}`;
+
       const authUser = await adminAuth.createUser({
         email,
         password,
-        displayName: s.name,
+        displayName: s.name.trim(),
       });
 
       createdUids.push(authUser.uid);
@@ -79,6 +80,13 @@ export async function POST(req) {
         appId,
         rollNo: nextRoll++,
         ...s,
+        admissionId: s.admissionId.toString().trim(),
+        name: s.name.trim(),
+        fatherName: s.fatherName?.toString().trim() || "",
+        motherName: s.motherName?.toString().trim() || "",
+        gender: s.gender?.toString().trim() || "",
+        phone: s.phone?.toString().trim() || "",
+        address: s.address?.toString().trim() || "",
       });
     }
 
@@ -89,7 +97,7 @@ export async function POST(req) {
         .collection("branches")
         .doc(branch)
         .collection("meta")
-        .doc(`${classId}_${sectionId}`);
+        .doc(`${classId}_${sectionId}_${sessionId}`);
 
       const rosterSnap = await tx.get(rosterRef);
       let rosterStudents = [];
@@ -103,6 +111,11 @@ export async function POST(req) {
           admissionId: s.admissionId,
           appId: s.appId,
           name: s.name,
+          fatherName: s.fatherName,
+          motherName: s.motherName,
+          gender: s.gender,
+          phone: s.phone,
+          address: s.address,
           dob: s.dob,
           email: s.email,
           className: classId,

@@ -12,13 +12,28 @@ import { useTheme } from "next-themes";
 
 function excelDateToYMD(value) {
   if (!value) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") {
+    // Check if it's already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    // Check if it's DD/MM/YYYY
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+      const [d, m, y] = value.split("/");
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return value;
+  };
   if (typeof value === "number") {
-    const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const d = String(date.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+    // Excel date serial format (days since Dec 30, 1899)
+    try {
+      const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+      if (isNaN(date.getTime())) return "";
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(date.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    } catch {
+      return "";
+    }
   }
   return "";
 }
@@ -38,14 +53,14 @@ export default function ImportExportAdmissions() {
   function downloadTemplate() {
     const ws = XLSX.utils.json_to_sheet([
       {
-        admissionId: "",
-        name: "",
-        fatherName: "",
-        motherName: "",
-        gender: "",
-        dob: "",
-        phone: "",
-        address: "",
+        admissionId: "1001",
+        name: "John Doe",
+        fatherName: "Mr. Doe",
+        motherName: "Mrs. Doe",
+        gender: "Male",
+        dob: "2015-05-15",
+        phone: "9876543210",
+        address: "New Delhi, India",
       },
     ]);
     const wb = XLSX.utils.book_new();
@@ -67,15 +82,28 @@ export default function ImportExportAdmissions() {
         toast.error("Empty file");
         return;
       }
+
+      const idSet = new Set();
       setRows(
-        json.map((r, idx) => ({
-          row: idx + 1,
-          ...r,
-          admissionId: r.admissionId?.toString().trim(),
-          name: r.name?.trim(),
-          dob: excelDateToYMD(r.dob),
-          _status: r.name ? "valid" : "error",
-        }))
+        json.map((r, idx) => {
+          const admId = r.admissionId?.toString().trim();
+          const name = r.name?.toString().trim();
+          const dob = excelDateToYMD(r.dob);
+
+          let status = "valid";
+          if (!admId || !name || !dob) status = "error";
+          if (idSet.has(admId)) status = "duplicate";
+          if (admId) idSet.add(admId);
+
+          return {
+            row: idx + 1,
+            ...r,
+            admissionId: admId,
+            name: name,
+            dob: dob,
+            _status: status,
+          };
+        })
       );
     };
     reader.readAsArrayBuffer(file);
@@ -90,6 +118,12 @@ export default function ImportExportAdmissions() {
       toast.error("No data to import");
       return;
     }
+    const hasError = rows.some(r => r._status !== "valid");
+    if (hasError) {
+      toast.error("Please fix errors or duplicates in the table first");
+      return;
+    }
+
     setLoading(true);
     try {
       await secureAxios.post("/api/school/admissions/import", {
@@ -368,23 +402,29 @@ export default function ImportExportAdmissions() {
                   <th className="px-4 py-3 text-left">Row</th>
                   <th className="px-4 py-3 text-left">Admission ID</th>
                   <th className="px-4 py-3 text-left">Name</th>
+                  <th className="px-4 py-3 text-left">Gender</th>
+                  <th className="px-4 py-3 text-left">DOB</th>
+                  <th className="px-4 py-3 text-left">Phone</th>
                   <th className="px-4 py-3 text-left">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={i} className="border-t border-(--border)">
-                    <td className="px-4 py-3 text-left">{r.row}</td>
-                    <td className="px-4 py-3 text-left">{r.admissionId || ''}</td>
-                    <td className="px-4 py-3 text-left">{r.name || ''}</td>
+                  <tr key={i} className={`border-t border-(--border) ${r._status !== 'valid' ? 'bg-red-500/5' : ''}`}>
+                    <td className="px-4 py-3 text-left font-bold text-(--text-muted)">{r.row}</td>
+                    <td className="px-4 py-3 text-left font-semibold">{r.admissionId || ''}</td>
+                    <td className="px-4 py-3 text-left font-semibold">{r.name || ''}</td>
+                    <td className="px-4 py-3 text-left uppercase text-[10px] font-bold">{r.gender || ''}</td>
+                    <td className="px-4 py-3 text-left text-xs">{r.dob || ''}</td>
+                    <td className="px-4 py-3 text-left text-xs">{r.phone || ''}</td>
                     <td className="px-4 py-3 text-left">
                       {r._status === "valid" ? (
-                        <span className="text-green-600 flex items-center gap-1">
+                        <span className="text-green-600 flex items-center gap-1 font-bold text-[10px] uppercase">
                           <CheckCircle size={14} /> Valid
                         </span>
                       ) : (
-                        <span className="text-red-600 flex items-center gap-1">
-                          <AlertCircle size={14} /> Error
+                        <span className="text-red-600 flex items-center gap-1 font-bold text-[10px] uppercase">
+                          <AlertCircle size={14} /> {r._status === 'duplicate' ? 'Duplicate' : 'Error'}
                         </span>
                       )}
                     </td>

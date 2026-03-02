@@ -13,41 +13,12 @@ import SubjectModal from "@/lib/school/academics/SubjectModal";
 import { canManage } from "@/lib/school/permissionUtils";
 
 export default function SubjectsPage() {
-  const { schoolUser, loading, setLoading, isLoaded } = useSchool();
+  const { schoolUser, loading, setLoading, isLoaded, subjectData } = useSchool();
   const { branch, branchInfo } = useBranch();
-  const [subjects, setSubjects] = useState([]);
   const [openSubjectModal, setOpenSubjectModal] = useState(false);
   const [subjectToEdit, setSubjectToEdit] = useState(null);
 
-  useEffect(() => {
-    if (isLoaded && schoolUser && branch) {
-      fetchSubjects(schoolUser.schoolId, branch);
-    }
-  }, [schoolUser, isLoaded, branch]);
-
-  async function fetchSubjects(currentSchoolId, currentBranch) {
-    try {
-      setLoading(true);
-      const ref = collection(
-        db,
-        "schools",
-        currentSchoolId,
-        "branches",
-        currentBranch,
-        "subjects"
-      );
-      const snap = await getDoc(doc(ref, "branch_subjects"));
-      if (!snap.exists() || !snap.data().subjects) {
-        setSubjects([]);
-        return;
-      }
-      setSubjects(snap.data().subjects);
-    } catch (err) {
-      toast.error("Failed to load subjects");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const subjects = subjectData || [];
 
   const deleteSubject = async (subjectId) => {
     if (!confirm('Are you sure you want to delete this subject?')) return;
@@ -57,7 +28,6 @@ export default function SubjectsPage() {
         params: { subjectId, branch }
       });
       toast.success("Subject removed from curriculum");
-      await fetchSubjects(schoolUser.schoolId, branch);
     } catch (error) {
       toast.error("Error deleting subject");
     } finally {
@@ -165,7 +135,7 @@ export default function SubjectsPage() {
             setSubjectToEdit(null);
             setOpenSubjectModal(false)
           }}
-          onSuccess={() => fetchSubjects(schoolUser.schoolId, branch)}
+          onSuccess={() => { }}
         />
       </div>
     </RequirePermission>

@@ -47,10 +47,11 @@ import {
 } from "recharts";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useTheme } from "next-themes";
+import OnboardingWizard from "@/components/school/OnboardingWizard";
 
 export default function SchoolDashboard() {
   const router = useRouter();
-  const { schoolUser, employeeData, classData } = useSchool();
+  const { schoolUser, employeeData, classData, subjectData, sessionList, loadClasses, loadSubjects } = useSchool();
   const { branch, branchInfo } = useBranch();
   const d = new Date();
   const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -190,6 +191,12 @@ export default function SchoolDashboard() {
             </div>
           </div>
         </div>
+        <OnboardingWizard
+          schoolId={schoolUser?.schoolId}
+          sessions={sessionList}
+          classes={classData}
+          subjects={subjectData}
+        />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <VitalCard label="Total Students" value={analytics?.studentCount ? analytics.studentCount > 0 ? analytics.studentCount.toString().padStart(2, '0') : 0 : 0} icon={Users2} />
           <VitalCard label="Total Employees" value={employeeData?.length ? employeeData.length > 0 ? employeeData.length.toString().padStart(2, '0') : 0 : 0} icon={Briefcase} />
