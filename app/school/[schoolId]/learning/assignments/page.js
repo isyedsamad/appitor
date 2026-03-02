@@ -23,7 +23,7 @@ import { useTheme } from "next-themes";
 
 export default function AssignmentPage() {
   const { theme } = useTheme();
-  const {schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading} = useSchool();
+  const { schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading } = useSchool();
   const { branch } = useBranch();
   const isAdmin = hasPermission(schoolUser, "learning.all", false);
   const [filters, setFilters] = useState({
@@ -54,7 +54,7 @@ export default function AssignmentPage() {
     employeeData.find(t => t.uid === id)?.name;
 
   useEffect(() => {
-    if(sessionList && currentSession) {
+    if (sessionList && currentSession) {
       setFilters({
         ...filters,
         sessionId: currentSession
@@ -65,10 +65,10 @@ export default function AssignmentPage() {
       })
     }
   }, [sessionList, currentSession])
-  
+
   useEffect(() => {
     if (!openAdd || isAdmin) return;
-    if(teacherOptions.length > 0) return;
+    if (teacherOptions.length > 0) return;
     async function fetchTeacherClasses() {
       setLoading(true);
       try {
@@ -163,7 +163,7 @@ export default function AssignmentPage() {
       year: "numeric",
     });
   }
-  
+
   function isExpired(ts) {
     if (!ts) return false;
     const date =
@@ -198,10 +198,10 @@ export default function AssignmentPage() {
     } finally {
       setLoading(false);
     }
-  }  
-  
+  }
+
   return (
-    <RequirePermission permission="learning.manage">
+    <RequirePermission permission="learning.assignments.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">

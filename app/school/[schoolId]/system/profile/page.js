@@ -72,7 +72,7 @@ export default function SchoolProfilePage() {
     };
 
     return (
-        <RequirePermission permission="system.manage">
+        <RequirePermission permission="system.profile.view">
             <div className="space-y-5">
                 <div className="flex flex-col gap-5 md:flex-row justify-between items-center">
                     <div className="flex items-center gap-3">

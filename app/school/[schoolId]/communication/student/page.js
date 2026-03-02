@@ -192,7 +192,7 @@ export default function StudentMessagingPage() {
   }
 
   return (
-    <RequirePermission permission="communication.manage">
+    <RequirePermission permission="communication.student.view">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

@@ -18,11 +18,11 @@ export default function Navbar({ onMenu }) {
     signOut(auth);
   }
   useEffect(() => {
-    if(isLoaded && schoolUser) {
+    if (isLoaded && schoolUser && currentBranch) {
       setBranchesList(branches);
       changeBranch(currentBranch);
     }
-  }, [isLoaded, schoolUser]);
+  }, [isLoaded, schoolUser, currentBranch]);
   // const loadClasses = async () => {
   //   const branchSnap = await getDocs(
   //     query(collection(db, 'schools', schoolUser.schoolId, 'branches', branch, 'classes'),
@@ -34,11 +34,11 @@ export default function Navbar({ onMenu }) {
     const [r1, r2, r3] = await Promise.all([loadClasses(branch), loadSubjects(branch), loadEmployee(branch)]);
   }
   useEffect(() => {
-    if(branch && schoolUser) {
+    if (branch && schoolUser) {
       loadData();
     }
   }, [branch, schoolUser])
-  
+
   return (
     <header
       className="
@@ -50,11 +50,11 @@ export default function Navbar({ onMenu }) {
     >
       <div className="flex items-center gap-2">
         <button
-            onClick={onMenu}
-            className="md:hidden p-2 rounded-md border border-(--border) flex items-center font-semibold"
-          >
-            <p><Menu size={18} /></p>
-            {/* <p>Menu</p> */}
+          onClick={onMenu}
+          className="md:hidden p-2 rounded-md border border-(--border) flex items-center font-semibold"
+        >
+          <p><Menu size={18} /></p>
+          {/* <p>Menu</p> */}
         </button>
         {branchesList.length > 0 && (
           <select
@@ -80,10 +80,10 @@ export default function Navbar({ onMenu }) {
           <Bell size={18} />
         </button>
         <button onClick={logout}
-            className="p-2 border border-(--border) rounded-md bg-(--bg-card) hover:text-(--danger)"
-          >
-            <LogOut size={18} />
-          </button>
+          className="p-2 border border-(--border) rounded-md bg-(--bg-card) hover:text-(--danger)"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </header>
   );

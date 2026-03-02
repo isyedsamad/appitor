@@ -69,7 +69,7 @@ export default function PendingAttendancePage() {
           ...d.data(),
         }))
       );
-    } catch(err) {
+    } catch (err) {
       toast.error("Failed: " + err);
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ export default function PendingAttendancePage() {
       await secureAxios.post("/api/school/attendance/approve", { requestId: id, branch });
       toast.success("Approved");
       loadData("pending");
-    } catch(err) {
+    } catch (err) {
       toast.error("Approval failed: " + err);
     } finally {
       setLoading(false);
@@ -97,14 +97,14 @@ export default function PendingAttendancePage() {
       await secureAxios.post("/api/school/attendance/reject", { requestId: id, branch });
       toast.success("Rejected");
       loadData("pending");
-    } catch(err) {
+    } catch (err) {
       toast.error("Rejection failed: " + err);
     } finally {
       setLoading(false);
     }
   }
   useEffect(() => {
-    if(session != '') changeTab('pending');
+    if (session != '') changeTab('pending');
   }, [session])
   useEffect(() => {
     async function load() {
@@ -113,164 +113,163 @@ export default function PendingAttendancePage() {
           "/api/school/settings/academic"
         );
         setSessions(res.data.sessions || []);
-      } catch(err) {
+      } catch (err) {
         toast.error("Failed to load academic settings: " + err);
       }
     }
     load();
   }, []);
   return (
-    <RequirePermission permission={'attendance.modify'}>
-    <div className="max-w-6xl mx-auto space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
-          <ClipboardCheck size={20} />
+    <RequirePermission permission={'attendance.pending.view'}>
+      <div className="max-w-6xl mx-auto space-y-5">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
+            <ClipboardCheck size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold">Attendance Approval</h1>
+            <p className="text-sm text-(--text-muted)">
+              Review & manage attendance changes
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-semibold">Attendance Approval</h1>
-          <p className="text-sm text-(--text-muted)">
-            Review & manage attendance changes
-          </p>
+        <div className="max-w-sm rounded-lg bg-(--bg-soft)">
+          <label className="text-sm text-(--text-muted)">
+            Academic Session
+          </label>
+          <select
+            className="input mt-1"
+            value={session}
+            onChange={e => {
+              setSession(e.target.value);
+              setActiveTab("pending");
+              setData([]);
+            }}
+          >
+            <option value="">Select session</option>
+            {sessions?.map(s => (
+              <option key={s.id}>{s.id}</option>
+            ))}
+          </select>
         </div>
-      </div>
-      <div className="max-w-sm rounded-lg bg-(--bg-soft)">
-        <label className="text-sm text-(--text-muted)">
-          Academic Session
-        </label>
-        <select
-          className="input mt-1"
-          value={session}
-          onChange={e => {
-            setSession(e.target.value);
-            setActiveTab("pending");
-            setData([]);
-          }}
-        >
-          <option value="">Select session</option>
-          {sessions?.map(s => (
-            <option key={s.id}>{s.id}</option>
-          ))}
-        </select>
-      </div>
-      {session && (
-        <div className="flex border border-(--border) rounded-lg overflow-hidden">
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => changeTab(t.key)}
-              className={`flex-1 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium
-                ${
-                  activeTab === t.key
+        {session && (
+          <div className="flex border border-(--border) rounded-lg overflow-hidden">
+            {TABS.map(t => (
+              <button
+                key={t.key}
+                onClick={() => changeTab(t.key)}
+                className={`flex-1 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium
+                ${activeTab === t.key
                     ? "bg-(--primary) text-white"
                     : "text-(--text-muted)"
-                }`}
-            >
-              <t.icon size={16} />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="rounded-xl divide-y space-y-2">
-        {loading && (
-          <p className="p-4 text-sm text-(--text-muted)">Loading…</p>
+                  }`}
+              >
+                <t.icon size={16} />
+                {t.label}
+              </button>
+            ))}
+          </div>
         )}
+        <div className="rounded-xl divide-y space-y-2">
+          {loading && (
+            <p className="p-4 text-sm text-(--text-muted)">Loading…</p>
+          )}
 
-        {!loading && data.length === 0 && (
-          <p className="p-6 text-center text-(--text-muted)">
-            No records found
-          </p>
-        )}
-        {data.map(r => (
-          <div
-            key={r.id}
-            className="border border-(--border) rounded-xl p-4 space-y-4
+          {!loading && data.length === 0 && (
+            <p className="p-6 text-center text-(--text-muted)">
+              No records found
+            </p>
+          )}
+          {data.map(r => (
+            <div
+              key={r.id}
+              className="border border-(--border) rounded-xl p-4 space-y-4
                       hover:bg-(--bg-soft) transition"
-          >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div>
-                <p className="font-semibold text-md text-(--text)">
-                  {r.type === "student"
-                    ? `${getClassName(r.className)} - ${getSectionName(r.className, r.section)}`
-                    : "Employee Attendance"}
-                </p>
-                <p className="text-sm text-(--text-muted)">
-                  Date: {r.date}
-                </p>
-              </div>
-              {activeTab === "pending" && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => reject(r.id)}
-                    className="px-3 py-1.5 rounded-md border border-red-500
+            >
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-md text-(--text)">
+                    {r.type === "student"
+                      ? `${getClassName(r.className)} - ${getSectionName(r.className, r.section)}`
+                      : "Employee Attendance"}
+                  </p>
+                  <p className="text-sm text-(--text-muted)">
+                    Date: {r.date}
+                  </p>
+                </div>
+                {activeTab === "pending" && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => reject(r.id)}
+                      className="px-3 py-1.5 rounded-md border border-red-500
                               text-red-500 hover:bg-red-500/10 text-sm flex items-center gap-1"
-                  >
-                    <X size={14} />
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => approve(r.id)}
-                    className="px-3 py-1.5 rounded-md bg-(--primary)
+                    >
+                      <X size={14} />
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => approve(r.id)}
+                      className="px-3 py-1.5 rounded-md bg-(--primary)
                               text-white text-sm flex items-center gap-1"
-                  >
-                    <Check size={14} />
-                    Approve
-                  </button>
+                    >
+                      <Check size={14} />
+                      Approve
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="text-sm text-(--text-muted) flex flex-col">
+                <p>Reason: <span className="font-medium text-(--text)">{r.reason}</span></p>
+                <p>Requested by: <span className="font-medium text-(--text)">{r.requestedBy.name} ({r.requestedBy.role})</span></p>
+              </div>
+              {r.mode === "full" && (
+                <div className="flex items-start gap-2 text-(--status-a-text) text-sm
+                              bg-(--status-a-bg)/50 border border-(--status-a-border) rounded-md p-3">
+                  <AlertTriangle size={14} className="mt-0.5" />
+                  <span>
+                    This attendance was not marked earlier.
+                    Approving will <b>create a new attendance record</b> for a past date.
+                  </span>
                 </div>
               )}
-            </div>
-            <div className="text-sm text-(--text-muted) flex flex-col">
-              <p>Reason: <span className="font-medium text-(--text)">{r.reason}</span></p>
-              <p>Requested by: <span className="font-medium text-(--text)">{r.requestedBy.name} ({r.requestedBy.role})</span></p>
-            </div>
-            {r.mode === "full" && (
-              <div className="flex items-start gap-2 text-(--status-a-text) text-sm
-                              bg-(--status-a-bg)/50 border border-(--status-a-border) rounded-md p-3">
-                <AlertTriangle size={14} className="mt-0.5" />
-                <span>
-                  This attendance was not marked earlier.
-                  Approving will <b>create a new attendance record</b> for a past date.
-                </span>
-              </div>
-            )}
-            {r.mode === "diff" && (
-              <div className="border border-(--border) rounded-lg divide-y">
-                {Object.entries(r.changes).map(([uid, c]) => (
-                  <div
-                    key={uid}
-                    className="flex items-center justify-between px-4 py-2 text-sm"
-                  >
-                    <span className="text-(--text-muted)">
-                      {c.name} ({c.appId ? c.appId : c.employeeId})
-                    </span>
+              {r.mode === "diff" && (
+                <div className="border border-(--border) rounded-lg divide-y">
+                  {Object.entries(r.changes).map(([uid, c]) => (
+                    <div
+                      key={uid}
+                      className="flex items-center justify-between px-4 py-2 text-sm"
+                    >
+                      <span className="text-(--text-muted)">
+                        {c.name} ({c.appId ? c.appId : c.employeeId})
+                      </span>
 
-                    <div className="flex items-center gap-2 font-semibold">
-                      <span className={`px-2 py-0.5 rounded
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span className={`px-2 py-0.5 rounded
                         ${STATUS[c.from]}  
                       `}>
-                        {c.from}
-                      </span>
-                      <span className="text-(--text-muted)">→</span>
-                      <span className={`px-2 py-0.5 rounded
+                          {c.from}
+                        </span>
+                        <span className="text-(--text-muted)">→</span>
+                        <span className={`px-2 py-0.5 rounded
                         ${STATUS[c.to]}  
                       `}>
-                        {c.to}
-                      </span>
+                          {c.to}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {activeTab !== "pending" && (
-              <p className="text-xs text-(--text-muted)">
-                Reviewed on{" "}
-                {r.reviewedAt?.toDate?.().toLocaleDateString()}
-              </p>
-            )}
-          </div>
-        ))}
+                  ))}
+                </div>
+              )}
+              {activeTab !== "pending" && (
+                <p className="text-xs text-(--text-muted)">
+                  Reviewed on{" "}
+                  {r.reviewedAt?.toDate?.().toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
     </RequirePermission>
   );
 }

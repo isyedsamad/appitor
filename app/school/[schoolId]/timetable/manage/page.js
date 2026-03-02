@@ -487,7 +487,7 @@ export default function EditTimetablePage() {
   const classObj = classData && classData.find((c) => c.id === classId);
 
   return (
-    <RequirePermission permission="timetable.edit">
+    <RequirePermission permission="timetable.edit.view">
       <div className="space-y-5">
         <div className="flex flex-col gap-5 md:flex-row justify-between items-center">
           <div className="flex items-center gap-3">

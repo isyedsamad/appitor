@@ -133,7 +133,7 @@ export default function ImportExportAdmissions() {
   }
 
   return (
-    <RequirePermission permission="admission.create">
+    <RequirePermission permission="admission.import.view">
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row gap-3 justify-between items-start pb-2">
           <div className="flex items-center gap-3">
@@ -326,7 +326,7 @@ export default function ImportExportAdmissions() {
                     DOB (YYYY-MM-DD)
                   </li>
                 </ul>
-          
+
                 <div className="text-xs text-(--text-muted) border-t border-(--border) pt-2">
                   Class, Section & Session are selected in Appitor — not in Excel.
                 </div>
@@ -358,7 +358,7 @@ export default function ImportExportAdmissions() {
                 </div>
               </div>
             </div>
-          </div>        
+          </div>
         )}
         {rows.length > 0 && (
           <div className="bg-(--bg-card) border border-(--border) rounded-lg overflow-auto">

@@ -18,7 +18,7 @@ export default function SchoolComplaintPage() {
   const { branch } = useBranch();
   const canManage = hasPermission(
     schoolUser,
-    "leavecomplaint.manage",
+    "complaint.manage",
     false
   );
   const [filters, setFilters] = useState({
@@ -101,7 +101,7 @@ export default function SchoolComplaintPage() {
   }
 
   return (
-    <RequirePermission permission="leavecomplaint.manage">
+    <RequirePermission permission="complaint.view">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -259,15 +259,15 @@ function TypeBadge({ type }) {
   const ui =
     type === "employee"
       ? {
-          bg: "bg-(--primary-soft)",
-          text: "text-(--primary)",
-          label: "EMPLOYEE",
-        }
+        bg: "bg-(--primary-soft)",
+        text: "text-(--primary)",
+        label: "EMPLOYEE",
+      }
       : {
-          bg: "bg-(--status-l-bg)",
-          text: "text-(--status-l-text)",
-          label: "STUDENT",
-        };
+        bg: "bg-(--status-l-bg)",
+        text: "text-(--status-l-text)",
+        label: "STUDENT",
+      };
 
   return (
     <span

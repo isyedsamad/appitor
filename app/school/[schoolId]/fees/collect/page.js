@@ -8,6 +8,7 @@ import secureAxios from "@/lib/secureAxios";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
+import { canManage } from "@/lib/school/permissionUtils";
 import { toast } from "react-toastify";
 import { buildMonthsForSession } from "@/lib/school/fees/monthUtil";
 
@@ -242,8 +243,11 @@ export default function FeeCollectionPage() {
       );
     }
   };
+  const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
+  const editable = canManage(schoolUser, "fee.collect", currentPlan);
+
   return (
-    <RequirePermission permission="fee.manage">
+    <RequirePermission permission="fee.operations.view">
       <div className="max-w-7xl mx-auto space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -399,11 +403,13 @@ export default function FeeCollectionPage() {
                               <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">₹ {i.amount}</td>
                               <td className="px-4 py-3">
                                 <div className="flex justify-end">
-                                  <Trash2
-                                    size={16}
-                                    className="cursor-pointer text-(--danger) hover:scale-110 transition"
-                                    onClick={() => removeItem(i)}
-                                  />
+                                  {editable && (
+                                    <Trash2
+                                      size={16}
+                                      className="cursor-pointer text-(--danger) hover:scale-110 transition"
+                                      onClick={() => removeItem(i)}
+                                    />
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -428,7 +434,9 @@ export default function FeeCollectionPage() {
                         <p className="text-sm font-medium text-(--text-muted)">Amount (in ₹)</p>
                         <input type="number" onWheel={(e) => e.preventDefault()} className="input" placeholder="i.e. 500" value={flexForm.amount} onChange={e => setFlexForm({ ...flexForm, amount: e.target.value })} />
                       </div>
-                      <button onClick={addFlexible} className="font-medium btn-outline text-sm bg-(--bg) hover:bg-(--bg)/50 flex gap-2"><Plus size={16} /> Add to Table</button>
+                      {editable && (
+                        <button onClick={addFlexible} className="font-medium btn-outline text-sm bg-(--bg) hover:bg-(--bg)/50 flex gap-2"><Plus size={16} /> Add to Table</button>
+                      )}
                     </div>
                   </div>
                   <div className="bg-(--bg-card) border border-(--border) rounded-xl">
@@ -498,7 +506,9 @@ export default function FeeCollectionPage() {
                   </div>
                   <div className="flex justify-between">
                     <button onClick={() => setStep(1)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
-                    <button onClick={savePayment} className="btn-primary font-semibold"><ShieldCheck size={17} /> Save Payment</button>
+                    {editable && (
+                      <button onClick={savePayment} className="btn-primary font-semibold"><ShieldCheck size={17} /> Save Payment</button>
+                    )}
                   </div>
                 </>
               )}

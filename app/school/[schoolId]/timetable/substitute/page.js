@@ -211,7 +211,7 @@ export default function SubstitutionPage() {
     const classObj = classData?.find((c) => c.id === classId);
 
     return (
-        <RequirePermission permission="timetable.edit">
+        <RequirePermission permission="timetable.substitute.view">
             <div className="space-y-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row justify-between items-center">

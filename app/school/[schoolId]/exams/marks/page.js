@@ -196,7 +196,7 @@ export default function MarksEntryPage() {
   }
 
   return (
-    <RequirePermission permission="exam.manage">
+    <RequirePermission permission="exam.marks.view">
       <div className="space-y-4 bg-(--bg) text-(--text)">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

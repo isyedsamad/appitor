@@ -117,7 +117,7 @@ export default function NewAdmissionPage() {
   }, [form.className, schoolUser, branch]);
 
   return (
-    <RequirePermission permission="admission.create">
+    <RequirePermission permission="admission.new.view">
       <div className="space-y-5 pb-20 text-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

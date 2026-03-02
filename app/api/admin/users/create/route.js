@@ -3,11 +3,13 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
+    await verifySuperAdmin(req);
     const { name, username, password, roleId, role, schoolId, schoolCode, branchIds, branchNames, currentBranch } = await req.json();
 
     if (!name || !username || !password || !roleId || !schoolId || branchIds.length == 0) {

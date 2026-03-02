@@ -51,10 +51,10 @@ export default function DayBookPage() {
     }
   };
   useEffect(() => {
-    if(schoolUser && branch) loadDayBook(selectedDate);
+    if (schoolUser && branch) loadDayBook(selectedDate);
   }, [schoolUser, branch]);
   return (
-    <RequirePermission permission="fee.view">
+    <RequirePermission permission="fee.reports.view">
       <div className="max-w-7xl mx-auto space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

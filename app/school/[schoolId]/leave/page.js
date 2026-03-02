@@ -16,7 +16,11 @@ const PAGE_SIZE = 10;
 export default function SchoolLeavePage() {
   const { schoolUser, sessionList, currentSession, setLoading } = useSchool();
   const { branch } = useBranch();
-  const canManage = hasPermission(schoolUser, "leavecomplaint.manage", false);
+  const canManage = hasPermission(
+    schoolUser,
+    "leave.manage",
+    false
+  );
   const [filters, setFilters] = useState({
     session: currentSession,
     type: "all",
@@ -76,7 +80,7 @@ export default function SchoolLeavePage() {
 
   async function updateStatus(leaveId, status) {
     const isReady = confirm('Do you really want to ' + (status != 'rejected' ? 'approve' : 'reject') + ' this leave request?');
-    if(!isReady) return;
+    if (!isReady) return;
     setLoading(true);
     try {
       await secureAxios.post("/api/school/leave/update-status", {
@@ -99,7 +103,7 @@ export default function SchoolLeavePage() {
   }
 
   return (
-    <RequirePermission permission="leavecomplaint.manage">
+    <RequirePermission permission="leave.view">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -230,8 +234,8 @@ export default function SchoolLeavePage() {
                       </p>
                     </td>
                     <td className="px-5 py-4 font-semibold">
-                        <p>{l.from}</p>
-                        <p>{l.to && ` → ${l.to}`}</p>
+                      <p>{l.from}</p>
+                      <p>{l.to && ` → ${l.to}`}</p>
                     </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={l.status} />
@@ -298,15 +302,15 @@ function TypeBadge({ type }) {
   const ui =
     type === "employee"
       ? {
-          bg: "bg-(--primary-soft)",
-          text: "text-(--primary)",
-          label: "EMPLOYEE",
-        }
+        bg: "bg-(--primary-soft)",
+        text: "text-(--primary)",
+        label: "EMPLOYEE",
+      }
       : {
-          bg: "bg-(--status-l-bg)",
-          text: "text-(--status-l-text)",
-          label: "STUDENT",
-        };
+        bg: "bg-(--status-l-bg)",
+        text: "text-(--status-l-text)",
+        label: "STUDENT",
+      };
   return (
     <span
       className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${ui.bg} ${ui.text}`}

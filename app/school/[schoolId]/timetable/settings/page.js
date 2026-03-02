@@ -71,7 +71,7 @@ export default function TimetableSettingsPage() {
       }
     };
     fetchSettings();
-  }, [branch, schoolUser?.schoolId]);  
+  }, [branch, schoolUser?.schoolId]);
   const toggleDay = (day) => {
     setForm((prev) => ({
       ...prev,
@@ -120,7 +120,7 @@ export default function TimetableSettingsPage() {
       setIsNew(false);
     } catch (err) {
       console.log(err);
-      
+
       toast.error("Failed: " + err);
     } finally {
       setLoading(false);
@@ -130,158 +130,157 @@ export default function TimetableSettingsPage() {
   if (!form) return null;
 
   return (
-    <RequirePermission permission={'timetable.edit'}>
-    <div className="space-y-5">
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
-          <CalendarClock size={20} />
-        </div>
-        <div>
-          <h1 className="text-lg font-semibold text-(--text)">
-            Timetable Settings
-          </h1>
-          <p className="text-sm text-(--text-muted)">
-            {isNew
-              ? "Set up timetable rules for this branch"
-              : "Manage school-wide timetable timing and structure"}
-          </p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
-          <SectionTitle icon={Clock} title="School Timing" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="School Start Time">
-              <input
-                type="time"
-                value={form.startTime}
-                onChange={(e) =>
-                  setForm({ ...form, startTime: e.target.value })
-                }
-                className="input"
-              />
-            </Field>
-            <Field label="Period Duration (min)">
-              <input
-                type="number"
-                value={form.periodDuration}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    periodDuration: Number(e.target.value),
-                  })
-                }
-                className="input"
-              />
-            </Field>
-            <Field label="Total Periods / Day">
-              <input
-                type="number"
-                value={form.totalPeriods}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    totalPeriods: Number(e.target.value),
-                  })
-                }
-                className="input"
-              />
-            </Field>
+    <RequirePermission permission="timetable.settings.view">
+      <div className="space-y-5">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
+            <CalendarClock size={20} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-(--text)">
+              Timetable Settings
+            </h1>
+            <p className="text-sm text-(--text-muted)">
+              {isNew
+                ? "Set up timetable rules for this branch"
+                : "Manage school-wide timetable timing and structure"}
+            </p>
           </div>
         </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
-          <SectionTitle icon={CalendarDays} title="Working Days" />
-          <div className="flex flex-wrap gap-2">
-            {DAYS.map((d) => (
-              <button
-                key={d.key}
-                onClick={() => toggleDay(d.key)}
-                className={`px-4 py-2 rounded-lg border text-sm transition
-                  ${
-                    form.workingDays.includes(d.key)
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
+            <SectionTitle icon={Clock} title="School Timing" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Field label="School Start Time">
+                <input
+                  type="time"
+                  value={form.startTime}
+                  onChange={(e) =>
+                    setForm({ ...form, startTime: e.target.value })
+                  }
+                  className="input"
+                />
+              </Field>
+              <Field label="Period Duration (min)">
+                <input
+                  type="number"
+                  value={form.periodDuration}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      periodDuration: Number(e.target.value),
+                    })
+                  }
+                  className="input"
+                />
+              </Field>
+              <Field label="Total Periods / Day">
+                <input
+                  type="number"
+                  value={form.totalPeriods}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      totalPeriods: Number(e.target.value),
+                    })
+                  }
+                  className="input"
+                />
+              </Field>
+            </div>
+          </div>
+          <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
+            <SectionTitle icon={CalendarDays} title="Working Days" />
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map((d) => (
+                <button
+                  key={d.key}
+                  onClick={() => toggleDay(d.key)}
+                  className={`px-4 py-2 rounded-lg border text-sm transition
+                  ${form.workingDays.includes(d.key)
                       ? "bg-(--primary) text-white border-(--primary)"
                       : "bg-(--bg) border-(--border) text-(--text-muted)"
-                  }`}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="xl:col-span-2 bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
-          <div className="flex items-start justify-between">
-            <SectionTitle icon={Coffee} title="Breaks" />
-            <button
-              onClick={addBreak}
-              className="text-sm text-(--primary) btn-outline py-1"
-            >
-              + Add Break
-            </button>
-          </div>
-          {form.breaks.length === 0 && (
-            <p className="text-sm text-(--text-muted)">
-              No breaks added yet
-            </p>
-          )}
-          <div className="space-y-3">
-            {form.breaks.map((brk, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 md:grid-cols-4 items-end gap-3"
-              >
-                <Field label="Break Name">
-                  <input
-                    value={brk.label}
-                    onChange={(e) =>
-                      updateBreak(i, "label", e.target.value)
-                    }
-                    placeholder="i.e. Lunch Break"
-                    className="input"
-                  />
-                </Field>
-                <Field label="Break after which Period">
-                  <input
-                    type="number"
-                    value={brk.afterPeriod}
-                    onChange={(e) =>
-                      updateBreak(i, "afterPeriod", Number(e.target.value))
-                    }
-                    placeholder="i.e. 3"
-                    className="input"
-                  />
-                </Field>
-                <Field label="Duration (min)">
-                  <input
-                    type="number"
-                    value={brk.duration}
-                    onChange={(e) =>
-                      updateBreak(i, "duration", Number(e.target.value))
-                    }
-                    placeholder="i.e. 20"
-                    className="input"
-                  />
-                </Field>
-                <button
-                  onClick={() => removeBreak(i)}
-                  className="text-sm text-(--danger) btn-outline py-2 text-left"
+                    }`}
                 >
-                  <Trash2 size={16} />Remove
+                  {d.label}
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+          <div className="xl:col-span-2 bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <SectionTitle icon={Coffee} title="Breaks" />
+              <button
+                onClick={addBreak}
+                className="text-sm text-(--primary) btn-outline py-1"
+              >
+                + Add Break
+              </button>
+            </div>
+            {form.breaks.length === 0 && (
+              <p className="text-sm text-(--text-muted)">
+                No breaks added yet
+              </p>
+            )}
+            <div className="space-y-3">
+              {form.breaks.map((brk, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-1 md:grid-cols-4 items-end gap-3"
+                >
+                  <Field label="Break Name">
+                    <input
+                      value={brk.label}
+                      onChange={(e) =>
+                        updateBreak(i, "label", e.target.value)
+                      }
+                      placeholder="i.e. Lunch Break"
+                      className="input"
+                    />
+                  </Field>
+                  <Field label="Break after which Period">
+                    <input
+                      type="number"
+                      value={brk.afterPeriod}
+                      onChange={(e) =>
+                        updateBreak(i, "afterPeriod", Number(e.target.value))
+                      }
+                      placeholder="i.e. 3"
+                      className="input"
+                    />
+                  </Field>
+                  <Field label="Duration (min)">
+                    <input
+                      type="number"
+                      value={brk.duration}
+                      onChange={(e) =>
+                        updateBreak(i, "duration", Number(e.target.value))
+                      }
+                      placeholder="i.e. 20"
+                      className="input"
+                    />
+                  </Field>
+                  <button
+                    onClick={() => removeBreak(i)}
+                    className="text-sm text-(--danger) btn-outline py-2 text-left"
+                  >
+                    <Trash2 size={16} />Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+        <div className="flex justify-end">
+          <button
+            onClick={saveSettings}
+            className="flex items-center gap-2 px-6 py-2 rounded-lg bg-(--primary) text-white hover:bg-(--primary-hover)"
+          >
+            <Save size={18} />
+            {isNew ? "Create Settings" : "Save Changes"}
+          </button>
+        </div>
       </div>
-      <div className="flex justify-end">
-        <button
-          onClick={saveSettings}
-          className="flex items-center gap-2 px-6 py-2 rounded-lg bg-(--primary) text-white hover:bg-(--primary-hover)"
-        >
-          <Save size={18} />
-          {isNew ? "Create Settings" : "Save Changes"}
-        </button>
-      </div>
-    </div>
     </RequirePermission>
   );
 }

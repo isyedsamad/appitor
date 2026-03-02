@@ -7,11 +7,6 @@ import { Settings, Save, Layers } from "lucide-react";
 import { fetchSchoolById } from "@/lib/admin/schoolService";
 import secureAxios from "@/lib/secureAxios";
 
-const MODULES = [
-  "students","attendance","fees","timetable",
-  "exams","homework","messaging","accounts"
-];
-
 export default function EditSchoolPage() {
   const { schoolId } = useParams();
   const router = useRouter();
@@ -32,7 +27,6 @@ export default function EditSchoolPage() {
         plan: school.plan,
         status: school.status,
         studentLimit: school.studentLimit,
-        modules: school.modules,
       },
     });
     setSaving(false);
@@ -46,16 +40,17 @@ export default function EditSchoolPage() {
           <Settings size={20} /> Edit School
         </h1>
         <p className="text-sm text-muted">
-          Update plan, modules and status
+          Update plan and status
         </p>
       </div>
 
       <div className="card grid sm:grid-cols-3 gap-4">
         <Select label="Plan" value={school.plan}
           onChange={(e) => setSchool({ ...school, plan: e.target.value })}>
-          <option value="free">Free</option>
           <option value="trial">Trial</option>
-          <option value="paid">Paid</option>
+          <option value="core">Appitor Core</option>
+          <option value="connect">Appitor Connect</option>
+          <option value="plus">Appitor Plus</option>
         </Select>
 
         <Select label="Status" value={school.status}
@@ -72,42 +67,6 @@ export default function EditSchoolPage() {
         />
       </div>
 
-      <div className="card">
-        <div className="flex items-center gap-2 mb-3">
-          <Layers size={18} />
-          <h2 className="font-medium">Modules</h2>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-3">
-          {MODULES.map((m) => (
-            <label
-              key={m}
-              className={`flex items-center gap-3 p-3 rounded-lg border
-                ${
-                  school.modules?.[m]
-                    ? "border-[var(--primary)] bg-[var(--primary-soft)]"
-                    : "border-[var(--border)]"
-                }`}
-            >
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-(--primary)"
-                checked={!!school.modules?.[m]}
-                onChange={(e) =>
-                  setSchool({
-                    ...school,
-                    modules: {
-                      ...school.modules,
-                      [m]: e.target.checked,
-                    },
-                  })
-                }
-              />
-              <span className="capitalize">{m}</span>
-            </label>
-          ))}
-        </div>
-      </div>
 
       <div className="flex justify-end">
         <button className="btn-primary" onClick={save} disabled={saving}>

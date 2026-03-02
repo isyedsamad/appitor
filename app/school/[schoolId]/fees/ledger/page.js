@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {Search, BookOpen, Calendar, User, ArrowDown, RotateCcw, IndianRupee, Download} from "lucide-react";
-import {collection, query, where, orderBy, limit, startAfter, getDocs, Timestamp} from "firebase/firestore";
+import { Search, BookOpen, Calendar, User, ArrowDown, RotateCcw, IndianRupee, Download } from "lucide-react";
+import { collection, query, where, orderBy, limit, startAfter, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -31,7 +31,7 @@ export default function FeeLedgerPage() {
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(false);
   useEffect(() => {
-    if(schoolUser && sessionList && currentSession) {
+    if (schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
     } else {
       return;
@@ -88,7 +88,7 @@ export default function FeeLedgerPage() {
   };
 
   return (
-    <RequirePermission permission="fee.view">
+    <RequirePermission permission="fee.reports.view">
       <div className="max-w-7xl mx-auto space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -174,75 +174,74 @@ export default function FeeLedgerPage() {
             )}
             <div className="flex-1"></div>
             <div>
-            <button
-              onClick={() =>
-                exportLedgerToExcel({
-                  rows,
-                  schoolName: schoolUser.name,
-                  branchName: branch,
-                  fromLabel: searchType === "date" ? queryText : "Student",
-                })
-              }
-              disabled={!rows.length}
-              className="btn-outline flex gap-2"
-            >
-              <Download size={16} className="text-green-500" />
-              Export Excel
-            </button>
+              <button
+                onClick={() =>
+                  exportLedgerToExcel({
+                    rows,
+                    schoolName: schoolUser.name,
+                    branchName: branch,
+                    fromLabel: searchType === "date" ? queryText : "Student",
+                  })
+                }
+                disabled={!rows.length}
+                className="btn-outline flex gap-2"
+              >
+                <Download size={16} className="text-green-500" />
+                Export Excel
+              </button>
             </div>
           </div>
         </div>
         <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-(--bg)">
-              <tr>
-                <th className="px-4 py-3 text-left">Receipt</th>
-                <th className="px-4 py-3 text-left">Student</th>
-                <th className="px-4 py-3 text-left">Date</th>
-                <th className="px-4 py-3 text-right">Amount</th>
-                <th className="px-4 py-3 text-right">Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
+            <table className="w-full text-sm">
+              <thead className="bg-(--bg)">
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-(--text-muted)">
-                    No records found
-                  </td>
+                  <th className="px-4 py-3 text-left">Receipt</th>
+                  <th className="px-4 py-3 text-left">Student</th>
+                  <th className="px-4 py-3 text-left">Date</th>
+                  <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3 text-right">Type</th>
                 </tr>
-              )}
-              {rows.map(r => (
-                <tr key={r.id} className="border-t border-(--border)">
-                  <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
-                  <td className="px-4 py-3 font-semibold">
-                    {r.appId}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.createdAt?.toDate().toLocaleDateString()}
-                  </td>
-                  <td className={`px-4 py-3 text-right font-semibold ${
-                    r.type === "refund" ? "text-(--danger)" : ""
-                  }`}>
-                    ₹ {Math.abs(r.amount)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-end items-center">
-                    {r.type === "refund" ? (
-                      <>
-                        <RotateCcw size={14} className="text-(--danger)" /> Refund
-                      </>
-                    ) : (
-                      <>
-                        <IndianRupee size={14} className="text-(--accent)" /> Payment
-                      </>
-                    )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-(--text-muted)">
+                      No records found
+                    </td>
+                  </tr>
+                )}
+                {rows.map(r => (
+                  <tr key={r.id} className="border-t border-(--border)">
+                    <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
+                    <td className="px-4 py-3 font-semibold">
+                      {r.appId}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.createdAt?.toDate().toLocaleDateString()}
+                    </td>
+                    <td className={`px-4 py-3 text-right font-semibold ${r.type === "refund" ? "text-(--danger)" : ""
+                      }`}>
+                      ₹ {Math.abs(r.amount)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 justify-end items-center">
+                        {r.type === "refund" ? (
+                          <>
+                            <RotateCcw size={14} className="text-(--danger)" /> Refund
+                          </>
+                        ) : (
+                          <>
+                            <IndianRupee size={14} className="text-(--accent)" /> Payment
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           {hasMore && (
             <div className="flex justify-center p-4 border-t border-(--border)">

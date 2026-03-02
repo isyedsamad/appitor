@@ -5,8 +5,8 @@ import { MessageSquare, Plus, Search, Save, X, Trash2, AlertCircle } from "lucid
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
-import { hasPermission } from "@/lib/school/permissionUtils";
 import secureAxios from "@/lib/secureAxios";
+import { canManage as canManageHelper } from "@/lib/school/permissionUtils";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "react-toastify";
@@ -15,9 +15,10 @@ import { useTheme } from "next-themes";
 export default function NoticeboardPage() {
   const { theme } = useTheme();
   const { schoolUser, sessionList, setLoading } = useSchool();
-  const { branch } = useBranch();
-  const canManage = hasPermission(schoolUser, "communication.manage", false);
-  const canDelete = hasPermission(schoolUser, "communication.all", false);
+  const { branchInfo, branch } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
+  const canManage = canManageHelper(schoolUser, "communication.notice", currentPlan);
+  const canDelete = canManage;
   const [sendPush, setSendPush] = useState(true);
   const [filters, setFilters] = useState({
     sessionId: schoolUser?.currentSession || "",
@@ -141,7 +142,7 @@ export default function NoticeboardPage() {
     ) || [];
 
   return (
-    <RequirePermission permission="communication.manage">
+    <RequirePermission permission="communication.noticeboard.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -216,10 +217,9 @@ export default function NoticeboardPage() {
                   {n.priority === "important" && (
                     <span
                       className={`text-xs px-2 py-1 rounded-full flex items-center gap-1
-                        ${
-                          theme === "dark"
-                            ? "bg-red-950 text-red-500"
-                            : "bg-red-100 text-red-600"
+                        ${theme === "dark"
+                          ? "bg-red-950 text-red-500"
+                          : "bg-red-100 text-red-600"
                         }`}
                     >
                       <AlertCircle size={12} /> Important
@@ -294,7 +294,7 @@ export default function NoticeboardPage() {
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-(--text)">
-                  Select who should see this notice <span className="text-(--danger)">*</span>
+                    Select who should see this notice <span className="text-(--danger)">*</span>
                   </label>
                   <div className="grid grid-cols-3 gap-3">
                     {[
@@ -306,10 +306,9 @@ export default function NoticeboardPage() {
                         <label
                           key={r.id}
                           className={`flex items-center gap-2 border-2 rounded-lg px-3 py-2 cursor-pointer transition
-                            ${
-                              checked
-                                ? "border-(--primary) bg-(--primary-soft)"
-                                : "border-(--border)"
+                            ${checked
+                              ? "border-(--primary) bg-(--primary-soft)"
+                              : "border-(--border)"
                             }
                           `}
                         >
@@ -356,10 +355,9 @@ export default function NoticeboardPage() {
                   </label>
                   <label
                     className={`flex items-start gap-3 border-2 rounded-lg px-4 py-3 cursor-pointer transition
-                      ${
-                        sendPush
-                          ? "border-(--primary) bg-(--primary-soft)"
-                          : "border-(--border)"
+                      ${sendPush
+                        ? "border-(--primary) bg-(--primary-soft)"
+                        : "border-(--border)"
                       }
                     `}
                   >

@@ -105,7 +105,7 @@ export default function EmployeeMessagingPage() {
   }
 
   return (
-    <RequirePermission permission="communication.manage">
+    <RequirePermission permission="communication.employee.view">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -120,38 +120,38 @@ export default function EmployeeMessagingPage() {
         </div>
         <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-(--bg)">
-              <tr>
-                <th className="px-5 py-3 text-left">Employee ID</th>
-                <th className="px-5 py-3 text-left">Employee</th>
-                <th className="px-5 py-3 text-left">Role</th>
-                <th className="px-5 py-3 text-left">Status</th>
-                <th className="px-5 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((e) => (
-                <tr
-                  key={e.uid}
-                  className="border-t border-(--border) hover:bg-(--bg)"
-                >
-                  <td className="px-5 py-3 font-medium">{e.employeeId}</td>
-                  <td className="px-5 py-3 font-medium capitalize">{e.name}</td>
-                  <td className="px-5 py-3 capitalize">{e.role}</td>
-                  <td className="px-5 py-3 capitalize">{e.status}</td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => openMessage(e)}
-                      className="btn-primary text-sm"
-                    >
-                      <MessageCircle size={14} /> Message
-                    </button>
-                  </td>
+            <table className="w-full text-sm">
+              <thead className="bg-(--bg)">
+                <tr>
+                  <th className="px-5 py-3 text-left">Employee ID</th>
+                  <th className="px-5 py-3 text-left">Employee</th>
+                  <th className="px-5 py-3 text-left">Role</th>
+                  <th className="px-5 py-3 text-left">Status</th>
+                  <th className="px-5 py-3 text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {employees.map((e) => (
+                  <tr
+                    key={e.uid}
+                    className="border-t border-(--border) hover:bg-(--bg)"
+                  >
+                    <td className="px-5 py-3 font-medium">{e.employeeId}</td>
+                    <td className="px-5 py-3 font-medium capitalize">{e.name}</td>
+                    <td className="px-5 py-3 capitalize">{e.role}</td>
+                    <td className="px-5 py-3 capitalize">{e.status}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={() => openMessage(e)}
+                        className="btn-primary text-sm"
+                      >
+                        <MessageCircle size={14} /> Message
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
         {openModal && selectedEmployee && (
@@ -202,10 +202,9 @@ export default function EmployeeMessagingPage() {
                     </div>
                     <label
                       className={`flex items-start gap-3 border-2 rounded-lg px-4 py-3 cursor-pointer transition
-                        ${
-                          sendPush
-                            ? "border-(--primary) bg-(--primary-soft)"
-                            : "border-(--border)"
+                        ${sendPush
+                          ? "border-(--primary) bg-(--primary-soft)"
+                          : "border-(--border)"
                         }`}
                     >
                       <input
@@ -276,10 +275,9 @@ export default function EmployeeMessagingPage() {
                             </p>
                             <span
                               className={`text-[11px] font-medium px-2 py-1 rounded-md
-                                ${
-                                  seen
-                                    ? "text-(--primary) bg-(--primary-soft)"
-                                    : "text-(--status-a-text) bg-(--status-a-bg)"
+                                ${seen
+                                  ? "text-(--primary) bg-(--primary-soft)"
+                                  : "text-(--status-a-text) bg-(--status-a-bg)"
                                 }`}
                             >
                               {seen ? "Seen" : "Unseen"}

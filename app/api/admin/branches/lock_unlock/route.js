@@ -1,10 +1,12 @@
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
+    await verifySuperAdmin(req);
     const { schoolId, branchId, isActive } = await req.json();
     const batch = adminDb.batch();
     const branchRef = adminDb.collection('branches').doc(branchId);

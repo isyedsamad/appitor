@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.create");
+    const user = await verifyUser(req, "complaint.manage");
     const body = await req.json();
     const { type, branch, session, title, description, appId } = body;
     if (!type || !branch || !session || !title || !description || !appId) {
@@ -14,7 +14,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    
+
     if (!["employee", "student"].includes(type)) {
       return NextResponse.json(
         { message: "Invalid complaint type" },

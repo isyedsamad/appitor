@@ -63,7 +63,7 @@ export default function FeeHeadsPage() {
     setLoading(false);
   };
   useEffect(() => {
-    if(branch && schoolUser) fetchHeads();
+    if (branch && schoolUser) fetchHeads();
   }, [branch, schoolUser]);
   const saveHead = async () => {
     if (!form.name.trim()) return;
@@ -125,7 +125,7 @@ export default function FeeHeadsPage() {
     setOpen(false);
   };
   return (
-    <RequirePermission permission="fee.manage">
+    <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="flex items-center gap-3">
@@ -224,17 +224,17 @@ export default function FeeHeadsPage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex gap-2 justify-end">
                         <button className="action-btn hover:text-yellow-500" onClick={() => {
-                              setEditing(h);
-                              setForm({
-                                name: h.name,
-                                category: h.category,
-                                frequency: h.frequency,
-                                refundable: h.refundable,
-                                type: h.type
-                              });
-                              setOpen(true);
-                              setMenuOpen(null);
-                            }}
+                          setEditing(h);
+                          setForm({
+                            name: h.name,
+                            category: h.category,
+                            frequency: h.frequency,
+                            refundable: h.refundable,
+                            type: h.type
+                          });
+                          setOpen(true);
+                          setMenuOpen(null);
+                        }}
                         ><Pencil size={15} /></button>
                         {h.status === "active" ? (
                           <button
@@ -244,7 +244,7 @@ export default function FeeHeadsPage() {
                             <Ban size={15} />
                             Disable
                           </button>
-                          ) : (
+                        ) : (
                           <button
                             onClick={() => updateStatus(h.id, "active")}
                             className="action-btn text-xs font-medium hover:text-green-500"

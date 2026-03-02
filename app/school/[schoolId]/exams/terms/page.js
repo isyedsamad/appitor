@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import {BookOpen, Plus, Trash2, CheckCircle2, Search, X, Save, CalendarRange} from "lucide-react";
+import { BookOpen, Plus, Trash2, CheckCircle2, Search, X, Save, CalendarRange } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
-import {collection, getDocs, query, where, orderBy} from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import { formatDate, formatInputDate } from "@/lib/dateUtils";
@@ -46,7 +46,7 @@ export default function ExamTermsPage() {
       const snap = await getDocs(q);
       setTerms(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setSearched(true);
-    } catch(err) {
+    } catch (err) {
       toast.error("Failed: " + err);
     } finally {
       setLoading(false);
@@ -76,7 +76,7 @@ export default function ExamTermsPage() {
       setOpenAdd(false);
       setForm({ name: "", startDate: "", endDate: "" });
       fetchTerms();
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err.response.data.message);
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ export default function ExamTermsPage() {
   const pending = total - declared;
 
   return (
-    <RequirePermission permission="exam.create">
+    <RequirePermission permission="exam.terms.view">
       <div className="space-y-4 bg-(--bg) text-(--text)">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -197,10 +197,9 @@ export default function ExamTermsPage() {
                       </div>
                       <span
                         className={`text-xs px-2 py-1 rounded font-medium
-                          ${
-                            isDeclared
-                              ? "bg-(--status-p-bg) text-(--status-p-text)"
-                              : "bg-(--status-l-bg) text-(--status-l-text)"
+                          ${isDeclared
+                            ? "bg-(--status-p-bg) text-(--status-p-text)"
+                            : "bg-(--status-l-bg) text-(--status-l-text)"
                           }
                         `}
                       >
@@ -292,10 +291,9 @@ function Stat({ label, value, accent }) {
   return (
     <div className="bg-(--bg-card) border border-(--border) rounded-xl p-4">
       <p className="text-sm text-(--text-muted)">{label}</p>
-      <p className={`text-2xl font-semibold ${
-        accent === "success" ? "text-green-600" :
-        accent === "warning" ? "text-(--warning)" : ""
-      }`}>
+      <p className={`text-2xl font-semibold ${accent === "success" ? "text-green-600" :
+          accent === "warning" ? "text-(--warning)" : ""
+        }`}>
         {value}
       </p>
     </div>

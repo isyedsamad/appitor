@@ -123,7 +123,7 @@ export default function StudentsListPage() {
   }
 
   return (
-    <RequirePermission permission="student.view">
+    <RequirePermission permission="student.profile.view">
       <div className="space-y-5 pb-20 text-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">

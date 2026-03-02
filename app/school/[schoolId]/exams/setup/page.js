@@ -66,7 +66,7 @@ export default function ExamSetupPage() {
         maxMarks: existing?.maxMarks || ""
       };
     });
-  }  
+  }
 
   async function fetchTerms(session) {
     if (!session) {
@@ -160,7 +160,7 @@ export default function ExamSetupPage() {
     } finally {
       setLoading(false);
     }
-  }  
+  }
 
   async function saveBulkSetup() {
     const { classId, sectionId } = form;
@@ -230,7 +230,7 @@ export default function ExamSetupPage() {
     } finally {
       setLoading(false);
     }
-  }  
+  }
 
   async function deleteSetup(id) {
     if (!confirm("Delete this exam setup?")) return;
@@ -241,7 +241,7 @@ export default function ExamSetupPage() {
       );
       toast.success("Exam setup deleted");
       fetchSetups();
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err);
     } finally {
       setLoading(false);
@@ -262,7 +262,7 @@ export default function ExamSetupPage() {
   }
 
   return (
-    <RequirePermission permission="exam.create">
+    <RequirePermission permission="exam.setup.view">
       <div className="space-y-4 bg-(--bg) text-(--text)">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -415,7 +415,7 @@ export default function ExamSetupPage() {
                 }} />
               </div>
               <div className="pt-4 pb-6 px-5 space-y-2 max-h-[75dvh] overflow-y-auto">
-                {searched && terms.filter(t => t.id == selectedTerm).map(t => 
+                {searched && terms.filter(t => t.id == selectedTerm).map(t =>
                   <>
                     <div key={t} className="flex justify-between items-start">
                       <div>
@@ -428,10 +428,9 @@ export default function ExamSetupPage() {
                       </div>
                       <span
                         className={`text-xs px-2 py-1 rounded font-medium
-                          ${
-                            t.resultDeclared === true
-                              ? "bg-(--status-p-bg) text-(--status-p-text)"
-                              : "bg-(--status-l-bg) text-(--status-l-text)"
+                          ${t.resultDeclared === true
+                            ? "bg-(--status-p-bg) text-(--status-p-text)"
+                            : "bg-(--status-l-bg) text-(--status-l-text)"
                           }
                         `}
                       >
@@ -449,79 +448,79 @@ export default function ExamSetupPage() {
                 {bulkRows.length > 0 && (
                   <div className="mt-4 border border-(--border) rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-(--bg)">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Subject</th>
-                          <th className="px-3 py-2 text-center">Exam Date</th>
-                          <th className="px-3 py-2 text-center">Marking</th>
-                          <th className="px-3 py-2 text-center">Max Marks</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bulkRows.map((row, i) => (
-                          <tr key={row.subjectId} className="border-t border-(--border)">
-                            <td className="px-3 py-2 font-medium">
-                              {subjectData.find(s => s.id === row.subjectId)?.name}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="date"
-                                className="input"
-                                value={row.examDate}
-                                onChange={e => {
-                                  const v = e.target.value;
-                                  setBulkRows(r =>
-                                    r.map((x, idx) =>
-                                      idx === i ? { ...x, examDate: v } : x
-                                    )
-                                  );
-                                }}
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <select
-                                className="input"
-                                value={row.markingType}
-                                onChange={e => {
-                                  const v = e.target.value;
-                                  setBulkRows(r =>
-                                    r.map((x, idx) =>
-                                      idx === i
-                                        ? { ...x, markingType: v, maxMarks: "" }
-                                        : x
-                                    )
-                                  );
-                                }}
-                              >
-                                <option value="grades">Grades</option>
-                                <option value="marks">Marks</option>
-                              </select>
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              {row.markingType === "marks" ? (
+                      <table className="w-full text-sm">
+                        <thead className="bg-(--bg)">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Subject</th>
+                            <th className="px-3 py-2 text-center">Exam Date</th>
+                            <th className="px-3 py-2 text-center">Marking</th>
+                            <th className="px-3 py-2 text-center">Max Marks</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {bulkRows.map((row, i) => (
+                            <tr key={row.subjectId} className="border-t border-(--border)">
+                              <td className="px-3 py-2 font-medium">
+                                {subjectData.find(s => s.id === row.subjectId)?.name}
+                              </td>
+                              <td className="px-3 py-2">
                                 <input
-                                  type="number"
-                                  className="input max-w-[90px]"
-                                  placeholder="100"
-                                  value={row.maxMarks}
+                                  type="date"
+                                  className="input"
+                                  value={row.examDate}
                                   onChange={e => {
                                     const v = e.target.value;
                                     setBulkRows(r =>
                                       r.map((x, idx) =>
-                                        idx === i ? { ...x, maxMarks: v } : x
+                                        idx === i ? { ...x, examDate: v } : x
                                       )
                                     );
                                   }}
                                 />
-                              ) : (
-                                <span className="text-(--text-muted)">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              </td>
+                              <td className="px-3 py-2">
+                                <select
+                                  className="input"
+                                  value={row.markingType}
+                                  onChange={e => {
+                                    const v = e.target.value;
+                                    setBulkRows(r =>
+                                      r.map((x, idx) =>
+                                        idx === i
+                                          ? { ...x, markingType: v, maxMarks: "" }
+                                          : x
+                                      )
+                                    );
+                                  }}
+                                >
+                                  <option value="grades">Grades</option>
+                                  <option value="marks">Marks</option>
+                                </select>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                {row.markingType === "marks" ? (
+                                  <input
+                                    type="number"
+                                    className="input max-w-[90px]"
+                                    placeholder="100"
+                                    value={row.maxMarks}
+                                    onChange={e => {
+                                      const v = e.target.value;
+                                      setBulkRows(r =>
+                                        r.map((x, idx) =>
+                                          idx === i ? { ...x, maxMarks: v } : x
+                                        )
+                                      );
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-(--text-muted)">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}

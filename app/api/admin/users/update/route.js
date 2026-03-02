@@ -1,11 +1,13 @@
 export const runtime = "nodejs";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
+    await verifySuperAdmin(req);
     const { uid, role, roleId, schoolId, schoolCode, branchIds, branchNames } = await req.json();
     if (!roleId || !schoolId || branchIds.length == 0) {
       return NextResponse.json(
@@ -19,7 +21,7 @@ export async function POST(req) {
         schoolCode,
         branchIds,
         branchNames,
-        roleId, 
+        roleId,
         role
       })
     return NextResponse.json({ success: true });

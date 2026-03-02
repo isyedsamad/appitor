@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {BookOpen, Plus, Save, X, Pencil, Trash2, Search} from "lucide-react";
+import { BookOpen, Plus, Save, X, Pencil, Trash2, Search } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -56,7 +56,7 @@ export default function SubjectTeacherMappingPage() {
         "items",
         "subjectTeacherMapping"
       );
-  
+
       let q = query(
         baseRef,
         where("classId", "==", selectedClassId),
@@ -75,7 +75,7 @@ export default function SubjectTeacherMappingPage() {
     } finally {
       setLoading(false);
     }
-  };  
+  };
   const handleClassChange = (classId) => {
     const cls = classData.find(c => c.id === classId);
     setForm({
@@ -106,7 +106,7 @@ export default function SubjectTeacherMappingPage() {
         setMappings([]);
         setLastDoc(null);
         fetchMapping(true);
-      }else {
+      } else {
         setLoading(false);
       }
     } catch (err) {
@@ -123,7 +123,7 @@ export default function SubjectTeacherMappingPage() {
   };
 
   return (
-    <RequirePermission permission="academic.manage">
+    <RequirePermission permission="timetable.mapping.view">
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex items-center gap-4">
@@ -221,7 +221,7 @@ export default function SubjectTeacherMappingPage() {
                   <td className="px-4 py-3">
                     {classData.filter(c => c.id == row.classId).map(c => c.name)} {classData.filter(c => c.id == row.classId).map(c =>
                       c.sections.filter(s => s.id == row.sectionId).map(s => s.name)
-                     )}
+                    )}
                   </td>
                   <td className="px-4 py-3">{subjects.filter(s => s.id == row.subjectId).map(s => s.name)}</td>
                   <td className="px-4 py-3 capitalize">{teachers.filter(t => t.uid == row.teacherId).map(t => t.name)}</td>

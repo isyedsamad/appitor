@@ -126,7 +126,7 @@ export default function StudentFeeAssignmentPage() {
     }
   };
   return (
-    <RequirePermission permission="fee.manage">
+    <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

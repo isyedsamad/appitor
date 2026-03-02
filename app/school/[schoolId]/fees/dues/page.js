@@ -193,7 +193,7 @@ export default function FeeDuesPage() {
   };
 
   return (
-    <RequirePermission permission="fee.view">
+    <RequirePermission permission="fee.operations.view">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

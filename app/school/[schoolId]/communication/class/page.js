@@ -165,7 +165,7 @@ export default function ClassNoticePage() {
     ) || [];
 
   return (
-    <RequirePermission permission="communication.manage">
+    <RequirePermission permission="communication.class.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -278,11 +278,10 @@ export default function ClassNoticePage() {
                   </div>
                   {n.priority === "important" && (
                     <span
-                      className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                        theme === "dark"
-                          ? "bg-red-950 text-red-500"
-                          : "bg-red-100 text-red-600"
-                      }`}
+                      className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${theme === "dark"
+                        ? "bg-red-950 text-red-500"
+                        : "bg-red-100 text-red-600"
+                        }`}
                     >
                       <AlertCircle size={12} /> Important
                     </span>
@@ -419,10 +418,9 @@ export default function ClassNoticePage() {
                   <label className="text-sm font-medium">Notification</label>
                   <label
                     className={`flex items-start gap-3 border-2 rounded-lg px-4 py-3 cursor-pointer transition
-                      ${
-                        sendPush
-                          ? "border-(--primary) bg-(--primary-soft)"
-                          : "border-(--border)"
+                      ${sendPush
+                        ? "border-(--primary) bg-(--primary-soft)"
+                        : "border-(--border)"
                       }
                     `}
                   >

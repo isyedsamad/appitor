@@ -3,11 +3,13 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
+import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
     await verifyAppCheck(req);
+    await verifySuperAdmin(req);
     const { name, ownerNote } = await req.json();
     if (!name) {
       return NextResponse.json(

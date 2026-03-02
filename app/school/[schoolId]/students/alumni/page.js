@@ -141,7 +141,7 @@ export default function AlumniPage() {
     }
 
     return (
-        <RequirePermission permission="student.manage">
+        <RequirePermission permission="student.alumni.view">
             <div className="space-y-5 pb-32 text-sm">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

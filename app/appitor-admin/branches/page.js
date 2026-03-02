@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, GitBranch, Pencil, Lock, LockOpen } from "lucide-react";
 import { fetchBranches } from "@/lib/admin/branchService";
 import AddBranchModal from "./AddBranchModal";
+import EditBranchModal from "./EditBranchModal";
 import Link from "next/link";
 import { useSuperAdmin } from "@/context/SuperAdminContext";
 import { useTheme } from "next-themes";
@@ -11,14 +12,16 @@ import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 
 export default function BranchesPage() {
-  const {theme} = useTheme();
+  const { theme } = useTheme();
   const { setLoading } = useSuperAdmin();
   const [branches, setBranches] = useState([]);
   const [open, setOpen] = useState(false);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState(null);
   const changeStatus = async (schoolId, branchId, isActive) => {
     setLoading(true);
     try {
-      await secureAxios.post('/api/admin/branches/lock_unlock', {schoolId, branchId, isActive});
+      await secureAxios.post('/api/admin/branches/lock_unlock', { schoolId, branchId, isActive });
       toast.success('Branch updated!', {
         theme: 'colored'
       })
@@ -56,13 +59,13 @@ export default function BranchesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[800px]">
             <thead className="bg-[var(--bg)] border-b border-(--border)">
-              <tr className="text-muted text-left">
-                <th className="px-4 py-3">Branch</th>
-                <th className="px-4 py-3">Code</th>
-                <th className="px-4 py-3">Location</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3 text-right">Action</th>
+              <tr className="text-[10px] font-bold uppercase text-muted text-left tracking-widest">
+                <th className="px-4 py-4">Branch Detail</th>
+                <th className="px-4 py-4">Code</th>
+                <th className="px-4 py-4">Location</th>
+                <th className="px-4 py-4">Tactical Plan</th>
+                <th className="px-4 py-4">Status</th>
+                <th className="px-4 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -71,35 +74,48 @@ export default function BranchesPage() {
                   key={b.id}
                   className="border-b border-(--border) last:border-0 hover:bg-(--bg)"
                 >
-                  <td className="px-4 py-3 font-medium">
-                    {b.appitorCode} - {b.name}
+                  <td className="px-4 py-3">
+                    <p className="font-bold text-(--text)">{b.name}</p>
+                    <p className="text-[10px] text-muted font-bold uppercase">{b.appitorCode} Context</p>
                   </td>
-                  <td className="px-4 py-3 font-semibold">
+                  <td className="px-4 py-3 font-semibold text-xs text-muted">
                     {b.branchCode}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-xs">
                     {b.city}, {b.state}
                   </td>
                   <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase border ${b.plan === 'plus' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                      b.plan === 'connect' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}>
+                      {b.plan || 'core'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <span
-                      className={`px-2 py-1 rounded-md text-xs font-semibold uppercase ${
-                        b.status == 'active' ? `${theme == 'dark' ? 'bg-green-950 text-green-600' : 'bg-green-100 text-green-600'}` : `${theme == 'dark' ? 'bg-red-950 text-red-600' : 'bg-red-100 text-red-600'}`
-                      }`}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${b.status == 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}
                     >
                       {b.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted">
-                    {b.createdAt?.toDate?.().toLocaleDateString()}
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       {b.status == 'active' ? (
-                        <button className="action-btn hover:text-red-600" onClick={() => {changeStatus(b.schoolId, b.id, true)}}><Lock size={16} /></button>
+                        <button className="action-btn text-rose-500 border-rose-200 hover:bg-rose-50" onClick={() => { changeStatus(b.schoolId, b.id, true) }}><Lock size={14} /></button>
                       ) : (
-                        <button className="action-btn hover:text-green-600" onClick={() => {changeStatus(b.schoolId, b.id, false)}}><LockOpen size={16} /></button>
+                        <button className="action-btn text-emerald-500 border-emerald-200 hover:bg-emerald-50" onClick={() => { changeStatus(b.schoolId, b.id, false) }}><LockOpen size={14} /></button>
                       )}
-                      <Link href={`/appitor-admin/schools/${b.id}/edit`}><ActionButton icon={Pencil} /></Link>
+                      <button
+                        className="action-btn text-(--primary) border-(--primary)/20 hover:bg-(--primary-soft)"
+                        onClick={() => {
+                          setSelectedBranch(b);
+                          setOpenEdit(true);
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -125,6 +141,17 @@ export default function BranchesPage() {
         setBranches(data);
         setLoading(false);
       }} />
+      <EditBranchModal
+        open={openEdit}
+        branch={selectedBranch}
+        onClose={() => setOpenEdit(false)}
+        onUpdate={async () => {
+          setLoading(true);
+          const data = await fetchBranches();
+          setBranches(data);
+          setLoading(false);
+        }}
+      />
     </div>
   );
 }

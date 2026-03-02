@@ -5,7 +5,7 @@ import { Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.create");
+    const user = await verifyUser(req, "leave.manage");
     const body = await req.json();
     const { type, branch, session, leaveId } = body;
     if (!type || !branch || !session || !leaveId) {
@@ -40,7 +40,7 @@ export async function POST(req) {
       .doc(user.uid)
       .collection("leave")
       .doc(session);
-    
+
     const schoolSnap = await schoolLeaveRef.get();
     if (!schoolSnap.exists) {
       return NextResponse.json(

@@ -8,6 +8,7 @@ import Loading from "@/components/ui/Loading";
 import { useRouter } from "next/navigation";
 import { useBranch } from "./BranchContext";
 import { formatDate } from "@/lib/dateUtils";
+import { toast } from "react-toastify";
 
 const SchoolContext = createContext(null);
 
@@ -82,99 +83,137 @@ export function SchoolProvider({ schoolId, children }) {
         router.replace("/school/");
         return;
       }
-      const userSnap = await getDoc(
-        doc(db, "schoolUsers", fbUser.uid)
-      );
-      if (!userSnap.exists()) {
-        setSchoolUser(null);
-        setLoading(false);
-        setIsLoaded(true);
-        signOut(auth);
-        return;
-      }
-      const userData = userSnap.data();
-      const schoolSnap = await getDoc(doc(db, "schools", schoolId));
-      const schoolData = schoolSnap.data();
 
-      let sessionToUse = schoolData.currentSession;
-      let sessionListToUse = schoolData.sessions || [];
-      if (userData.currentBranch) {
-        const branchSettingsSnap = await getDoc(
-          doc(db, "schools", schoolId, "branches", userData.currentBranch, "settings", "academic")
-        );
-        if (branchSettingsSnap.exists()) {
-          const branchSettings = branchSettingsSnap.data();
-          if (branchSettings.currentSession) {
-            sessionToUse = branchSettings.currentSession;
-          }
-          if (branchSettings.sessions) {
-            sessionListToUse = branchSettings.sessions;
+      try {
+        const userSnap = await getDoc(doc(db, "schoolUsers", fbUser.uid));
+        if (!userSnap.exists()) {
+          setSchoolUser(null);
+          setLoading(false);
+          setIsLoaded(true);
+          signOut(auth);
+          return;
+        }
+
+        const userData = userSnap.data();
+        if (userData.status !== "active") {
+          toast.error("Your account is currently disabled. Please contact your administrator.", { theme: "colored" });
+          setSchoolUser(null);
+          signOut(auth);
+          setLoading(false);
+          setIsLoaded(true);
+          return;
+        }
+
+        const schoolSnap = await getDoc(doc(db, "schools", schoolId));
+        if (!schoolSnap.exists() || userData.schoolId !== schoolId) {
+          setSchoolUser(null);
+          setLoading(false);
+          setIsLoaded(true);
+          signOut(auth);
+          return;
+        }
+        const schoolData = schoolSnap.data();
+        if (schoolData.status !== "active") {
+          toast.error("This school is currently locked. Please contact support.", { theme: "colored" });
+          setSchoolUser(null);
+          signOut(auth);
+          setLoading(false);
+          setIsLoaded(true);
+          return;
+        }
+
+        if (userData.currentBranch && userData.currentBranch !== "*") {
+          const branchSnap = await getDoc(doc(db, "branches", userData.currentBranch));
+          if (branchSnap.exists()) {
+            const branchData = branchSnap.data();
+            if (branchData.status !== "active") {
+              toast.error("This campus is currently locked. Switching context...", { theme: "colored" });
+              setSchoolUser(null);
+              signOut(auth);
+              setLoading(false);
+              setIsLoaded(true);
+              return;
+            }
           }
         }
-      }
 
-      setCurrentSession(sessionToUse);
-      setSessionList(sessionListToUse);
+        let sessionToUse = schoolData.currentSession;
+        let sessionListToUse = schoolData.sessions || [];
+        if (userData.currentBranch && userData.currentBranch !== "*") {
+          const branchSettingsSnap = await getDoc(
+            doc(db, "schools", schoolId, "branches", userData.currentBranch, "settings", "academic")
+          );
+          if (branchSettingsSnap.exists()) {
+            const branchSettings = branchSettingsSnap.data();
+            if (branchSettings.currentSession) {
+              sessionToUse = branchSettings.currentSession;
+            }
+            if (branchSettings.sessions) {
+              sessionListToUse = branchSettings.sessions;
+            }
+          }
+        }
 
-      if (userData.schoolId !== schoolId || userData.status == "disabled" || schoolData.status != "active") {
-        setSchoolUser(null);
-        setLoading(false);
-        setIsLoaded(true);
-        return;
-      }
-      const roleSnap = await getDoc(
-        doc(db, "roles", userData.roleId)
-      );
-      if (!roleSnap.exists()) {
-        console.error("Role not found");
-        setSchoolUser(null);
-        setLoading(false);
-        setIsLoaded(true);
-        return;
-      }
-      const roleData = roleSnap.data();
-      const allRolesSnap = await getDocs(collection(db, 'roles'));
-      const allRolesData = allRolesSnap.docs;
-      setRoles(allRolesData.map((d) => ({ id: d.id, ...d.data() })));
-      setSchoolUser({
-        ...userData,
-        uid: fbUser.uid,
-        employeeId: userData.employeeId ? userData.employeeId : '',
-        schoolId,
-        currentSession: sessionToUse,
-        schoolName: schoolData.name,
-        schoolCode: schoolData.code,
-        roleId: userData.roleId,
-        roleName: roleData.name.toLowerCase(),
-        permissions: roleData.permissions || [],
-        linkedId: userData.linkedId || null,
-      });
-      if (userData) {
-        const currentBranchUser = userData.currentBranch;
-        if (userData.branchIds.length > 1) {
-          const combined = userData.branchIds.map((id, index) => ({
-            id,
-            name: userData.branchNames[index]
-          }));
-          setBranches(combined);
-          setCurrentBranch(currentBranchUser);
-        } else {
-          if (userData.branchIds[0] == "*") {
-            const branchRef = query(
-              collection(db, 'branches'),
-              where('schoolId', '==', userData.schoolId)
-            )
-            const branchSnap = await getDocs(branchRef);
-            setBranches(branchSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            setCurrentBranch(userData.currentBranch);
+        setCurrentSession(sessionToUse);
+        setSessionList(sessionListToUse);
+
+        const roleSnap = await getDoc(doc(db, "roles", userData.roleId));
+        if (!roleSnap.exists()) {
+          console.error("Role not found");
+          setSchoolUser(null);
+          setLoading(false);
+          setIsLoaded(true);
+          return;
+        }
+        const roleData = roleSnap.data();
+        const allRolesSnap = await getDocs(collection(db, 'roles'));
+        const allRolesData = allRolesSnap.docs;
+        setRoles(allRolesData.map((d) => ({ id: d.id, ...d.data() })));
+        setSchoolUser({
+          ...userData,
+          uid: fbUser.uid,
+          employeeId: userData.employeeId ? userData.employeeId : '',
+          schoolId,
+          currentSession: sessionToUse,
+          schoolName: schoolData.name,
+          schoolCode: schoolData.code,
+          roleId: userData.roleId,
+          roleName: roleData.name.toLowerCase(),
+          permissions: roleData.permissions || [],
+          plan: schoolData.plan || "trial",
+          linkedId: userData.linkedId || null,
+        });
+
+        if (userData) {
+          const currentBranchUser = userData.currentBranch;
+          if (userData.branchIds.length > 1) {
+            const combined = userData.branchIds.map((id, index) => ({
+              id,
+              name: userData.branchNames[index]
+            }));
+            setBranches(combined);
+            setCurrentBranch(currentBranchUser);
           } else {
-            setBranches([{ id: 1, name: userData.branchNames[0] }]);
-            setCurrentBranch(userData.branchIds[0]);
+            if (userData.branchIds[0] == "*") {
+              const branchRef = query(
+                collection(db, 'branches'),
+                where('schoolId', '==', userData.schoolId)
+              )
+              const branchSnap = await getDocs(branchRef);
+              setBranches(branchSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+              setCurrentBranch(userData.currentBranch);
+            } else {
+              setBranches([{ id: userData.branchIds[0], name: userData.branchNames[0] }]);
+              setCurrentBranch(userData.branchIds[0]);
+            }
           }
         }
+      } catch (error) {
+        console.error("AUTH SYNC ERROR:", error);
+      } finally {
+        setLoading(false);
+        setIsLoaded(true);
       }
-      setLoading(false);
-      setIsLoaded(true);
     });
 
     return () => unsub();

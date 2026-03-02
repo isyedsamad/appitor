@@ -136,7 +136,7 @@ export default function EnquiryManagementPage() {
     } finally {
       setLoading(false);
     }
-  }  
+  }
 
   async function addFollowUp() {
     if (!followUp.remark || !followUp.nextFollowUpDate) {
@@ -169,7 +169,7 @@ export default function EnquiryManagementPage() {
         branch,
         enquiryId: selected.id,
       });
-  
+
       sessionStorage.setItem(
         "fromEnquiry",
         JSON.stringify({
@@ -178,12 +178,12 @@ export default function EnquiryManagementPage() {
           classInterested: selected.classInterested,
         })
       );
-  
+
       router.push(`/school/${schoolUser.schoolId}/admissions/new`);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed");
     }
-  }  
+  }
 
   function isOverdue(e) {
     if (e.status !== "FOLLOW_UP") return false;
@@ -200,7 +200,7 @@ export default function EnquiryManagementPage() {
   }, [sessionId]);
 
   return (
-    <RequirePermission permission="admission.manage">
+    <RequirePermission permission="admission.enquiry.view">
       <div className="space-y-6">
 
         <div className="flex flex-col gap-3 md:flex-row justify-between items-center">
@@ -327,7 +327,7 @@ export default function EnquiryManagementPage() {
                             </p>
                             {isLate && (
                               <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full
-                              ${theme == 'light' ? 'bg-red-100 text-red-600' :  'text-red-600 bg-red-950'}`}>
+                              ${theme == 'light' ? 'bg-red-100 text-red-600' : 'text-red-600 bg-red-950'}`}>
                                 <AlertTriangle size={12} />
                                 Overdue
                               </span>

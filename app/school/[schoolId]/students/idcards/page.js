@@ -154,7 +154,7 @@ export default function IDCardsPage() {
     };
 
     return (
-        <RequirePermission permission="student.view">
+        <RequirePermission permission="student.idcard.view">
             <div className="space-y-6 pb-20 text-sm" style={containerStyle}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
                     <div className="flex items-center gap-4">

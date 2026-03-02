@@ -64,7 +64,7 @@ export default function FeeTemplatesPage() {
     setLoading(false);
   };
   useEffect(() => {
-    if(branch && schoolUser) fetchData();
+    if (branch && schoolUser) fetchData();
   }, [branch, schoolUser]);
   function validateItems(items) {
     for (const element of items) {
@@ -104,7 +104,7 @@ export default function FeeTemplatesPage() {
       }
       resetPopup();
       fetchData();
-    } catch(err) {
+    } catch (err) {
       toast.error('Failed: ' + err.response.data.message);
     } finally {
       setLoading(false);
@@ -125,7 +125,7 @@ export default function FeeTemplatesPage() {
     0
   );
   return (
-    <RequirePermission permission="fee.manage">
+    <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="flex items-center gap-3">
@@ -188,22 +188,22 @@ export default function FeeTemplatesPage() {
                   <span>₹ {t.items.reduce((s, i) => s + Number(i.amount), 0)}</span>
                 </div>
                 <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    setEditing(t);
-                    setForm({
-                      name: t.name,
-                      className: t.className,
-                      section: t.section || "",
-                      academicYear: t.academicYear,
-                    });
-                    setItems(t.items);
-                    setOpen(true);
-                  }}
-                  className="action-btn font-medium text-xs mt-2 text-(--status-l-text)"
-                >
-                  Edit Fee Template
-                </button>
+                  <button
+                    onClick={() => {
+                      setEditing(t);
+                      setForm({
+                        name: t.name,
+                        className: t.className,
+                        section: t.section || "",
+                        academicYear: t.academicYear,
+                      });
+                      setItems(t.items);
+                      setOpen(true);
+                    }}
+                    className="action-btn font-medium text-xs mt-2 text-(--status-l-text)"
+                  >
+                    Edit Fee Template
+                  </button>
                 </div>
               </div>
             </div>

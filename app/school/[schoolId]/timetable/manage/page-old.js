@@ -164,13 +164,13 @@ export default function EditTimetablePage() {
       [day]: prev[day].map(p =>
         p.period === period
           ? {
-              ...p,
-              entries: p.entries.map((e, i) =>
-                i === index
-                  ? { subjectId: mapping.subjectId, teacherId: mapping.teacherId }
-                  : e
-              ),
-            }
+            ...p,
+            entries: p.entries.map((e, i) =>
+              i === index
+                ? { subjectId: mapping.subjectId, teacherId: mapping.teacherId }
+                : e
+            ),
+          }
           : p
       ),
     }));
@@ -202,7 +202,7 @@ export default function EditTimetablePage() {
   /* ---------------- UI ---------------- */
 
   return (
-    <RequirePermission permission="timetable.edit">
+    <RequirePermission permission="timetable.edit.view">
       <div className="space-y-4">
 
         {/* HEADER */}
@@ -267,10 +267,9 @@ export default function EditTimetablePage() {
                       group relative rounded-xl border cursor-pointer
                       bg-(--bg-card)
                       transition-all duration-200
-                      ${
-                        replaceTarget
-                          ? "border-(--primary) ring-1 ring-(--primary-soft)"
-                          : "border-(--border) hover:border-(--primary)"
+                      ${replaceTarget
+                        ? "border-(--primary) ring-1 ring-(--primary-soft)"
+                        : "border-(--border) hover:border-(--primary)"
                       }
                       hover:shadow-md
                     `}

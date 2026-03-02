@@ -152,7 +152,7 @@ export default function RefundPage() {
     }
   };
   return (
-    <RequirePermission permission="fee.manage">
+    <RequirePermission permission="fee.operations.view">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">

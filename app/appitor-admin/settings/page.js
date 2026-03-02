@@ -19,19 +19,19 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-        const data = await fetchSystemSettings();
-        setSettings({
-            ...DEFAULT_SYSTEM_SETTINGS,
-            ...data,
-            auth: {
-                ...DEFAULT_SYSTEM_SETTINGS.auth,
-                ...(data?.auth || {}),
-            },
-            communication: {
-                ...DEFAULT_SYSTEM_SETTINGS.communication,
-                ...(data?.communication || {}),
-            },
-        })
+      const data = await fetchSystemSettings();
+      setSettings({
+        ...DEFAULT_SYSTEM_SETTINGS,
+        ...data,
+        auth: {
+          ...DEFAULT_SYSTEM_SETTINGS.auth,
+          ...(data?.auth || {}),
+        },
+        communication: {
+          ...DEFAULT_SYSTEM_SETTINGS.communication,
+          ...(data?.communication || {}),
+        },
+      })
     }
     load();
   }, []);
@@ -61,6 +61,7 @@ export default function SettingsPage() {
       <Section icon={Settings} title="General">
         <Input
           label="Application Name"
+          placeholder="e.g. Appitor Admin"
           value={settings.appName}
           onChange={(e) =>
             setSettings({ ...settings, appName: e.target.value })
@@ -69,6 +70,7 @@ export default function SettingsPage() {
 
         <Input
           label="Support Email"
+          placeholder="e.g. support@appitor.com"
           value={settings.supportEmail}
           onChange={(e) =>
             setSettings({ ...settings, supportEmail: e.target.value })

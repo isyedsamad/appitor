@@ -75,7 +75,7 @@ export default function FinanceReportsPage() {
   };
 
   const loadSession = async () => {
-    if(sessionId == '') return;
+    if (sessionId == '') return;
     setLoading(true);
     try {
       const session = sessionList.find(s => s.id === sessionId);
@@ -119,7 +119,7 @@ export default function FinanceReportsPage() {
       );
       setSummary(totals);
       setTrend(rows);
-    } catch(err) {
+    } catch (err) {
       console.log(err);
       toast.error("Failed to Load Session Report");
     } finally {
@@ -129,17 +129,17 @@ export default function FinanceReportsPage() {
 
   const refundRatio = summary
     ? mode == 'month' ? ((summary.refunds.total / summary.collections.total) * 100).toFixed(2)
-    : ((summary.refunds / summary.collections) * 100).toFixed(2)
+      : ((summary.refunds / summary.collections) * 100).toFixed(2)
     : 0;
 
   useEffect(() => {
     setPieData(trend[0]?.collections
       ? Object.entries(trend[0].collections)
-          .filter(([k]) => k !== "total")
-          .map(([k, v]) => ({ name: k, value: v }))
+        .filter(([k]) => k !== "total")
+        .map(([k, v]) => ({ name: k, value: v }))
       : []);
   }, [trend])
-  
+
   const bestMonth = trend.reduce(
     (a, b) => (b.net > a.net ? b : a),
     trend[0] || {}
@@ -150,7 +150,7 @@ export default function FinanceReportsPage() {
   );
 
   return (
-    <RequirePermission permission="fee.view">
+    <RequirePermission permission="fee.reports.view">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
@@ -208,7 +208,7 @@ export default function FinanceReportsPage() {
                 ))}
               </select>
               <button onClick={loadSession} className="btn-primary">
-              <Search size={16} /> Analyze
+                <Search size={16} /> Analyze
               </button>
             </>
           )}
@@ -248,8 +248,8 @@ export default function FinanceReportsPage() {
             <ChartCard title="Payment Mode Dependency">
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie 
-                    data={pieData} 
+                  <Pie
+                    data={pieData}
                     dataKey="value"
                     nameKey="name"
                     innerRadius={70}

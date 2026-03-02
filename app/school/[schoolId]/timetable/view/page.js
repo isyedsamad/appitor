@@ -217,7 +217,7 @@ export default function ViewTimetablePage() {
   };
 
   return (
-    <RequirePermission permission="timetable.view">
+    <RequirePermission permission="timetable.view.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden group">
           <div className="flex items-center gap-3 relative z-10">

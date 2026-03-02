@@ -24,11 +24,11 @@ export default function ClassesPage() {
   const [subjectData, setSubjectData] = useState(null);
   const [sectionData, setSectionData] = useState(null);
   useEffect(() => {
-    if(isLoaded && schoolUser && branch) {
-        setSchoolId(schoolUser.schoolId);
-        setBranchId(branch);
-        setLoading(true);
-        fetchSubjects(schoolUser.schoolId, branch)
+    if (isLoaded && schoolUser && branch) {
+      setSchoolId(schoolUser.schoolId);
+      setBranchId(branch);
+      setLoading(true);
+      fetchSubjects(schoolUser.schoolId, branch)
     }
   }, [schoolUser, isLoaded, branch]);
   async function fetchSubjects(currentSchoolId, currentBranch) {
@@ -42,7 +42,7 @@ export default function ClassesPage() {
     );
     const snap = await getDoc(doc(ref, "branch_subjects"));
     setLoading(false);
-    if(!snap.exists() || !snap.data().subjects || snap.data().subjects.length == 0) {
+    if (!snap.exists() || !snap.data().subjects || snap.data().subjects.length == 0) {
       setSubjects([]);
       return;
     }
@@ -50,7 +50,7 @@ export default function ClassesPage() {
   }
   const deleteSubject = async (subjectId) => {
     const sure = confirm('do you really want to delete the subject?');
-    if(!sure) return;
+    if (!sure) return;
     setLoading(true);
     try {
       await secureAxios.delete('/api/school/academics/subjects', {
@@ -68,7 +68,7 @@ export default function ClassesPage() {
     }
   }
   return (
-    <RequirePermission permission="academic.manage">
+    <RequirePermission permission="academic.subjects.view">
       <div className="space-y-4">
         <header className="flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -98,7 +98,7 @@ export default function ClassesPage() {
               <div className="flex justify-between items-center">
                 <h2 className="font-semibold">
                   {cls.name}
-                  </h2>
+                </h2>
                 <div className="flex gap-1">
                   <div onClick={() => {
                     setSubjectData(cls);

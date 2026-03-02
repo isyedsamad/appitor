@@ -11,10 +11,11 @@ import ClassModal from "@/lib/school/academics/ClassModal";
 import SectionModal from "@/lib/school/academics/SectionModal";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function ClassesPage() {
   const { schoolUser, loading, setLoading, isLoaded, loadClasses, classData } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const [classes, setClasses] = useState([]);
   const [openClassModal, setOpenClassModal] = useState(false);
   const [openSectionModal, setOpenSectionModal] = useState(null);
@@ -23,14 +24,14 @@ export default function ClassesPage() {
   const [classDataPage, setClassDataPage] = useState(null);
   const [sectionData, setSectionData] = useState(null);
   useEffect(() => {
-    if(isLoaded && schoolUser && branch) {
-        setSchoolId(schoolUser.schoolId);
-        setBranchId(branch);
-        // fetchClasses(schoolUser.schoolId, branch)
+    if (isLoaded && schoolUser && branch) {
+      setSchoolId(schoolUser.schoolId);
+      setBranchId(branch);
+      // fetchClasses(schoolUser.schoolId, branch)
     }
   }, [schoolUser, isLoaded, branch]);
   useEffect(() => {
-    if(classData) setClasses(classData)
+    if (classData) setClasses(classData)
   }, [classData])
   async function fetchClasses(currentSchoolId, currentBranch) {
     await loadClasses(currentBranch);
@@ -54,7 +55,7 @@ export default function ClassesPage() {
   }
   const deleteSection = async (secId, classId) => {
     const sure = confirm('do you really want to delete the section?');
-    if(!sure) return;
+    if (!sure) return;
     setLoading(true);
     try {
       await secureAxios.delete('/api/school/academics/sections', {
@@ -73,7 +74,7 @@ export default function ClassesPage() {
   }
   const deleteClass = async (classId) => {
     const sure = confirm('do you really want to delete the class?');
-    if(!sure) return;
+    if (!sure) return;
     setLoading(true);
     try {
       await secureAxios.delete('/api/school/academics/classes', {
@@ -90,8 +91,11 @@ export default function ClassesPage() {
       setLoading(false);
     }
   }
+  const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
+  const editable = canManage(schoolUser, "academic.classes", currentPlan);
+
   return (
-    <RequirePermission permission="academic.manage">
+    <RequirePermission permission="academic.classes.view">
       <div className="space-y-4">
         <header className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
           <div className="flex items-center gap-3">
@@ -105,12 +109,14 @@ export default function ClassesPage() {
               </p>
             </div>
           </div>
-          <button
-            className="btn-primary flex gap-2"
-            onClick={() => setOpenClassModal(true)}
-          >
-            <Plus size={16} /> Add Class
-          </button>
+          {editable && (
+            <button
+              className="btn-primary flex gap-2"
+              onClick={() => setOpenClassModal(true)}
+            >
+              <Plus size={16} /> Add Class
+            </button>
+          )}
         </header>
         {(isLoaded && !loading && classes.length == 0) && (
           <p className="text-(--text-muted)">No classes found!</p>
@@ -121,20 +127,22 @@ export default function ClassesPage() {
               <div className="flex justify-between items-center">
                 <h2 className="font-semibold">
                   {cls.name.toLowerCase().includes('class') ? '' : 'Class: '}{cls.name}
-                  </h2>
-                <div className="flex gap-1">
-                  <div onClick={() => {
-                    setClassDataPage(cls);
-                    setOpenClassModal(true);
-                  }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
-                    <Pencil size={16} />
+                </h2>
+                {editable && (
+                  <div className="flex gap-1">
+                    <div onClick={() => {
+                      setClassDataPage(cls);
+                      setOpenClassModal(true);
+                    }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                      <Pencil size={16} />
+                    </div>
+                    <div onClick={() => {
+                      deleteClass(cls.id);
+                    }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                      <Trash2 size={16} />
+                    </div>
                   </div>
-                  <div onClick={() => {
-                    deleteClass(cls.id);
-                  }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
-                    <Trash2 size={16} />
-                  </div>
-                </div>
+                )}
               </div>
               {cls.sections?.map(sec => (
                 <div
@@ -142,35 +150,39 @@ export default function ClassesPage() {
                   className="flex justify-between items-center text-sm bg-(--bg)/50 px-3 py-2 rounded"
                 >
                   <div className="flex flex-col">
-                  <span className="font-semibold">
-                    Section: {sec.name}
-                  </span>
-                  <span className="text-(--text-muted) text-xs font-medium">
-                    Capacity - {sec.capacity}
-                  </span>
+                    <span className="font-semibold">
+                      Section: {sec.name}
+                    </span>
+                    <span className="text-(--text-muted) text-xs font-medium">
+                      Capacity - {sec.capacity}
+                    </span>
                   </div>
-                  <div className="flex gap-1">
-                  <div onClick={() => {
-                    setSectionData(sec);
-                    setOpenSectionModal(cls);
-                  }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
-                    <Pencil size={14} />
-                  </div>
-                  <div onClick={() => {
-                    deleteSection(sec.id, cls.id);
-                  }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
-                    <Trash2 size={14} />
-                  </div>
-                  </div>
+                  {editable && (
+                    <div className="flex gap-1">
+                      <div onClick={() => {
+                        setSectionData(sec);
+                        setOpenSectionModal(cls);
+                      }} className="hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                        <Pencil size={14} />
+                      </div>
+                      <div onClick={() => {
+                        deleteSection(sec.id, cls.id);
+                      }} className="hover:text-red-500 cursor-pointer p-2 rounded-md bg-(--bg)">
+                        <Trash2 size={14} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
 
-              <button
-                className="text-sm font-medium hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)"
-                onClick={() => setOpenSectionModal(cls)}
-              >
-                + Add Section
-              </button>
+              {editable && (
+                <button
+                  className="text-sm font-medium hover:text-yellow-500 cursor-pointer p-2 rounded-md bg-(--bg)"
+                  onClick={() => setOpenSectionModal(cls)}
+                >
+                  + Add Section
+                </button>
+              )}
             </div>
           ))}
         </div>

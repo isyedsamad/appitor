@@ -155,7 +155,7 @@ export default function SchoolDashboard() {
   ];
 
   return (
-    <RequirePermission permission="dashboard.view">
+    <RequirePermission permission="dashboard.view" isForAll={true}>
       <div className="space-y-4 pb-10 max-w-full animate-in fade-in duration-700">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -211,7 +211,7 @@ export default function SchoolDashboard() {
               <button
                 key={i}
                 onClick={() => router.push(`/school/${schoolUser.schoolId}${action.path}`)}
-                className={`flex justify-start items-center gap-3 py-3 px-4 bg-(--bg-card) border border-(--border) rounded-xl hover:shadow-sm transition-all group`}
+                className={`flex justify-start items-center gap-3 py-3 px-4 bg-(--bg-card) border border-(--border) rounded-xl hover:shadow-sm transition-all group hover:-translate-y-0.5`}
               >
                 <div className={`w-8 h-8 rounded-lg bg-(--status-${action.color}-bg) text-(--status-${action.color}-text) flex items-center justify-center shrink-0`}>
                   <action.icon size={16} />
@@ -423,8 +423,8 @@ function VitalCard({ label, value, icon: Icon }) {
   return (
     <div className="bg-(--bg-card) px-6 py-3 rounded-xl border border-(--border) shadow-sm flex items-center justify-between hover:shadow-md transition-all">
       <div>
-        <p className="text-xs font-semibold text-(--text-muted) uppercase">{label}</p>
-        <h3 className="text-2xl font-semibold mt-1 text-(--text)">{value}</h3>
+        <p className="text-xs font-bold text-(--text-muted) uppercase">{label}</p>
+        <h3 className="text-2xl font-bold mt-1 text-(--text)">{value}</h3>
       </div>
       <div className="w-11 h-11 rounded-xl bg-(--bg) flex items-center justify-center text-(--text-muted) border border-(--border)">
         <Icon size={20} />

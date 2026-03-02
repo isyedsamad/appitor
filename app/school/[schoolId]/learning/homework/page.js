@@ -324,7 +324,7 @@ export default function HomeworkPage() {
   }
 
   return (
-    <RequirePermission permission="learning.manage">
+    <RequirePermission permission="learning.homework.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="flex items-center gap-3">

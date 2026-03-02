@@ -5,7 +5,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "leavecomplaint.create");
+    const user = await verifyUser(req, "leave.manage");
     const body = await req.json();
     const { type, branch, session, reason, from, to, days, appId } = body;
     if (!type || !branch || !session || !reason || !from || !days || !appId) {
