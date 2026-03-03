@@ -40,7 +40,7 @@ export async function POST(req) {
       const schoolData = schoolSnap.data();
       const nextCounter = (branchData.employeeCounter || 0) + 1;
 
-      employeeId = `${schoolData.code}-${branchData.appitorCode}E${nextCounter}`;
+      employeeId = `${schoolData.code}-${branchData.appitorCode}E${1000 + nextCounter}`;
 
       const authEmail = `${employeeId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
       const authUser = await adminAuth.createUser({
@@ -99,9 +99,7 @@ export async function POST(req) {
         password: generatedPassword,
       });
 
-      tx.update(branchRef, {
-        employeeCounter: nextCounter,
-      });
+      await incrementEmployeeCount(tx, adminDb, user.schoolId, primaryBranch, 1);
 
       const metaEntry = {
         uid,
@@ -128,10 +126,6 @@ export async function POST(req) {
           count: employees.length,
           updatedAt: FieldValue.serverTimestamp(),
         });
-      }
-
-      if (baseEmployeeData.status === "active") {
-        await incrementEmployeeCount(tx, adminDb, user.schoolId, primaryBranch, 1);
       }
     });
 
