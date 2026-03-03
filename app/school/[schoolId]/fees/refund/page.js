@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Receipt, User, Calendar, Wallet, RotateCcw, X, ShieldCheck } from "lucide-react";
+import { Search, Receipt, User, Calendar, Wallet, RotateCcw, X, ShieldCheck, Hash } from "lucide-react";
 import { collection, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -9,10 +9,11 @@ import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
+import { formatDateSlash } from "@/lib/dateUtils";
 
 export default function RefundPage() {
   const { schoolUser, setLoading, currentSession, sessionList } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const [sessionId, setSessionId] = useState(null);
   const [searchType, setSearchType] = useState("student");
   const [queryText, setQueryText] = useState("");
@@ -21,6 +22,13 @@ export default function RefundPage() {
   const [refundMap, setRefundMap] = useState({});
   const [refundRemark, setRefundRemark] = useState('');
   const [payType, setPayType] = useState('cash');
+  useEffect(() => {
+    if (searchType == "receipt") {
+      setQueryText("RCPT/" + branchInfo?.branchCode + "/" + currentSession + "/");
+    } else {
+      setQueryText("");
+    }
+  }, [searchType]);
   useEffect(() => {
     if (schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
@@ -155,7 +163,7 @@ export default function RefundPage() {
     <RequirePermission permission="fee.operations.view">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <div className="p-3 rounded-lg bg-(--primary-soft) text-(--primary) shadow-sm">
             <RotateCcw size={20} />
           </div>
           <div>
@@ -171,19 +179,19 @@ export default function RefundPage() {
               <button
                 key={t}
                 onClick={() => setSearchType(t)}
-                className={`px-4 py-2 text-sm font-medium rounded-none border border-(--border) ${searchType === t
-                  ? "bg-(--primary) text-white"
-                  : "bg-(--bg-card)"
+                className={`px-4 py-2 text-sm font-medium rounded-none border ${searchType === t
+                  ? "bg-(--primary) text-white border-(--primary)"
+                  : "bg-(--bg-card) border-(--border)"
                   }
                   ${t === "receipt" ? "rounded-r-md" : "rounded-l-md"}`}
               >
-                {t === "receipt" ? "Receipt No" : "Student App ID"}
+                {t === "receipt" ? (<><Hash size={16} /> Receipt No</>) : (<><User size={16} /> App ID</>)}
               </button>
             ))}
           </div>
-          <div className="flex flex-1 flex-col sm:flex-row items-start sm:items-end gap-3">
+          <div className={`grid gap-3 items-end ${searchType == 'receipt' ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-5'}`}>
             {searchType != 'receipt' && (
-              <div className="flex flex-col">
+              <div>
                 <p className="text-sm text-(--text-muted) font-medium">Session</p>
                 <select
                   className="input max-w-xs"
@@ -202,22 +210,22 @@ export default function RefundPage() {
                 </select>
               </div>
             )}
-            <div className="flex flex-col">
+            <div>
               <p className="text-sm text-(--text-muted) font-medium">{searchType == 'receipt' ? 'Receipt No' : 'Student App ID'}</p>
               <input
-                className="input flex-1"
+                className={`input flex-1`}
                 placeholder={
                   searchType === "receipt"
-                    ? "i.e. RCPT/ISM/2025-26/001928"
-                    : "i.e. A25000001"
+                    ? `i.e. RCPT/${branchInfo?.branchCode || 'BRN'}/${currentSession || '2025-26'}/001928`
+                    : "i.e. A250001"
                 }
                 value={queryText}
-                onChange={e => setQueryText(e.target.value)}
+                onChange={e => setQueryText(e.target.value.toUpperCase())}
                 onKeyDown={e => e.key === "Enter" && searchPayments()}
               />
             </div>
-            <button onClick={searchPayments} className="btn-primary py-3">
-              <Search size={18} />
+            <button onClick={searchPayments} className="btn-primary">
+              <Search size={18} /> Search
             </button>
           </div>
         </div>
@@ -246,17 +254,17 @@ export default function RefundPage() {
                 ) : (
                   rows.map(r => (
                     <tr key={r.id} className="border-t border-(--border)">
-                      <td className="px-4 py-3">
-                        {r.createdAt?.toDate().toLocaleString()}
+                      <td className="px-4 py-3 font-semibold">
+                        {formatDateSlash(r.createdAt?.toDate())}
                       </td>
-                      <td className="px-4 py-3">{r.receiptNo}</td>
+                      <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
                       <td className="px-4 py-3 capitalize font-medium">{r.paymentMode}</td>
                       <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
                         ₹ {r.paidAmount}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
-                          className="btn-outline uppercase text-sm font-semibold"
+                          className="btn-outline text-sm font-semibold bg-(--status-a-bg) text-(--status-a-text) border border-(--status-a-border) hover:opacity-70"
                           onClick={() => setOpenPayment(r)}
                         >
                           Refund
@@ -295,18 +303,18 @@ export default function RefundPage() {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 md:p-6">
                   <div className="md:col-span-4 space-y-4">
-                    <div className="border border-(--border) rounded-xl p-4">
-                      <div className="text-xs text-(--text-muted) mb-1">
+                    <div className="border border-(--border) bg-(--bg) rounded-xl p-4">
+                      <div className="text-xs font-semibold text-(--text-muted) mb-1">
                         Collected By
                       </div>
                       <div className="flex items-center gap-2 font-medium">
-                        <User size={14} />
+                        {/* <User size={14} /> */}
                         {openPayment.collectedBy?.name}
                       </div>
-                      <div className="text-xs text-(--text-muted)">
-                        {openPayment.collectedBy?.role}
+                      <div className="text-xs font-semibold text-(--text-muted)">
+                        {openPayment.collectedBy?.role || 'Admin'}
                       </div>
                     </div>
                     <div className="border border-(--border) rounded-xl p-4 space-y-2 text-sm">
@@ -329,7 +337,7 @@ export default function RefundPage() {
                       <div className="flex justify-between">
                         <span className="text-(--text-muted)">Collected At</span>
                         <span>
-                          {openPayment.createdAt.toDate().toLocaleString()}
+                          {formatDateSlash(openPayment.createdAt.toDate())}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -341,7 +349,7 @@ export default function RefundPage() {
                     </div>
                     <div className="border border-(--border) rounded-xl p-4 flex flex-col gap-3">
                       <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium text-(--text-muted)">Payment Mode</p>
+                        <p className="text-sm font-medium text-(--status-a-text)">Refund Payment Mode</p>
                         <select
                           className="input"
                           value={payType}
@@ -356,7 +364,7 @@ export default function RefundPage() {
                         </select>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <div className="text-sm font-medium text-(--text-muted)">
+                        <div className="text-sm font-medium text-(--status-a-text)">
                           Refund Remark
                         </div>
                         <textarea
@@ -377,68 +385,70 @@ export default function RefundPage() {
                       return (
                         <div
                           key={periodOrId}
-                          className="border border-(--border) rounded-xl p-4 space-y-3"
+                          className="border border-(--border) rounded-xl space-y-3"
                         >
-                          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-1">
-                            <div className="font-semibold text-sm">
+                          <div className="flex bg-(--bg) border-b border-(--border) rounded-t-xl py-3 px-4 flex-col md:flex-row md:justify-between md:items-center gap-1">
+                            <div className="font-semibold text-(--primary) text-md">
                               {item.type === "month" ? `Fee Period: ${item.period}` : `Flexible Fee: ${item.label}`}
                             </div>
-                            <div className="text-xs text-(--text-muted)">
-                              Paid on {item.paidAt.toDate().toLocaleDateString()}
+                            <div className="text-xs font-medium text-(--text-muted)">
+                              Paid on {formatDateSlash(item.paidAt.toDate())}
                             </div>
                           </div>
-                          {item.type === "month" && item.headsSnapshot && (
-                            <div className="space-y-1 text-sm">
-                              {item.headsSnapshot.map(h => (
-                                <div
-                                  key={h.headId}
-                                  className="flex justify-between"
-                                >
-                                  <span className="text-(--text-muted)">
-                                    {h.headName}
-                                  </span>
-                                  <span className="font-medium">
-                                    ₹ {h.amount}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div className="flex justify-between pt-2 border-t border-(--border) font-medium text-xs">
-                            <span className="text-(--text-muted)">Total Paid</span>
-                            <span>₹ {item.amount}</span>
-                          </div>
-                          <div className="flex justify-between font-medium text-xs pb-2 border-b border-(--border)">
-                            <span className="text-(--text-muted)">Already Refunded</span>
-                            <span className={item.refundedAmount > 0 ? "text-red-500 font-semibold" : ""}>₹ {item.refundedAmount || 0}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            {isFullyRefunded ? (
-                              <div className="px-3 py-2 rounded-lg bg-(--status-p-bg) border border-(--status-p-border) text-center text-(--status-p-text) text-xs font-semibold">
-                                ✓ Fully Refunded
+                          <div className="px-5 pb-4 space-y-2">
+                            {item.type === "month" && item.headsSnapshot && (
+                              <div className="space-y-1 text-xs">
+                                {item.headsSnapshot.map(h => (
+                                  <div
+                                    key={h.headId}
+                                    className="flex justify-between"
+                                  >
+                                    <span className="font-medium text-(--text-muted)">
+                                      {h.headName}
+                                    </span>
+                                    <span className="font-medium">
+                                      ₹ {h.amount}
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ) : (
-                              <>
-                                <p className="text-xs font-semibold text-(--text-muted) mb-1">Refund Amount</p>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={maxRefundable}
-                                  value={refundMap[periodOrId] || ""}
-                                  onChange={(e) => {
-                                    let val = Number(e.target.value || 0);
-                                    if (val < 0) val = 0;
-                                    if (val > maxRefundable) val = maxRefundable;
-                                    setRefundMap(prev => ({
-                                      ...prev,
-                                      [periodOrId]: val || ""
-                                    }));
-                                  }}
-                                  className="input w-full"
-                                  placeholder={`Refund amount (max ₹${maxRefundable})`}
-                                />
-                              </>
                             )}
+                            <div className="flex justify-between pt-2 mb-1 border-t border-(--border) font-medium text-sm">
+                              <span className="text-(--text-muted)">Total Paid</span>
+                              <span>₹ {item.amount}</span>
+                            </div>
+                            <div className="flex justify-between font-medium text-sm pb-2 border-b border-(--border)">
+                              <span className="text-(--text-muted)">Already Refunded</span>
+                              <span className={item.refundedAmount > 0 ? "text-red-500 font-semibold" : ""}>₹ {item.refundedAmount || 0}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              {isFullyRefunded ? (
+                                <div className="px-3 py-2 rounded-lg bg-(--status-p-bg) border border-(--status-p-border) text-center text-(--status-p-text) text-xs font-semibold">
+                                  ✓ Fully Refunded
+                                </div>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-semibold text-(--status-a-text) mb-1">Refund Amount</p>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={maxRefundable}
+                                    value={refundMap[periodOrId] || ""}
+                                    onChange={(e) => {
+                                      let val = Number(e.target.value || 0);
+                                      if (val < 0) val = 0;
+                                      if (val > maxRefundable) val = maxRefundable;
+                                      setRefundMap(prev => ({
+                                        ...prev,
+                                        [periodOrId]: val || ""
+                                      }));
+                                    }}
+                                    className="input w-full"
+                                    placeholder={`Refund amount (max ₹${maxRefundable})`}
+                                  />
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )
@@ -458,6 +468,6 @@ export default function RefundPage() {
           </div>
         )}
       </div>
-    </RequirePermission>
+    </RequirePermission >
   );
 }

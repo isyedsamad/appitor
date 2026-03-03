@@ -343,7 +343,7 @@ function StatCard({ label, value, icon: Icon, color }) {
     <div className={`px-5 py-4 rounded-lg border ${colors[color]} flex items-center justify-between bg-(--bg-card)`}>
       <div>
         <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-1">{label}</p>
-        <p className="text-2xl font-bold font-mono tracking-tight">{value > 0 ? value.toString().padStart(2, "0") : "-"}</p>
+        <p className="text-2xl font-bold font-mono tracking-tight">{value == 0 ? "-" : value.toString().padStart(2, "0")}</p>
       </div>
       <div className={`p-2.5 rounded-xl ${colors[color]} border-0`}>
         <Icon size={20} />

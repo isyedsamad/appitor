@@ -42,14 +42,45 @@ export async function POST(req) {
     };
 
     await adminDb.runTransaction(async tx => {
-      const paymentSnap = await tx.get(paymentRef);
-      if (!paymentSnap.exists) throw new Error("PAYMENT_NOT_FOUND");
+      // 1. INITIAL READS
+      const [paymentSnap, summarySnap] = await Promise.all([
+        tx.get(paymentRef),
+        tx.get(summaryRef)
+      ]);
 
-      const summarySnap = await tx.get(summaryRef);
+      if (!paymentSnap.exists) throw new Error("PAYMENT_NOT_FOUND");
       if (!summarySnap.exists) throw new Error("SUMMARY_NOT_FOUND");
 
-      const snapshots = await Promise.all(refs.map(ref => tx.get(ref)));
-      snapshots.forEach((snap, index) => {
+      const paymentData = paymentSnap.data();
+      const paymentItems = paymentData.items || [];
+      const summary = summarySnap.data();
+
+      // Identify which dues docs we need to read
+      const neededDuesInfo = [];
+      const validRefundEntries = Object.entries(refundItems).filter(([_, amount]) => {
+        const val = Number(amount);
+        return !isNaN(val) && val > 0;
+      });
+
+      for (const [itemKey, refundAmount] of validRefundEntries) {
+        const pItem = paymentItems.find(i => (i.type === "month" ? i.period === itemKey : i.id?.toString() === itemKey));
+        if (pItem && pItem.type === "month") {
+          const duesRef = branchRef.collection("fees").doc("dues").collection("items").doc(`${studentId}_${sessionId}_${itemKey}`);
+          neededDuesInfo.push({ itemKey, duesRef, refundAmount: Number(refundAmount) });
+        }
+      }
+
+      // Read book snapshots and dues snapshots
+      const [bookSnapshots, duesSnapshots] = await Promise.all([
+        Promise.all(refs.map(ref => tx.get(ref))),
+        Promise.all(neededDuesInfo.map(info => tx.get(info.duesRef)))
+      ]);
+
+      // 2. LOGIC AND CALCULATIONS
+      let calculatedTotalRefund = 0;
+
+      // Handle books initialization if they don't exist
+      bookSnapshots.forEach((snap, index) => {
         if (!snap.exists) {
           tx.set(refs[index], {
             ...emptyBook,
@@ -58,16 +89,8 @@ export async function POST(req) {
         }
       });
 
-      const paymentData = paymentSnap.data();
-      const paymentItems = paymentData.items || [];
-      const summary = summarySnap.data();
-
-      let calculatedTotalRefund = 0;
-
-      for (const [itemKey, refundAmountRaw] of Object.entries(refundItems)) {
+      for (const [itemKey, refundAmountRaw] of validRefundEntries) {
         const refundAmount = Number(refundAmountRaw);
-        if (isNaN(refundAmount) || refundAmount <= 0) continue;
-
         const pItem = paymentItems.find(i => (i.type === "month" ? i.period === itemKey : i.id?.toString() === itemKey));
 
         if (!pItem) {
@@ -83,17 +106,14 @@ export async function POST(req) {
         calculatedTotalRefund += refundAmount;
 
         if (pItem.type === "month") {
-          const duesRef = branchRef
-            .collection("fees")
-            .doc("dues")
-            .collection("items")
-            .doc(`${studentId}_${sessionId}_${itemKey}`);
+          const duesInfo = neededDuesInfo.find(info => info.itemKey === itemKey);
+          const index = neededDuesInfo.indexOf(duesInfo);
+          const duesSnap = duesSnapshots[index];
 
-          const duesSnap = await tx.get(duesRef);
           if (duesSnap.exists) {
             const dues = duesSnap.data();
             tx.set(
-              duesRef,
+              duesInfo.duesRef,
               {
                 paid: Math.max((dues.paid || 0) - refundAmount, 0),
                 due: (dues.due || 0) + refundAmount,
@@ -105,13 +125,11 @@ export async function POST(req) {
           }
 
           if (summary.months?.[itemKey]) {
-            summary.months[itemKey].paid =
-              Math.max(summary.months[itemKey].paid - refundAmount, 0);
+            summary.months[itemKey].paid = Math.max(summary.months[itemKey].paid - refundAmount, 0);
             summary.months[itemKey].status = "due";
             summary.months[itemKey].lastRefundAt = nowTs;
           }
-        }
-        else if (pItem.type === "flexible") {
+        } else if (pItem.type === "flexible") {
           const flexIdx = summary.flexible?.findIndex(f => f.id?.toString() === itemKey);
           if (flexIdx !== undefined && flexIdx !== -1 && summary.flexible) {
             summary.flexible[flexIdx].refundedAmount = (summary.flexible[flexIdx].refundedAmount || 0) + refundAmount;
@@ -125,12 +143,14 @@ export async function POST(req) {
         throw new Error("INVALID_REFUND_AMOUNT");
       }
 
+      // Final summary updates
       const totalMonthFees = Object.values(summary.months || {}).reduce((s, m) => s + m.total, 0);
       const totalFlexFees = (summary.flexible || []).reduce((s, f) => s + f.amount, 0);
       summary.totals.totalFee = totalMonthFees + totalFlexFees;
       summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid;
       summary.updatedAt = nowServer;
 
+      // 3. WRITES
       for (const ref of refs) {
         tx.update(ref, {
           "refunds.total": FieldValue.increment(calculatedTotalRefund),

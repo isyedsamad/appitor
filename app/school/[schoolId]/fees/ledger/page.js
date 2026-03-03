@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, BookOpen, Calendar, User, ArrowDown, RotateCcw, IndianRupee, Download } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Search, BookOpen, Calendar, User, ArrowDown, RotateCcw, Download, FileText, X, Info, CreditCard, Wallet as WalletIcon, CheckCircle2, AlertTriangle, Filter } from "lucide-react";
 import { collection, query, where, orderBy, limit, startAfter, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -9,58 +9,63 @@ import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
 import { exportLedgerToExcel } from "@/lib/exports/fees/exportLedgerExcel";
+import { generateLedgerPDF } from "@/lib/exports/fees/exportLedgerPdf";
+import { formatDateSlash } from "@/lib/dateUtils";
 
-const PAGE_SIZE = 5;
-const toDayRange = (date) => {
-  const d = new Date(date);
-  const start = new Date(d.setHours(0, 0, 0, 0));
-  const end = new Date(d.setHours(23, 59, 59, 999));
-  return {
-    start: Timestamp.fromDate(start),
-    end: Timestamp.fromDate(end),
-  };
-};
+const PAGE_SIZE = 50;
 
 export default function FeeLedgerPage() {
-  const { schoolUser, setLoading, currentSession, sessionList } = useSchool();
-  const { branch } = useBranch();
+  const { schoolUser, setLoading, currentSession, sessionList, schoolInfo } = useSchool();
+  const { branch, branchInfo } = useBranch();
   const [sessionId, setSessionId] = useState(null);
   const [searchType, setSearchType] = useState("date");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [queryText, setQueryText] = useState("");
   const [rows, setRows] = useState([]);
   const [lastDoc, setLastDoc] = useState(null);
   const [hasMore, setHasMore] = useState(false);
+
+  const [filterType, setFilterType] = useState("all");
+  const [filterMode, setFilterMode] = useState("all");
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+
   useEffect(() => {
-    if (schoolUser && sessionList && currentSession) {
-      setSessionId(currentSession);
-    } else {
-      return;
-    }
-  }, [schoolUser, sessionList, currentSession])
+    if (currentSession) setSessionId(currentSession);
+  }, [currentSession]);
+
   const searchLedger = async (loadMore = false) => {
-    if (!queryText) {
-      toast.error("Enter search value");
+    if (searchType === "date") {
+      if (!startDate || !endDate) {
+        toast.error("Please select both dates");
+        return;
+      }
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      const diffTime = Math.abs(e - s);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays > 2) {
+        toast.error("Date range cannot exceed 3 days");
+        return;
+      }
+    } else if (!queryText) {
+      toast.error("Enter App ID");
       return;
     }
+
     setLoading(true);
     try {
-      const baseRef = collection(
-        db,
-        "schools",
-        schoolUser.schoolId,
-        "branches",
-        branch,
-        "fees",
-        "ledger",
-        "items"
-      );
+      const baseRef = collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "ledger", "items");
       let q;
+
       if (searchType === "date") {
-        const { start, end } = toDayRange(queryText);
+        const startTs = Timestamp.fromDate(new Date(new Date(startDate).setHours(0, 0, 0, 0)));
+        const endTs = Timestamp.fromDate(new Date(new Date(endDate).setHours(23, 59, 59, 999)));
+
         q = query(
           baseRef,
-          where("createdAt", ">=", start),
-          where("createdAt", "<=", end),
+          where("createdAt", ">=", startTs),
+          where("createdAt", "<=", endTs),
           orderBy("createdAt", "desc"),
           ...(loadMore && lastDoc ? [startAfter(lastDoc)] : []),
           limit(PAGE_SIZE)
@@ -69,11 +74,13 @@ export default function FeeLedgerPage() {
         q = query(
           baseRef,
           where("appId", "==", queryText.toUpperCase()),
+          where("sessionId", "==", sessionId),
           orderBy("createdAt", "desc"),
           ...(loadMore && lastDoc ? [startAfter(lastDoc)] : []),
           limit(PAGE_SIZE)
         );
       }
+
       const snap = await getDocs(q);
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setRows(loadMore ? [...rows, ...data] : data);
@@ -87,174 +94,268 @@ export default function FeeLedgerPage() {
     }
   };
 
+  const filteredRows = useMemo(() => {
+    return rows.filter(r => {
+      const matchType = filterType === "all" || r.type === filterType;
+      const matchMode = filterMode === "all" || r.paymentMode === filterMode;
+      return matchType && matchMode;
+    });
+  }, [rows, filterType, filterMode]);
+
+  const summary = useMemo(() => {
+    return filteredRows.reduce((acc, r) => {
+      if (r.type === "refund") {
+        acc.totalRefund += Math.abs(r.amount);
+      } else {
+        acc.totalPaid += r.amount;
+      }
+      acc.netBalance = acc.totalPaid - acc.totalRefund;
+      return acc;
+    }, { totalPaid: 0, totalRefund: 0, netBalance: 0 });
+  }, [filteredRows]);
+
   return (
     <RequirePermission permission="fee.reports.view">
-      <div className="max-w-7xl mx-auto space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <BookOpen size={20} />
+      <div className="max-w-7xl mx-auto space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 shadow-sm rounded-lg bg-(--primary-soft) text-(--primary)">
+              <BookOpen size={20} />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">Fee Ledger</h1>
+              <p className="text-sm text-(--text-muted)">{branchInfo?.name} · Transaction Insights</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold">Fee Ledger</h1>
-            <p className="text-sm text-(--text-muted)">
-              Complete payment & refund history
-            </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => generateLedgerPDF({ branchInfo, schoolInfo, transactions: filteredRows, filters: { startDate, endDate }, summary })}
+              disabled={!filteredRows.length}
+              className="btn-primary flex gap-2"
+            >
+              <FileText size={16} /> PDF Report
+            </button>
+            <button
+              onClick={() => exportLedgerToExcel({ rows: filteredRows, schoolName: schoolUser.schoolName, branchName: branchInfo?.name, fromLabel: searchType === "date" ? `${startDate} to ${endDate}` : queryText })}
+              disabled={!filteredRows.length}
+              className="btn-outline flex gap-2"
+            >
+              <Download size={16} className="text-green-500" /> Excel
+            </button>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="flex overflow-hidden w-fit">
-            {["date", "student"].map(t => (
-              <button
-                key={t}
-                onClick={() => {
-                  setSearchType(t);
-                  setQueryText("");
-                  setRows([]);
-                  setLastDoc(null);
-                }}
-                className={`px-4 py-2 text-sm font-medium border rounded-none border-(--border)
-                  ${searchType === t ? "bg-(--primary) text-white" : "bg-(--bg-card)"}
-                  ${t === "date" ? "rounded-l-md" : "rounded-r-md"}`}
-              >
-                {t === "date" ? "Date" : "Student App ID"}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-1 flex-col sm:flex-row gap-3 items-start sm:items-end">
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <SummaryCard label="Total Collections" value={summary.totalPaid} color="accent" />
+          <SummaryCard label="Total Refunds" value={summary.totalRefund} color="danger" />
+          <SummaryCard label="Net Balance" value={summary.netBalance} color="primary" />
+        </div>
+
+        <div className="bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            <div className="flex-none">
+              <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Search By</label>
+              <div className="flex border border-(--border) w-fit rounded-md overflow-hidden h-10">
+                {["date", "student"].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => { setSearchType(t); setRows([]); setLastDoc(null); }}
+                    className={`px-4 text-sm font-medium transition-colors ${searchType === t ? "bg-(--primary) text-white" : "bg-(--bg) text-(--text-muted) hover:bg-(--bg-soft)"}`}
+                  >
+                    {t === "date" ? <Calendar size={14} className="inline" /> : <User size={14} className="inline" />}
+                    {t === "date" ? "Date" : "App ID"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {searchType === "date" ? (
-              <div className="flex flex-1 justify-center items-end gap-2">
-                <div className="flex flex-col flex-1">
-                  <p className="text-sm text-(--text-muted)">Select Date</p>
-                  <input
-                    type="date"
-                    className="input"
-                    onChange={e => setQueryText(e.target.value)}
-                  />
+              <div className="grid grid-cols-2 sm:grid-cols-3 flex-1 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">From</label>
+                  <input type="date" className="input w-full" value={startDate} onChange={e => setStartDate(e.target.value)} />
                 </div>
-                <button onClick={() => searchLedger()} className="btn-primary py-3">
-                  <Search size={18} />
-                </button>
+                <div>
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">To</label>
+                  <input type="date" className="input w-full" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="text-xs hidden sm:block opacity-0 mb-1 block">Search</label>
+                  <button onClick={() => searchLedger()} className="btn-primary w-full h-10">
+                    <Search size={18} /> Search
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-1 flex-col sm:flex-row justify-center items-start sm:items-end gap-2">
-                <div className="flex flex-col">
-                  <p className="text-sm text-(--text-muted) font-medium">Session</p>
-                  <select
-                    className="input max-w-xs"
-                    value={sessionId ? sessionId : ''}
-                    onChange={e => {
-                      const id = e.target.value;
-                      setSessionId(id);
-                    }}
-                  >
-                    {sessionList && sessionList.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {s.id}
-                        {s.id === sessionId ? " (Current)" : ""}
-                      </option>
-                    ))}
+              <div className="grid grid-cols-1 sm:grid-cols-3 flex-1 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Session</label>
+                  <select className="input w-full h-10" value={sessionId || ""} onChange={e => setSessionId(e.target.value)}>
+                    {sessionList?.map(s => <option key={s.id} value={s.id}>{s.id}</option>)}
                   </select>
                 </div>
-                <div className="flex flex-1 justify-start gap-1 items-end">
-                  <div className="flex flex-col flex-1">
-                    <p className="text-sm text-(--text-muted) font-medium">Student App ID</p>
-                    <input
-                      className="input"
-                      placeholder="A25000001"
-                      value={queryText}
-                      onChange={e => setQueryText(e.target.value.toUpperCase())}
-                      onKeyDown={e => e.key === "Enter" && searchLedger()}
-                    />
-                  </div>
-                  <button onClick={() => searchLedger()} className="btn-primary py-3">
-                    <Search size={18} />
+                <div>
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">App ID</label>
+                  <input className="input w-full h-10 uppercase" placeholder="A1001" value={queryText} onChange={e => setQueryText(e.target.value)} onKeyDown={e => e.key === "Enter" && searchLedger()} />
+                </div>
+                <div>
+                  <label className="text-xs hidden sm:block opacity-0 mb-1 block">Search</label>
+                  <button onClick={() => searchLedger()} className="btn-primary w-full h-10">
+                    <Search size={18} /> Search
                   </button>
                 </div>
               </div>
             )}
-            <div className="flex-1"></div>
-            <div>
-              <button
-                onClick={() =>
-                  exportLedgerToExcel({
-                    rows,
-                    schoolName: schoolUser.name,
-                    branchName: branch,
-                    fromLabel: searchType === "date" ? queryText : "Student",
-                  })
-                }
-                disabled={!rows.length}
-                className="btn-outline flex gap-2"
-              >
-                <Download size={16} className="text-green-500" />
-                Export Excel
-              </button>
+          </div>
+
+          <div className="pt-4 border-t border-(--border) flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter size={14} className="text-(--text-muted)" />
+              <span className="text-sm font-medium">Filters:</span>
             </div>
+            <select className="input py-1.5 h-auto text-xs font-semibold w-32" value={filterType} onChange={e => setFilterType(e.target.value)}>
+              <option value="all">All Types</option>
+              <option value="payment">Payments</option>
+              <option value="refund">Refunds</option>
+              <option value="discount">Discount</option>
+            </select>
+            <select className="input py-1.5 h-auto text-xs font-semibold w-32" value={filterMode} onChange={e => setFilterMode(e.target.value)}>
+              <option value="all">All Modes</option>
+              <option value="cash">Cash</option>
+              <option value="upi">UPI</option>
+              <option value="bank">Bank</option>
+              <option value="cheque">Cheque</option>
+            </select>
           </div>
         </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
+
+        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-(--bg)">
-                <tr>
-                  <th className="px-4 py-3 text-left">Receipt</th>
-                  <th className="px-4 py-3 text-left">Student</th>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-right">Amount</th>
-                  <th className="px-4 py-3 text-right">Type</th>
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-(--bg-soft) border-b border-(--border)">
+                  <th className="px-5 py-4 font-semibold text-(--text-muted)">Receipt No</th>
+                  <th className="px-5 py-4 font-semibold text-(--text-muted)">Student ID</th>
+                  <th className="px-5 py-4 font-semibold text-(--text-muted)">Date</th>
+                  <th className="px-5 py-4 font-semibold text-(--text-muted)">Mode</th>
+                  <th className="px-5 py-4 font-semibold text-(--text-muted) text-right">Amount</th>
+                  <th className="px-5 py-4 font-semibold text-(--text-muted) text-right">Type</th>
+                  <th className="px-5 py-4 w-10"></th>
                 </tr>
               </thead>
-              <tbody>
-                {rows.length === 0 && (
+              <tbody className="divide-y divide-(--border)">
+                {filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-(--text-muted)">
-                      No records found
+                    <td colSpan={7} className="px-5 py-12 text-center text-(--text-muted)">
+                      No transaction records found matching active filters.
                     </td>
                   </tr>
+                ) : (
+                  filteredRows.map(r => (
+                    <tr key={r.id} className="hover:bg-(--bg-soft)/50 transition-colors">
+                      <td className="px-5 py-4 font-semibold">{r.receiptNo}</td>
+                      <td className="px-5 py-4 uppercase font-medium">{r.appId}</td>
+                      <td className="px-5 py-4 text-(--text-muted)">{formatDateSlash(r.createdAt?.toDate())}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          {r.type == "discount" ? '' : r.paymentMode === "cash" ? <WalletIcon size={14} /> : <CreditCard size={14} />}
+                          <span className="capitalize">{r.paymentMode || "N/A"}</span>
+                        </div>
+                      </td>
+                      <td className={`px-5 py-4 text-right font-bold ${r.type === "refund" ? "text-(--status-a-text)" : "text-(--status-p-text)"}`}>
+                        ₹ {Math.abs(r.amount).toLocaleString()}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end">
+                          <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${r.type === "refund" ? "bg-(--status-a-bg) text-(--status-a-text) border-(--status-a-border)" : "bg-(--status-p-bg) text-(--status-p-text) border-(--status-p-border)"}`}>
+                            {r.type}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <button onClick={() => setSelectedTransaction(r)} className="text-(--text-muted) hover:text-(--primary) transition-colors p-1">
+                          <Info size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
-                {rows.map(r => (
-                  <tr key={r.id} className="border-t border-(--border)">
-                    <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
-                    <td className="px-4 py-3 font-semibold">
-                      {r.appId}
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.createdAt?.toDate().toLocaleDateString()}
-                    </td>
-                    <td className={`px-4 py-3 text-right font-semibold ${r.type === "refund" ? "text-(--danger)" : ""
-                      }`}>
-                      ₹ {Math.abs(r.amount)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-1 justify-end items-center">
-                        {r.type === "refund" ? (
-                          <>
-                            <RotateCcw size={14} className="text-(--danger)" /> Refund
-                          </>
-                        ) : (
-                          <>
-                            <IndianRupee size={14} className="text-(--accent)" /> Payment
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>
           {hasMore && (
-            <div className="flex justify-center p-4 border-t border-(--border)">
-              <button
-                onClick={() => searchLedger(true)}
-                className="btn-secondary flex gap-2"
-              >
-                Load More <ArrowDown size={16} />
+            <div className="p-4 border-t border-(--border) flex justify-center">
+              <button onClick={() => searchLedger(true)} className="btn-secondary flex items-center gap-2 text-xs font-semibold px-6">
+                Load More Records <ArrowDown size={14} />
               </button>
             </div>
           )}
         </div>
       </div>
+
+      {selectedTransaction && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-(--border) bg-(--bg-soft)">
+              <h3 className="font-bold text-lg">Transaction Details</h3>
+              <button onClick={() => setSelectedTransaction(null)} className="p-1.5 hover:bg-(--border) rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Receipt No</p>
+                  <p className="font-semibold">{selectedTransaction.receiptNo}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Date & Time</p>
+                  <p className="font-semibold">{selectedTransaction.createdAt?.toDate().toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-(--border)">
+                <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Remark / Note</p>
+                <p className="text-sm mt-1">{selectedTransaction.remark || "N/A"}</p>
+              </div>
+              <div className="pt-4 border-t border-(--border) bg-(--bg-soft)/50 -mx-6 px-6 py-4">
+                <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Processed By</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="w-8 h-8 rounded-full bg-(--primary) text-white flex items-center justify-center text-xs font-bold uppercase">
+                    {selectedTransaction.createdBy?.name?.[0] || "U"}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{selectedTransaction.createdBy?.name || "System"}</p>
+                    <p className="text-[10px] text-(--text-muted) uppercase">{selectedTransaction.createdBy?.role || "Admin"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </RequirePermission>
+  );
+}
+
+function SummaryCard({ label, value, color }) {
+  const getTheme = () => {
+    switch (color) {
+      case "danger": return { bg: "bg-(--status-o-bg)", text: "text-(--status-o-text)", border: "border-(--status-o-border)", gradient: "from-(--status-o-bg)/50 to-transparent", icon: <AlertTriangle size={20} /> };
+      case "accent": return { bg: "bg-(--status-p-bg)", text: "text-(--status-p-text)", border: "border-(--status-p-border)", gradient: "from-(--status-p-bg)/50 to-transparent", icon: <CheckCircle2 size={20} /> };
+      default: return { bg: "bg-(--status-l-bg)", text: "text-(--status-l-text)", border: "border-(--status-l-border)", gradient: "from-(--status-l-bg)/50 to-transparent", icon: <Filter size={20} /> };
+    }
+  };
+  const theme = getTheme();
+  return (
+    <div className={`relative overflow-hidden rounded-lg border ${theme.border} bg-gradient-to-br ${theme.gradient} bg-(--bg-card) px-5 py-4 shadow-sm transition-all hover:shadow-md`}>
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm font-medium text-(--text-muted)">{label}</p>
+          <h3 className={`text-2xl font-bold tracking-tight ${theme.text}`}>₹ {value.toLocaleString()}</h3>
+        </div>
+        <div className={`p-2 rounded-xl border ${theme.bg} ${theme.text} ${theme.border}`}>{theme.icon}</div>
+      </div>
+      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${theme.gradient} opacity-20 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none`} />
+    </div>
   );
 }

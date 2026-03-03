@@ -431,7 +431,7 @@ function SummaryCard({ label, value, color, isCount }) {
           <p className="text-sm font-medium text-(--text-muted)">{label}</p>
           <div>
             <h3 className={`text-2xl font-bold tracking-tight ${theme.text}`}>
-              {!isCount && "₹"} {value > 0 ? value.toString().padStart(2, "0") : "0"}
+              {!isCount && "₹"} {value == 0 ? 0 : value.toString().padStart(2, "0")}
             </h3>
           </div>
         </div>

@@ -20,7 +20,7 @@ export default function Sidebar() {
   const basePath = `/school/${schoolUser.schoolId}`;
   return (
     <aside
-      className={`h-dvh border-r border-(--border) bg-(--bg)
+      className={`min-h-dvh border-r border-(--border) bg-(--bg-card)
         transition-all duration-300 ${collapsed ? "w-15" : "w-55"}`}
     >
       <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--bg-card)">
