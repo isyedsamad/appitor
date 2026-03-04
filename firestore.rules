@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- AUTHENTICATION HELPERS ---
+    
+    function isAuthed() {
+      return request.auth != null;
+    }
+    
+    // Fetches the basic user metadata
+    function getUserData() {
+      return get(/databases/$(database)/documents/schoolUsers/$(request.auth.uid)).data;
+    }
+
+    // Fetches permissions from the central roles collection
+    function getRolePermissions(roleId) {
+      return get(/databases/$(database)/documents/roles/$(roleId)).data.permissions;
+    }
+    
+    function isMemberOf(schoolId) {
+      return isAuthed() && 
+             getUserData().schoolId == schoolId && 
+             getUserData().status == 'active';
+    }
+
+    function hasPermission(schoolId, perm, module) {
+      return isMemberOf(schoolId) && 
+             (getRolePermissions(getUserData().roleId).hasAny([perm, module + '.*', '*']));
+    }
+
+    function getModuleCategory(module) {
+      return (module == 'fees') ? 'fee' : 
+             (module == 'complaint') ? 'complaint' : 
+             (module == 'communication') ? 'communication' :
+             (module == 'holidays') ? 'holiday' :
+             (module == 'classes' || module == 'subjects' || module == 'sections') ? 'academic' : module;
+    }
+
+    function getModulePermissionBase(module) {
+      return (module == 'fees') ? 'fee.operations' : 
+             (module == 'communication') ? 'communication.notice' :
+             (module == 'classes' || module == 'subjects' || module == 'sections') ? 'academic.' + module : 
+             (module == 'complaint') ? 'complaint' : 
+             (module == 'holidays') ? 'holiday' : module;
+    }
+
+    // --- COLLECTION RULES ---
+
+    // 1. Centralized User Directory
+    match /schoolUsers/{userId} {
+      allow read: if isAuthed() && request.auth.uid == userId;
+      // Allow users to update their own currentBranch for context switching
+      allow update: if isAuthed() && request.auth.uid == userId 
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentBranch']);
+      allow create, delete: if false; 
+    }
+
+    // 2. Roles (Read-only access for members)
+    match /roles/{roleId} {
+      allow read: if isAuthed();
+    }
+
+    // 3. Multi-Tenant Organizations
+    match /organizations/{orgId} {
+      allow read: if isAuthed() && getUserData().orgId == orgId;
+      allow write: if false;
+    }
+
+    // 4. Top-Level Branches (Query Compatible)
+    match /branches/{branchId} {
+      // Allows individual reads and filtered queries by schoolId
+      allow read: if isAuthed() && (resource == null || resource.data.schoolId == getUserData().schoolId);
+    }
+
+    // 5. School Ecosystem
+    match /schools/{schoolId} {
+      // Public list for login page (filtering by status == 'active')
+      allow list: if resource.data.status == 'active';
+      // Specific read/write requires membership
+      allow get: if isMemberOf(schoolId);
+      
+      // School-level modules
+      match /{module}/{docId} {
+        allow read: if isMemberOf(schoolId);
+        allow write: if (module == 'settings' && docId == 'academic') 
+                       ? hasPermission(schoolId, 'system.academic.manage', 'system')
+                       : hasPermission(schoolId, 'system.profile.manage', 'system');
+      }
+
+      // Branches & Deep Modules
+      match /branches/{branchId} {
+        allow read: if isMemberOf(schoolId);
+        allow write: if hasPermission(schoolId, 'system.profile.manage', 'system');
+
+        // Dynamic Module Matching
+        match /{module}/{allSub=**} {
+          allow read: if isMemberOf(schoolId) && (
+            (module == 'analytics') 
+              ? hasPermission(schoolId, 'dashboard.view', 'dashboard')
+              : hasPermission(schoolId, getModulePermissionBase(module) + '.view', getModuleCategory(module)) || isMemberOf(schoolId)
+          );
+          allow write: if (module == 'analytics')
+              ? hasPermission(schoolId, 'dashboard.manage', 'dashboard')
+              : hasPermission(schoolId, getModulePermissionBase(module) + '.manage', getModuleCategory(module));
+        }
+      }
+
+      // Students & Registrations (Root of school)
+      match /students/{studentId} {
+        allow read: if hasPermission(schoolId, 'student.profile.view', 'student');
+        allow write: if hasPermission(schoolId, 'student.profile.manage', 'student');
+      }
+      match /registrations/{regId} {
+        allow read: if hasPermission(schoolId, 'student.profile.view', 'student');
+        allow write: if hasPermission(schoolId, 'student.profile.manage', 'student');
+      }
+
+      // Attendance
+      match /attendance/{docId} {
+        allow read: if hasPermission(schoolId, 'attendance.mark.view', 'attendance');
+        allow write: if hasPermission(schoolId, 'attendance.mark.manage', 'attendance');
+        match /{allSub=**} {
+          allow read: if hasPermission(schoolId, 'attendance.mark.view', 'attendance');
+          allow write: if hasPermission(schoolId, 'attendance.mark.manage', 'attendance');
+        }
+      }
+
+      // Final school-level sub-collection fallthrough
+      match /{allSub=**} {
+         allow read: if isMemberOf(schoolId);
+      }
+    }
+    
+    // Global Fallthrough
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
