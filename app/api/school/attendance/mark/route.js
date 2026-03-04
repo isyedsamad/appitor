@@ -74,6 +74,9 @@ export async function POST(req) {
 
         const monthIncMap = { P: "totalP", A: "totalA", L: "totalL", M: "totalM", H: "totalH", O: "totalO" };
         const oldStatus = oldRecords[uid];
+
+        if (oldStatus === status) continue; // No change, skip updates
+
         const incField = monthIncMap[status];
         const decField = oldStatus ? monthIncMap[oldStatus] : null;
 
@@ -83,21 +86,25 @@ export async function POST(req) {
           session,
           className: className || null,
           section: section || null,
-          [`days.${dayNumber}`]: status,
+          days: { [dayNumber]: status },
           updatedAt: FieldValue.serverTimestamp(),
         };
         if (incField) monthUpdate[incField] = FieldValue.increment(1);
-        if (decField && oldStatus !== status) monthUpdate[decField] = FieldValue.increment(-1);
+        if (decField) monthUpdate[decField] = FieldValue.increment(-1);
 
         tx.set(monthRef, monthUpdate, { merge: true });
 
         // Session breakdown update
         const sessionUpdate = {
           session,
+          months: {
+            [monthKey]: {
+              ...(status && { [status]: FieldValue.increment(1) }),
+              ...(oldStatus && { [oldStatus]: FieldValue.increment(-1) })
+            }
+          },
           updatedAt: FieldValue.serverTimestamp(),
         };
-        if (status) sessionUpdate[`months.${monthKey}.${status}`] = FieldValue.increment(1);
-        if (oldStatus && oldStatus !== status) sessionUpdate[`months.${monthKey}.${oldStatus}`] = FieldValue.increment(-1);
 
         tx.set(sessionRef, sessionUpdate, { merge: true });
       }

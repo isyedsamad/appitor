@@ -38,7 +38,8 @@ export async function POST(req) {
         updatedAt: now,
       });
 
-      if (prevStatus !== "FOLLOW_UP") {
+      const canUpdateSummary = prevStatus !== "FOLLOW_UP" && prevStatus !== "CONVERTED" && prevStatus !== "ADMITTED";
+      if (canUpdateSummary) {
         const summaryRef = adminDb
           .collection("schools").doc(user.schoolId)
           .collection("branches").doc(branch)

@@ -23,6 +23,9 @@ export async function POST(req) {
       if (!snap.exists) throw new Error("Enquiry not found");
 
       const { sessionId, status } = snap.data();
+      if (status === "CONVERTED" || status === "ADMITTED") {
+        return; // Already converted
+      }
 
       tx.update(enquiryRef, {
         status: "CONVERTED",

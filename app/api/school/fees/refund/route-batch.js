@@ -87,10 +87,15 @@ export async function POST(req) {
       .doc("day_book")
       .collection("items")
       .doc(dayId);
-    batch.update(dayRef, {
-      "refunds.total": FieldValue.increment(Number(totalRefund)),
-      [`refunds.${payType}`]: FieldValue.increment(Number(totalRefund)),
+    batch.set(dayRef, {
+      date: dayId,
+      refunds: {
+        total: FieldValue.increment(Number(totalRefund)),
+        [payType || "cash"]: FieldValue.increment(Number(totalRefund)),
+      },
       net: FieldValue.increment(-Number(totalRefund)),
+      transactions: FieldValue.increment(1),
+      transactionsRefund: FieldValue.increment(1),
       updatedAt: nowServer,
     }, { merge: true });
     const refundLedgerRef = branchRef

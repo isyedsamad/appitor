@@ -167,10 +167,12 @@ export async function POST(req) {
       .doc("day_book")
       .collection("items")
       .doc(dayId);
-    batch.update(dayRef, {
+    batch.set(dayRef, {
       date: dayId,
-      "collections.total": FieldValue.increment(Number(payment.paidAmount)),
-      [`collections.${payment.payType}`]: FieldValue.increment(Number(payment.paidAmount)),
+      collections: {
+        total: FieldValue.increment(Number(payment.paidAmount)),
+        [payment.payType || "cash"]: FieldValue.increment(Number(payment.paidAmount)),
+      },
       net: FieldValue.increment(Number(payment.paidAmount)),
       transactions: FieldValue.increment(1),
       updatedAt: nowServer,

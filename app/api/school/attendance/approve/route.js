@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 
 function getStatusDelta(from, to) {
   const delta = {};
+  if (from === to) return delta;
   if (from) delta[`total${from}`] = FieldValue.increment(-1);
   if (to) delta[`total${to}`] = FieldValue.increment(1);
   return delta;
@@ -117,15 +118,18 @@ export async function POST(req) {
         .collection("attendance_session")
         .doc(pending.session);
 
+      const monthsDelta = {};
+      if (from !== to) {
+        if (from) monthsDelta[from] = FieldValue.increment(-1);
+        if (to) monthsDelta[to] = FieldValue.increment(1);
+      }
+
       batch.set(
         sessionRef,
         {
           session: pending.session,
           months: {
-            [monthKey]: {
-              ...(from && { [from]: FieldValue.increment(-1) }),
-              ...(to && { [to]: FieldValue.increment(1) }),
-            },
+            [monthKey]: monthsDelta,
           },
           updatedAt: FieldValue.serverTimestamp(),
         },
