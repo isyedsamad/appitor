@@ -15,11 +15,13 @@ const PAGE_SIZE = 10;
 
 export default function SchoolLeavePage() {
   const { schoolUser, sessionList, currentSession, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const canManage = hasPermission(
     schoolUser,
     "leave.manage",
-    false
+    false,
+    currentPlan
   );
   const [filters, setFilters] = useState({
     session: currentSession,

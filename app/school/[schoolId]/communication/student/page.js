@@ -8,11 +8,14 @@ import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { hasPermission } from "@/lib/school/permissionUtils";
 import { toast } from "react-toastify";
 
 export default function StudentMessagingPage() {
   const { schoolUser, classData, sessionList, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "communication.student.manage", false, currentPlan);
   const [sendPush, setSendPush] = useState(true);
   const [searchType, setSearchType] = useState("class"); // class | appId
   const [filters, setFilters] = useState({
@@ -380,12 +383,14 @@ export default function StudentMessagingPage() {
                       >
                         Cancel
                       </button>
-                      <button
-                        onClick={sendMessage}
-                        className="btn-primary flex items-center gap-2"
-                      >
-                        <Send size={16} /> Send Message
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={sendMessage}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          <Send size={16} /> Send Message
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

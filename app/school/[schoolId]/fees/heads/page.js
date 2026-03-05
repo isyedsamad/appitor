@@ -35,6 +35,8 @@ import { canManage } from "@/lib/school/permissionUtils";
 export default function FeeHeadsPage() {
   const { schoolUser, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "fee.setup.manage", currentPlan);
   const [heads, setHeads] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);

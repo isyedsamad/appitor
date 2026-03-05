@@ -24,7 +24,10 @@ const GRADE_POINTS = {
 
 export default function MarksEntryPage() {
   const { schoolUser, sessionList, classData, setLoading, subjectData, employeeData } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "exam.marks.manage", false, currentPlan);
+
   const [terms, setTerms] = useState([]);
   const [setups, setSetups] = useState([]);
   const [students, setStudents] = useState([]);
@@ -422,7 +425,7 @@ export default function MarksEntryPage() {
             </div>
           </div>
         )}
-        {searched && (
+        {searched && canManage && (
           <div className="flex justify-end">
             <button onClick={saveMarks} className="btn-primary flex gap-2">
               <Save size={16} />

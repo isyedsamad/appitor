@@ -15,11 +15,14 @@ import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { hasPermission } from "@/lib/school/permissionUtils";
 import { toast } from "react-toastify";
 
 export default function EmployeeMessagingPage() {
   const { schoolUser, employeeData, sessionList, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "communication.employee.manage", false, currentPlan);
   const [sendPush, setSendPush] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -229,12 +232,14 @@ export default function EmployeeMessagingPage() {
                       >
                         Cancel
                       </button>
-                      <button
-                        onClick={sendMessage}
-                        className="btn-primary flex items-center gap-2"
-                      >
-                        <Send size={16} /> Send Message
-                      </button>
+                      {canManage && (
+                        <button
+                          onClick={sendMessage}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          <Send size={16} /> Send Message
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

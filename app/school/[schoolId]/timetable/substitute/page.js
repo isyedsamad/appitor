@@ -31,6 +31,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { hasPermission } from "@/lib/school/permissionUtils";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
@@ -39,7 +40,9 @@ const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"
 
 export default function SubstitutionPage() {
     const { schoolUser, classData, employeeData, subjectData, setLoading, currentSession } = useSchool();
-    const { branch } = useBranch();
+    const { branch, branchInfo } = useBranch();
+    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+    const canManage = hasPermission(schoolUser, "timetable.substitute.manage", false, currentPlan);
     const { theme } = useTheme();
 
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -311,7 +314,7 @@ export default function SubstitutionPage() {
                                         </div>
                                         <div
                                             className={`bg-(--bg-card) border-b-3 border-(--border) p-3 transition-all cursor-pointer hover:bg-(--primary)/5 relative group`}
-                                            onClick={() => handleOpenAssistant(p, staticSlot)}
+                                            onClick={() => canManage && handleOpenAssistant(p, staticSlot)}
                                         >
                                             <div className="flex flex-wrap gap-2">
                                                 {staticSlot?.entries?.map((e, i) => {
@@ -344,25 +347,27 @@ export default function SubstitutionPage() {
                                                                 {employeeData.find(t => t.uid === subSlot.substituteTeacherId)?.name}
                                                             </div>
                                                         </div>
-                                                        <button
-                                                            className="p-1 hover:text-red-500 transition-colors bg-(--bg-card) border border-(--border) rounded-full"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                removeSubstitution(p);
-                                                            }}
-                                                        >
-                                                            <Trash2 size={13} />
-                                                        </button>
+                                                        {canManage && (
+                                                            <button
+                                                                className="p-1 hover:text-red-500 transition-colors bg-(--bg-card) border border-(--border) rounded-full"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    removeSubstitution(p);
+                                                                }}
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
-                                                {(!isSubstituted && !staticSlot?.entries?.length) && (
+                                                {(!isSubstituted && !staticSlot?.entries?.length && canManage) && (
                                                     <div className="h-full w-full py-4 flex items-center justify-center opacity-50 group-hover:opacity-100 transition-all border-2 border-dashed border-(--border) rounded">
                                                         <div className="text-[9px] font-bold text-(--text-muted) flex items-center gap-1 uppercase tracking-widest">
                                                             <PlusCircle size={12} /> Assign
                                                         </div>
                                                     </div>
                                                 )}
-                                                {(!isSubstituted && staticSlot?.entries?.length > 0) && (
+                                                {(!isSubstituted && staticSlot?.entries?.length > 0 && canManage) && (
                                                     <div className="h-full py-4 px-5 flex items-center justify-center opacity-50 group-hover:opacity-100 transition-all border-2 border-dashed border-(--border) rounded">
                                                         <div className="text-[9px] font-bold text-(--text-muted) flex items-center gap-1 uppercase tracking-widest">
                                                             <PlusCircle size={12} /> Add Substitution

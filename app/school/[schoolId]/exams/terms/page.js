@@ -13,7 +13,10 @@ import { formatDate, formatInputDate } from "@/lib/dateUtils";
 
 export default function ExamTermsPage() {
   const { schoolUser, sessionList, setLoading, currentSession } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "exam.terms.manage", false, currentPlan);
+
   const [terms, setTerms] = useState([]);
   const [selectedSession, setSelectedSession] = useState("");
   const [searched, setSearched] = useState(false);
@@ -132,13 +135,15 @@ export default function ExamTermsPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setOpenAdd(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={15} />
-            Add Exam Term
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setOpenAdd(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus size={15} />
+              Add Exam Term
+            </button>
+          )}
         </div>
         <div className="grid md:grid-cols-5 gap-3 md:items-end">
           <div>
@@ -217,7 +222,7 @@ export default function ExamTermsPage() {
                         <span className="text-sm btn-outline cursor-not-allowed text-(--text-muted) italic">
                           Result is locked
                         </span>
-                      ) : (
+                      ) : canManage ? (
                         <button
                           onClick={() => declareResult(t.id)}
                           className="text-sm text-green-500 btn-outline flex items-center gap-1"
@@ -225,12 +230,14 @@ export default function ExamTermsPage() {
                           <CheckCircle2 size={15} />
                           Declare Result
                         </button>
+                      ) : (
+                        <span className="text-xs text-(--text-muted)">—</span>
                       )}
                       {isDeclared ? (
                         <span className="text-sm btn-outline cursor-not-allowed text-(--text-muted) font-medium italic">
                           Deletion disabled
                         </span>
-                      ) : (
+                      ) : canManage ? (
                         <button
                           onClick={() => deleteTerm(t.id)}
                           className="text-sm text-(--danger) btn-outline font-medium flex items-center gap-1"
@@ -238,6 +245,8 @@ export default function ExamTermsPage() {
                           <Trash2 size={15} />
                           Delete
                         </button>
+                      ) : (
+                        <span className="text-xs text-(--text-muted)">—</span>
                       )}
                     </div>
                   </div>
@@ -292,7 +301,7 @@ function Stat({ label, value, accent }) {
     <div className="bg-(--bg-card) border border-(--border) rounded-xl p-4">
       <p className="text-sm text-(--text-muted)">{label}</p>
       <p className={`text-2xl font-semibold ${accent === "success" ? "text-green-600" :
-          accent === "warning" ? "text-(--warning)" : ""
+        accent === "warning" ? "text-(--warning)" : ""
         }`}>
         {value}
       </p>

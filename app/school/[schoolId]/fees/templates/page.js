@@ -30,6 +30,8 @@ import { canManage } from "@/lib/school/permissionUtils";
 export default function FeeTemplatesPage() {
   const { schoolUser, setLoading, classData, currentSession } = useSchool();
   const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "fee.setup.manage", currentPlan);
   const [templates, setTemplates] = useState([]);
   const [feeHeads, setFeeHeads] = useState([]);
   const [open, setOpen] = useState(false);

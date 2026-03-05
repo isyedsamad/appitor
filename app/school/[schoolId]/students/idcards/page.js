@@ -65,6 +65,8 @@ export default function IDCardsPage() {
     const [showQr, setShowQr] = useState(true);
 
     const selectedClass = classData?.find(c => c.id === className);
+    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+    const editable = canManage(schoolUser, "student.idcard.manage", currentPlan);
 
     async function loadStudents() {
         if (!session || !className || !section) {
@@ -153,9 +155,6 @@ export default function IDCardsPage() {
         "--id-grid-cols": gridCols,
         "--id-grid-rows": gridRows,
     };
-
-    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-    const editable = canManage(schoolUser, "student.idcard.manage", currentPlan);
 
     return (
         <RequirePermission permission="student.idcard.view">

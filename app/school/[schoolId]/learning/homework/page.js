@@ -29,8 +29,9 @@ export default function HomeworkPage() {
     employeeData
   } = useSchool();
 
-  const { branch } = useBranch();
-  const isAdmin = hasPermission(schoolUser, "learning.homework.manage", false);
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const isAdmin = hasPermission(schoolUser, "learning.homework.manage", false, currentPlan);
   const [filters, setFilters] = useState({
     classId: "",
     sectionId: "",

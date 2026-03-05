@@ -16,6 +16,7 @@ import { useBranch } from "@/context/BranchContext";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import RequirePermission from "@/components/school/RequirePermission";
+import { canManage } from "@/lib/school/permissionUtils";
 
 const DAYS = [
   { key: "MON", label: "Mon" },

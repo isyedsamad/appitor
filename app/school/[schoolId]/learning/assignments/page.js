@@ -24,8 +24,9 @@ import { useTheme } from "next-themes";
 export default function AssignmentPage() {
   const { theme } = useTheme();
   const { schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading } = useSchool();
-  const { branch } = useBranch();
-  const isAdmin = hasPermission(schoolUser, "learning.assignments.manage", false);
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const isAdmin = hasPermission(schoolUser, "learning.assignments.manage", false, currentPlan);
   const [filters, setFilters] = useState({
     sessionId: currentSession?.id || "",
     classId: "",

@@ -23,7 +23,10 @@ import { formatDate } from "@/lib/dateUtils";
 
 export default function ExamSetupPage() {
   const { schoolUser, sessionList, classData, subjectData, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "exam.setup.manage", false, currentPlan);
+
   const [editId, setEditId] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [setups, setSetups] = useState([]);
@@ -276,7 +279,7 @@ export default function ExamSetupPage() {
               </p>
             </div>
           </div>
-          {searched && (
+          {searched && canManage && (
             <button
               onClick={() => fetchMappedSubjects(form.classId, form.sectionId, "edit")}
               className="btn-primary flex items-center gap-2"

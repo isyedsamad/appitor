@@ -348,7 +348,7 @@ export default function SchoolDashboard() {
                 <h3 className="text-xs font-semibold flex items-center gap-2">
                   <Calendar size={16} className="text-(--primary)" /> Upcoming Holidays
                 </h3>
-                <button onClick={() => router.push(`/school/${schoolUser.schoolId}/academics/holidays`)} className="text-xs font-semibold text-(--primary) hover:underline">
+                <button onClick={() => router.push(`/school/${schoolUser.schoolId}/holidays`)} className="text-xs font-semibold text-(--primary) hover:underline">
                   All Holidays
                 </button>
               </div>

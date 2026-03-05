@@ -30,6 +30,8 @@ import { canManage } from "@/lib/school/permissionUtils";
 export default function AlumniPage() {
     const { classData, schoolUser, setLoading, loading, sessionList, currentSession } = useSchool();
     const { branchInfo } = useBranch();
+    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+    const editable = canManage(schoolUser, "student.profile.manage", currentPlan);
     const [session, setSession] = useState(currentSession || "");
     const [students, setStudents] = useState([]);
     const [selected, setSelected] = useState([]);

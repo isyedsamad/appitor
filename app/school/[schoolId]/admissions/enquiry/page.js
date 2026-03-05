@@ -52,7 +52,7 @@ const STATUS_META = {
 export default function EnquiryManagementPage() {
   const router = useRouter();
   const { schoolUser, sessionList, currentSession, classData, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const { theme } = useTheme();
   const [sessionId, setSessionId] = useState(currentSession?.id || "");
   const [enquiries, setEnquiries] = useState([]);

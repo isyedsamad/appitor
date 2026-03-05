@@ -14,11 +14,13 @@ import { formatDate } from "@/lib/dateUtils";
 
 export default function SchoolHolidayPage() {
   const { schoolUser, sessionList, currentSession, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const canCreate = hasPermission(
     schoolUser,
     "holiday.create",
-    false
+    false,
+    currentPlan
   );
   const [filters, setFilters] = useState({
     session: currentSession,

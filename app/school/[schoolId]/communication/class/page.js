@@ -15,9 +15,10 @@ import { useTheme } from "next-themes";
 export default function ClassNoticePage() {
   const { theme } = useTheme();
   const { schoolUser, classData, sessionList, setLoading } = useSchool();
-  const { branch } = useBranch();
-  const canManage = hasPermission(schoolUser, "communication.class.manage", false);
-  const canDelete = hasPermission(schoolUser, "communication.class.manage", false);
+  const { branch, branchInfo } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const canManage = hasPermission(schoolUser, "communication.class.manage", false, currentPlan);
+  const canDelete = hasPermission(schoolUser, "communication.class.manage", false, currentPlan);
   const [sendPush, setSendPush] = useState(true);
   const [filters, setFilters] = useState({
     sessionId: schoolUser?.currentSession || "",
