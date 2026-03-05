@@ -40,7 +40,7 @@ function excelDateToYMD(value) {
 }
 
 export default function ImportExportAdmissions() {
-  const { sessionList, currentSession, classData, setLoading } = useSchool();
+  const { schoolUser, sessionList, currentSession, classData, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
   const { theme } = useTheme();
   const [context, setContext] = useState({

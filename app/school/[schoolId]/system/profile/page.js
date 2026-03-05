@@ -19,7 +19,7 @@ import RequirePermission from "@/components/school/RequirePermission";
 import { canManage } from "@/lib/school/permissionUtils";
 
 export default function SchoolProfilePage() {
-    const { setLoading } = useSchool();
+    const { schoolUser, setLoading } = useSchool();
     const { branch, branchInfo, setBranchInfo } = useBranch();
     const [formData, setFormData] = useState({
         name: "",

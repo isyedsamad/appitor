@@ -31,7 +31,7 @@ import { canManage } from "@/lib/school/permissionUtils";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function PromoteDemotePage() {
-  const { classData, setLoading, loading, sessionList, currentSession } = useSchool();
+  const { schoolUser, classData, setLoading, loading, sessionList, currentSession } = useSchool();
   const { branchInfo } = useBranch();
 
   const [fromSession, setFromSession] = useState(currentSession || "");

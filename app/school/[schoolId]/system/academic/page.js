@@ -21,7 +21,7 @@ import { formatInputDate, toInputDate } from "@/lib/dateUtils";
 import { canManage } from "@/lib/school/permissionUtils";
 
 export default function AcademicSessionSettingsPage() {
-  const { currentSession, setCurrentSession, setLoading } = useSchool();
+  const { schoolUser, currentSession, setCurrentSession, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState("");
