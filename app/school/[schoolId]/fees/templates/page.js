@@ -25,6 +25,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function FeeTemplatesPage() {
   const { schoolUser, setLoading, classData, currentSession } = useSchool();
@@ -139,13 +140,15 @@ export default function FeeTemplatesPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus size={16} />
-            New Template
-          </button>
+          {editable && (
+            <button
+              onClick={() => setOpen(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus size={16} />
+              New Template
+            </button>
+          )}
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map(t => (
@@ -187,24 +190,26 @@ export default function FeeTemplatesPage() {
                   <span className="flex-1 text-left">Total:</span>
                   <span>₹ {t.items.reduce((s, i) => s + Number(i.amount), 0)}</span>
                 </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setEditing(t);
-                      setForm({
-                        name: t.name,
-                        className: t.className,
-                        section: t.section || "",
-                        academicYear: t.academicYear,
-                      });
-                      setItems(t.items);
-                      setOpen(true);
-                    }}
-                    className="action-btn font-medium text-xs mt-2 text-(--status-l-text)"
-                  >
-                    Edit Fee Template
-                  </button>
-                </div>
+                {editable && (
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        setEditing(t);
+                        setForm({
+                          name: t.name,
+                          className: t.className,
+                          section: t.section || "",
+                          academicYear: t.academicYear,
+                        });
+                        setItems(t.items);
+                        setOpen(true);
+                      }}
+                      className="action-btn font-medium text-xs mt-2 text-(--status-l-text)"
+                    >
+                      Edit Fee Template
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}

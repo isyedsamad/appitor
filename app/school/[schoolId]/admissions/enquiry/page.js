@@ -40,6 +40,7 @@ import {
 } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { useTheme } from "next-themes";
+import { canManage } from "@/lib/school/permissionUtils";
 
 const STATUS_META = {
   NEW: "bg-(--status-m-bg) text-(--status-m-text) border-(--status-m-border)",
@@ -192,6 +193,9 @@ export default function EnquiryManagementPage() {
     return new Date(last.nextFollowUpDate) < new Date();
   }
 
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "admission.enquiry.manage", currentPlan);
+
   useEffect(() => {
     if (sessionId) {
       fetchSummary();
@@ -213,9 +217,11 @@ export default function EnquiryManagementPage() {
               <p className="text-sm text-(--text-muted)">Session-wise admission enquiries</p>
             </div>
           </div>
-          <button onClick={() => setOpenAdd(true)} className="btn-primary flex items-center gap-2">
-            <Plus size={16} /> New Enquiry
-          </button>
+          {editable && (
+            <button onClick={() => setOpenAdd(true)} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> New Enquiry
+            </button>
+          )}
         </div>
 
         <div className="max-w-xs">
@@ -524,23 +530,27 @@ export default function EnquiryManagementPage() {
                       }
                     />
                   </div>
-                  <button
-                    onClick={addFollowUp}
-                    className="btn-outline w-full"
-                  >
-                    Add follow-up
-                  </button>
+                  {editable && (
+                    <button
+                      onClick={addFollowUp}
+                      className="btn-outline w-full"
+                    >
+                      Add follow-up
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="px-5 py-4 border-t border-(--border) bg-(--bg)">
-                <button
-                  onClick={convertToAdmission}
-                  className="btn-primary w-full flex items-center justify-center gap-2"
-                >
-                  Convert to Admission
-                  <ArrowRight size={16} />
-                </button>
-              </div>
+              {editable && (
+                <div className="px-5 py-4 border-t border-(--border) bg-(--bg)">
+                  <button
+                    onClick={convertToAdmission}
+                    className="btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    Convert to Admission
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

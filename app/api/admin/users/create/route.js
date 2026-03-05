@@ -18,11 +18,27 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+    let finalBranchIds = branchIds || [];
+    let finalBranchNames = branchNames || [];
+    let finalCurrentBranch = currentBranch || "";
+
+    if (finalBranchIds.includes("*")) {
+      const branchesSnap = await adminDb.collection("branches").where("schoolId", "==", schoolId).get();
+      finalBranchIds = [];
+      finalBranchNames = [];
+      branchesSnap.forEach(doc => {
+        finalBranchIds.push(doc.id);
+        finalBranchNames.push(doc.data().name);
+      });
+      finalCurrentBranch = finalBranchIds.length > 0 ? finalBranchIds[0] : "";
+    }
+
     const email = `${username.toLowerCase()}@${schoolCode.toLowerCase()}.appitor`;
     const user = await adminAuth.createUser({
       email,
       password
     });
+
     await adminDb.collection("schoolUsers").doc(user.uid).set({
       uid: user.uid,
       name,
@@ -30,9 +46,9 @@ export async function POST(req) {
       email,
       schoolId,
       schoolCode,
-      branchIds,
-      branchNames,
-      currentBranch,
+      branchIds: finalBranchIds,
+      branchNames: finalBranchNames,
+      currentBranch: finalCurrentBranch,
       roleId,
       role,
       status: "active",

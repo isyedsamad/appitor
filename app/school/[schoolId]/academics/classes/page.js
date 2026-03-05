@@ -84,7 +84,7 @@ export default function ClassesPage() {
   };
 
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-  const editable = canManage(schoolUser, "academic.classes", currentPlan);
+  const editable = canManage(schoolUser, "academic.classes.manage", currentPlan);
 
   return (
     <RequirePermission permission="academic.classes.view">

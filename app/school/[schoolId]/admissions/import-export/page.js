@@ -9,6 +9,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { useTheme } from "next-themes";
+import { canManage } from "@/lib/school/permissionUtils";
 
 function excelDateToYMD(value) {
   if (!value) return "";
@@ -166,6 +167,9 @@ export default function ImportExportAdmissions() {
     }
   }
 
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "admission.import.manage", currentPlan);
+
   return (
     <RequirePermission permission="admission.import.view">
       <div className="space-y-4">
@@ -233,15 +237,17 @@ export default function ImportExportAdmissions() {
           </select>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <label className="btn-primary flex justify-center items-center gap-2 cursor-pointer">
-            <Upload size={16} /> Upload Excel
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              hidden
-              onChange={handleFileUpload}
-            />
-          </label>
+          {editable && (
+            <label className="btn-primary flex justify-center items-center gap-2 cursor-pointer">
+              <Upload size={16} /> Upload Excel
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                hidden
+                onChange={handleFileUpload}
+              />
+            </label>
+          )}
           <button onClick={exportStudents} className="btn-outline">
             <Download size={16} /> Export Students
           </button>

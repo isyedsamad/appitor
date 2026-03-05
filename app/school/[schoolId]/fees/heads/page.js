@@ -30,6 +30,7 @@ import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function FeeHeadsPage() {
   const { schoolUser, setLoading } = useSchool();
@@ -140,14 +141,16 @@ export default function FeeHeadsPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => setOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg
-                       bg-(--primary) text-white shadow-sm hover:opacity-90"
-          >
-            <Plus size={16} />
-            Add Fee Head
-          </button>
+          {editable && (
+            <button
+              onClick={() => setOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg
+                         bg-(--primary) text-white shadow-sm hover:opacity-90"
+            >
+              <Plus size={16} />
+              Add Fee Head
+            </button>
+          )}
         </div>
         <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -222,38 +225,40 @@ export default function FeeHeadsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="flex gap-2 justify-end">
-                        <button className="action-btn hover:text-yellow-500" onClick={() => {
-                          setEditing(h);
-                          setForm({
-                            name: h.name,
-                            category: h.category,
-                            frequency: h.frequency,
-                            refundable: h.refundable,
-                            type: h.type
-                          });
-                          setOpen(true);
-                          setMenuOpen(null);
-                        }}
-                        ><Pencil size={15} /></button>
-                        {h.status === "active" ? (
-                          <button
-                            onClick={() => updateStatus(h.id, "inactive")}
-                            className="action-btn text-xs font-medium hover:text-red-500"
-                          >
-                            <Ban size={15} />
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => updateStatus(h.id, "active")}
-                            className="action-btn text-xs font-medium hover:text-green-500"
-                          >
-                            <CheckCircle2 size={14} />
-                            Enable
-                          </button>
-                        )}
-                      </div>
+                      {editable && (
+                        <div className="flex gap-2 justify-end">
+                          <button className="action-btn hover:text-yellow-500" onClick={() => {
+                            setEditing(h);
+                            setForm({
+                              name: h.name,
+                              category: h.category,
+                              frequency: h.frequency,
+                              refundable: h.refundable,
+                              type: h.type
+                            });
+                            setOpen(true);
+                            setMenuOpen(null);
+                          }}
+                          ><Pencil size={15} /></button>
+                          {h.status === "active" ? (
+                            <button
+                              onClick={() => updateStatus(h.id, "inactive")}
+                              className="action-btn text-xs font-medium hover:text-red-500"
+                            >
+                              <Ban size={15} />
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => updateStatus(h.id, "active")}
+                              className="action-btn text-xs font-medium hover:text-green-500"
+                            >
+                              <CheckCircle2 size={14} />
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

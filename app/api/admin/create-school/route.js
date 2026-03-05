@@ -5,6 +5,7 @@ import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
 import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import { syncSchoolListIndex } from "@/lib/admin/schoolListService";
 
 export async function POST(req) {
   try {
@@ -31,6 +32,7 @@ export async function POST(req) {
     });
 
     await batch.commit();
+    await syncSchoolListIndex();
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("create school error:", err);

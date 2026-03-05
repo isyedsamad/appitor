@@ -23,6 +23,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import RequirePermission from "@/components/school/RequirePermission";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function NewAdmissionPage() {
   const router = useRouter();
@@ -95,6 +96,9 @@ export default function NewAdmissionPage() {
       setLoading(false);
     }
   }
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "admission.new.manage", currentPlan);
 
   useEffect(() => {
     if (!form.className || !schoolUser) {
@@ -312,12 +316,14 @@ export default function NewAdmissionPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleSubmit}
-                  className="w-full text-sm flex items-center justify-center gap-2 py-3 bg-(--primary) text-white rounded-xl font-semibold hover:bg-(--primary-hover) shadow-md shadow-orange-500/20 transition-all active:scale-[0.98] mt-2"
-                >
-                  <Save size={16} /> Create Admission
-                </button>
+                {editable && (
+                  <button
+                    onClick={handleSubmit}
+                    className="w-full text-sm flex items-center justify-center gap-2 py-3 bg-(--primary) text-white rounded-xl font-semibold hover:bg-(--primary-hover) shadow-md shadow-orange-500/20 transition-all active:scale-[0.98] mt-2"
+                  >
+                    <Save size={16} /> Create Admission
+                  </button>
+                )}
               </div>
             </section>
           </div>

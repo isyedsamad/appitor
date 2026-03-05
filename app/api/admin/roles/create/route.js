@@ -33,9 +33,27 @@ export async function POST(req) {
     batch.set(roleRef, roleData);
 
     if (userData && userData.username && userData.schoolId) {
+      let finalBranchIds = userData.branchIds || [];
+      let finalBranchNames = userData.branchNames || [];
+      let finalCurrentBranch = userData.currentBranch || "";
+
+      if (finalBranchIds.includes("*")) {
+        const branchesSnap = await adminDb.collection("branches").where("schoolId", "==", userData.schoolId).get();
+        finalBranchIds = [];
+        finalBranchNames = [];
+        branchesSnap.forEach(doc => {
+          finalBranchIds.push(doc.id);
+          finalBranchNames.push(doc.data().name);
+        });
+        finalCurrentBranch = finalBranchIds.length > 0 ? finalBranchIds[0] : "";
+      }
+
       const userRef = adminDb.collection("schoolUsers").doc();
       batch.set(userRef, {
         ...userData,
+        branchIds: finalBranchIds,
+        branchNames: finalBranchNames,
+        currentBranch: finalCurrentBranch,
         role: name,
         roleId: roleRef.id,
         status: "active",

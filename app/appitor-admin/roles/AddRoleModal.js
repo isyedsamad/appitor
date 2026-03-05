@@ -194,33 +194,57 @@ export default function AddRoleModal({ open, onClose }) {
           <div className="space-y-6">
             <SectionTitle icon={<GitBranch size={12} />} title="Global Permission Matrix" />
             <div className="space-y-4 pr-1">
-              {Object.entries(PERMISSIONS).map(([group, perms]) => (
-                <div key={group} className="space-y-2 bg-[var(--bg)]/30 rounded-2xl p-4 border border-[var(--border)]">
-                  <h4 className="text-[10px] font-bold text-[var(--text)] uppercase">{group}</h4>
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {perms.map((p) => {
-                      const isActive = permissions[p];
-                      return (
-                        <label
-                          key={p}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-[var(--bg)]/50 ${isActive ? 'text-(--primary)' : 'text-[var(--text-muted)]'}`}
-                        >
-                          <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={!!isActive}
-                            onChange={(e) => setPermissions({ ...permissions, [p]: e.target.checked })}
-                          />
-                          <div className={`w-3.5 h-3.5 rounded-md border-2 flex items-center justify-center transition-all ${isActive ? 'bg-(--primary) border-(--primary)' : 'border-[var(--border)] bg-[var(--bg)]'}`}>
-                            {isActive && <div className="w-1 h-1 rounded-full bg-white" />}
-                          </div>
-                          <span className="text-[10px] font-bold uppercase">{p}</span>
-                        </label>
-                      );
-                    })}
+              {Object.entries(PERMISSIONS).map(([group, perms]) => {
+                const isAllSelected = perms.every((p) => permissions[p]);
+
+                return (
+                  <div key={group} className="space-y-2 bg-[var(--bg)]/30 rounded-2xl p-4 border border-[var(--border)]">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[10px] font-bold text-[var(--text)] uppercase">{group}</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextPerms = { ...permissions };
+                          if (isAllSelected) {
+                            perms.forEach((p) => (nextPerms[p] = false));
+                          } else {
+                            perms.forEach((p) => (nextPerms[p] = true));
+                          }
+                          setPermissions(nextPerms);
+                        }}
+                        className={`text-[9px] font-bold uppercase transition-all px-2 py-0.5 rounded-md border ${isAllSelected
+                          ? "bg-(--primary-soft) text-(--primary) border-(--primary)/20 hover:bg-(--primary) hover:text-white"
+                          : "bg-[var(--bg)] text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--border)] hover:text-[var(--text)]"
+                          }`}
+                      >
+                        {isAllSelected ? "Deselect All" : "Select All"}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {perms.map((p) => {
+                        const isActive = permissions[p];
+                        return (
+                          <label
+                            key={p}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all cursor-pointer hover:bg-[var(--bg)]/50 ${isActive ? 'text-(--primary)' : 'text-[var(--text-muted)]'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="hidden"
+                              checked={!!isActive}
+                              onChange={(e) => setPermissions({ ...permissions, [p]: e.target.checked })}
+                            />
+                            <div className={`w-3.5 h-3.5 rounded-md border-2 flex items-center justify-center transition-all ${isActive ? 'bg-(--primary) border-(--primary)' : 'border-[var(--border)] bg-[var(--bg)]'}`}>
+                              {isActive && <div className="w-1 h-1 rounded-full bg-white" />}
+                            </div>
+                            <span className="text-[10px] font-bold uppercase">{p}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

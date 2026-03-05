@@ -33,6 +33,10 @@ export default function TimetableSettingsPage() {
 
   const [form, setForm] = useState(null);
   const [isNew, setIsNew] = useState(false);
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "timetable.settings.manage", currentPlan);
+
   useEffect(() => {
     if (!branch || !schoolUser?.schoolId) return;
     const fetchSettings = async () => {
@@ -210,12 +214,14 @@ export default function TimetableSettingsPage() {
           <div className="xl:col-span-2 bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
             <div className="flex items-start justify-between">
               <SectionTitle icon={Coffee} title="Breaks" />
-              <button
-                onClick={addBreak}
-                className="text-sm text-(--primary) btn-outline py-1"
-              >
-                + Add Break
-              </button>
+              {editable && (
+                <button
+                  onClick={addBreak}
+                  className="text-sm text-(--primary) btn-outline py-1"
+                >
+                  + Add Break
+                </button>
+              )}
             </div>
             {form.breaks.length === 0 && (
               <p className="text-sm text-(--text-muted)">
@@ -260,12 +266,14 @@ export default function TimetableSettingsPage() {
                       className="input"
                     />
                   </Field>
-                  <button
-                    onClick={() => removeBreak(i)}
-                    className="text-sm text-(--danger) btn-outline py-2 text-left"
-                  >
-                    <Trash2 size={16} />Remove
-                  </button>
+                  {editable && (
+                    <button
+                      onClick={() => removeBreak(i)}
+                      className="text-sm text-(--danger) btn-outline py-2 text-left"
+                    >
+                      <Trash2 size={16} />Remove
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

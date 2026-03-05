@@ -27,6 +27,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
+import { canManage } from "@/lib/school/permissionUtils";
 import RequirePermission from "@/components/school/RequirePermission";
 
 export default function PromoteDemotePage() {
@@ -151,6 +152,9 @@ export default function PromoteDemotePage() {
       setLoading(false);
     }
   }
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "student.promote.manage", currentPlan);
 
   return (
     <RequirePermission permission="student.promote.view">
@@ -389,7 +393,7 @@ export default function PromoteDemotePage() {
 
                 <button
                   onClick={promote}
-                  disabled={!toSection || !toSession || loading}
+                  disabled={!toSection || !toSession || loading || !editable}
                   className="btn-primary flex items-center gap-2 py-2.5 px-6 shadow-xl shadow-orange-500/10"
                 >
                   <ArrowUp size={16} />

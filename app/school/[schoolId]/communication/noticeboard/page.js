@@ -17,7 +17,7 @@ export default function NoticeboardPage() {
   const { schoolUser, sessionList, setLoading } = useSchool();
   const { branchInfo, branch } = useBranch();
   const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
-  const canManage = canManageHelper(schoolUser, "communication.notice", currentPlan);
+  const canManage = canManageHelper(schoolUser, "communication.noticeboard.manage", currentPlan);
   const canDelete = canManage;
   const [sendPush, setSendPush] = useState(true);
   const [filters, setFilters] = useState({

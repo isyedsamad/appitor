@@ -37,6 +37,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
+import { canManage } from "@/lib/school/permissionUtils";
 
 import "@/components/school/students/IDPrintLayout.css";
 
@@ -152,6 +153,9 @@ export default function IDCardsPage() {
         "--id-grid-cols": gridCols,
         "--id-grid-rows": gridRows,
     };
+
+    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+    const editable = canManage(schoolUser, "student.idcard.manage", currentPlan);
 
     return (
         <RequirePermission permission="student.idcard.view">
@@ -490,7 +494,7 @@ function DesignStep({
                     <Toggle label="Include QR Code" active={showQr} onClick={() => setShowQr(!showQr)} />
                 </section>
 
-                <button onClick={onPrint} className="btn-primary w-full h-[50px] shadow-lg shadow-orange-500/20 flex items-center justify-center gap-3">
+                <button onClick={onPrint} disabled={!editable} className="btn-primary w-full h-[50px] shadow-lg shadow-orange-500/20 flex items-center justify-center gap-3">
                     <Printer size={20} /> <span className="text-base">Print {selectedIds.size} Cards</span>
                 </button>
             </div>

@@ -219,7 +219,7 @@ export default function MarkAttendancePage() {
       setLoading(false);
     }
   }
-  const editable = canManage(schoolUser, "attendance.mark", branchInfo?.plan || schoolUser.plan || "trial");
+  const editable = canManage(schoolUser, "attendance.mark.manage", branchInfo?.plan || schoolUser.plan || "trial");
 
   return (
     <RequirePermission permission="attendance.mark.view">

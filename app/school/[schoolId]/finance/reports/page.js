@@ -35,6 +35,7 @@ import { formatMonth, formatMonthMMYYYYToYYYYMM } from "@/lib/dateUtils";
 import { buildMonthsForSession } from "@/lib/school/fees/monthUtil";
 import { generateFinanceReportPDF } from "@/lib/exports/finance/exportFinanceReportPdf";
 import { exportFinanceReportToExcel } from "@/lib/exports/finance/exportFinanceReportExcel";
+import { canManage } from "@/lib/school/permissionUtils";
 
 const COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
@@ -161,6 +162,9 @@ export default function FinanceReportsPage() {
 
   const bestMonth = trend.reduce((a, b) => ((b.net || 0) > (a.net || 0) ? b : a), trend[0] || {});
   const worstMonth = trend.reduce((a, b) => ((b.net || 0) < (a.net || 0) ? b : a), trend[0] || {});
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "fee.reports.manage", currentPlan);
 
   return (
     <RequirePermission permission="fee.reports.view">

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import RequirePermission from "@/components/school/RequirePermission";
 
 export default function SchoolRootPage() {
     const router = useRouter();
@@ -14,8 +15,10 @@ export default function SchoolRootPage() {
     }, [params.schoolId, router]);
 
     return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="w-8 h-8 border-4 border-(--primary) border-t-transparent rounded-full animate-spin" />
-        </div>
+        <RequirePermission permission="dashboard.view">
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="w-8 h-8 border-4 border-(--primary) border-t-transparent rounded-full animate-spin" />
+            </div>
+        </RequirePermission>
     );
 }

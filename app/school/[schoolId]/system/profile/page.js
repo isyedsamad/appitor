@@ -16,6 +16,7 @@ import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function SchoolProfilePage() {
     const { setLoading } = useSchool();
@@ -71,6 +72,9 @@ export default function SchoolProfilePage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+    const editable = canManage(schoolUser, "system.profile.manage", currentPlan);
+
     return (
         <RequirePermission permission="system.profile.view">
             <div className="space-y-5">
@@ -89,12 +93,14 @@ export default function SchoolProfilePage() {
                         </div>
                     </div>
 
-                    <button
-                        className="btn-primary h-10 px-6 gap-2 text-xs font-semibold uppercase tracking-wide"
-                        onClick={handleSave}
-                    >
-                        <Save size={16} /> Save Changes
-                    </button>
+                    {editable && (
+                        <button
+                            className="btn-primary h-10 px-6 gap-2 text-xs font-semibold uppercase tracking-wide"
+                            onClick={handleSave}
+                        >
+                            <Save size={16} /> Save Changes
+                        </button>
+                    )}
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-5">

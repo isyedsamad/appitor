@@ -348,7 +348,7 @@ export default function StudentProfilePage() {
   }
   if (!student || !schoolUser || !branches) return null;
   const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
-  const editable = canManage(schoolUser, "student.profile", currentPlan);
+  const editable = canManage(schoolUser, "student.profile.manage", currentPlan);
 
   return (
     <RequirePermission permission="student.profile.view">

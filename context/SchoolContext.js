@@ -180,7 +180,7 @@ export function SchoolProvider({ schoolId, children }) {
           return;
         }
 
-        if (userData.currentBranch && userData.currentBranch !== "*") {
+        if (userData.currentBranch) {
           const branchSnap = await getDoc(doc(db, "branches", userData.currentBranch));
           if (branchSnap.exists()) {
             const branchData = branchSnap.data();
@@ -197,7 +197,7 @@ export function SchoolProvider({ schoolId, children }) {
 
         let sessionToUse = schoolData.currentSession;
         let sessionListToUse = schoolData.sessions || [];
-        if (userData.currentBranch && userData.currentBranch !== "*") {
+        if (userData.currentBranch) {
           const branchSettingsSnap = await getDoc(
             doc(db, "schools", schoolId, "branches", userData.currentBranch, "settings", "academic")
           );
@@ -243,28 +243,12 @@ export function SchoolProvider({ schoolId, children }) {
         });
 
         if (userData) {
-          const currentBranchUser = userData.currentBranch;
-          if (userData.branchIds.length > 1) {
-            const combined = userData.branchIds.map((id, index) => ({
-              id,
-              name: userData.branchNames[index]
-            }));
-            setBranches(combined);
-            setCurrentBranch(currentBranchUser);
-          } else {
-            if (userData.branchIds[0] == "*") {
-              const branchRef = query(
-                collection(db, 'branches'),
-                where('schoolId', '==', userData.schoolId)
-              )
-              const branchSnap = await getDocs(branchRef);
-              setBranches(branchSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-              setCurrentBranch(userData.currentBranch);
-            } else {
-              setBranches([{ id: userData.branchIds[0], name: userData.branchNames[0] }]);
-              setCurrentBranch(userData.branchIds[0]);
-            }
-          }
+          const combined = (userData.branchIds || []).map((id, index) => ({
+            id,
+            name: (userData.branchNames || [])[index]
+          }));
+          setBranches(combined);
+          setCurrentBranch(userData.currentBranch || "");
         }
       } catch (error) {
         console.error("AUTH SYNC ERROR:", error);

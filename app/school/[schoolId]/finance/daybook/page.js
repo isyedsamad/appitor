@@ -23,6 +23,7 @@ import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
 import { formatDate } from "@/lib/dateUtils";
+import { canManage } from "@/lib/school/permissionUtils";
 import { generateDayBookPDF } from "@/lib/exports/finance/exportDayBookPdf";
 import { exportDayBookToExcel } from "@/lib/exports/finance/exportDayBookExcel";
 import {
@@ -91,6 +92,9 @@ export default function DayBookPage() {
     ]
     : [];
 
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "fee.reports.manage", currentPlan);
+
   return (
     <RequirePermission permission="fee.reports.view">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -119,13 +123,15 @@ export default function DayBookPage() {
                 }}
               />
             </div>
-            <button
-              onClick={() => loadDayBook(selectedDate)}
-              className="btn-outline h-10 px-4 flex gap-2 items-center"
-            >
-              <RefreshCcw size={16} />
-              Sync
-            </button>
+            {editable && (
+              <button
+                onClick={() => loadDayBook(selectedDate)}
+                className="btn-outline h-10 px-4 flex gap-2 items-center"
+              >
+                <RefreshCcw size={16} />
+                Sync
+              </button>
+            )}
             <div className="flex items-center justify-end gap-1 bg-(--bg-card) rounded-lg border border-(--border)">
               <button
                 onClick={() => generateDayBookPDF({ branchInfo, dayData: dayBook, selectedDate })}

@@ -11,9 +11,11 @@ import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import { limit, startAfter } from "firebase/firestore";
 
+import { canManage } from "@/lib/school/permissionUtils";
+
 export default function SubjectTeacherMappingPage() {
   const { setLoading, schoolUser, classData, employeeData, subjectData } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSectionId, setSelectedSectionId] = useState('');
   const [lastDoc, setLastDoc] = useState(null);
@@ -42,6 +44,10 @@ export default function SubjectTeacherMappingPage() {
     setSubjects(subjectData);
     setTeachers(employeeData);
   }, [branch, schoolUser?.schoolId, classData, subjectData, employeeData]);
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "timetable.mapping.manage", currentPlan);
+
   const fetchMapping = async (reset = false) => {
     if (!selectedClassId || !selectedSectionId) return;
     try {
@@ -139,28 +145,30 @@ export default function SubjectTeacherMappingPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setForm({
-                classId: "",
-                className: "",
-                sectionId: "",
-                sectionName: "",
-                subjectId: "",
-                subjectName: "",
-                teacherId: "",
-                teacherName: "",
-                periodsPerWeek: "",
-              });
-              setSections([]);
-              setEditing(null);
-              setOpen(true);
-            }}
-            className="btn-primary"
-          >
-            <Plus size={18} />
-            Add Mapping
-          </button>
+          {editable && (
+            <button
+              onClick={() => {
+                setForm({
+                  classId: "",
+                  className: "",
+                  sectionId: "",
+                  sectionName: "",
+                  subjectId: "",
+                  subjectName: "",
+                  teacherId: "",
+                  teacherName: "",
+                  periodsPerWeek: "",
+                });
+                setSections([]);
+                setEditing(null);
+                setOpen(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus size={18} />
+              Add Mapping
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 max-w-xl gap-3 items-start md:items-end justify-start w-full">
           <div className="flex flex-col flex-1">
@@ -227,20 +235,22 @@ export default function SubjectTeacherMappingPage() {
                   <td className="px-4 py-3 capitalize">{teachers.filter(t => t.uid == row.teacherId).map(t => t.name)}</td>
                   <td className="px-4 py-3">{(row.periodsPerWeek >= 10 || row.periodsPerWeek == 0) ? row.periodsPerWeek : '0' + row.periodsPerWeek}</td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end items-center gap-2">
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="action-btn hover:text-yellow-600"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => openEdit(row)}
-                        className="action-btn hover:text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    {editable && (
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="action-btn hover:text-yellow-600"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => openEdit(row)}
+                          className="action-btn hover:text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

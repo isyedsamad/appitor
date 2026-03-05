@@ -36,7 +36,7 @@ export default function SubjectsPage() {
   };
 
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-  const editable = canManage(schoolUser, "academic.subjects", currentPlan);
+  const editable = canManage(schoolUser, "academic.subjects.manage", currentPlan);
 
   return (
     <RequirePermission permission="academic.subjects.view">

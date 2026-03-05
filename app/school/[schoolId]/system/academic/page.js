@@ -18,6 +18,7 @@ import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
 import { formatInputDate, toInputDate } from "@/lib/dateUtils";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function AcademicSessionSettingsPage() {
   const { currentSession, setCurrentSession, setLoading } = useSchool();
@@ -110,6 +111,9 @@ export default function AcademicSessionSettingsPage() {
     setSessions(prev => prev.filter(s => s.id !== id));
   }
 
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "system.academic.manage", currentPlan);
+
   return (
     <RequirePermission permission="system.academic.view">
       <div className="space-y-5">
@@ -138,12 +142,14 @@ export default function AcademicSessionSettingsPage() {
                 Branch: <span className="text-(--text)">{branchInfo?.name || "..."}</span>
               </span>
             </div>
-            <button
-              className="btn-primary h-10 px-6 gap-2 text-xs font-semibold uppercase"
-              onClick={saveSettings}
-            >
-              <Save size={16} /> Save Changes
-            </button>
+            {editable && (
+              <button
+                className="btn-primary h-10 px-6 gap-2 text-xs font-semibold uppercase"
+                onClick={saveSettings}
+              >
+                <Save size={16} /> Save Changes
+              </button>
+            )}
           </div>
         </div>
 
@@ -197,12 +203,14 @@ export default function AcademicSessionSettingsPage() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <button
-                    onClick={addSession}
-                    className="btn-primary h-10 w-full flex items-center justify-center gap-2 font-semibold text-xs"
-                  >
-                    <Plus size={14} /> Add to List
-                  </button>
+                  {editable && (
+                    <button
+                      onClick={addSession}
+                      className="btn-primary h-10 w-full flex items-center justify-center gap-2 font-semibold text-xs"
+                    >
+                      <Plus size={14} /> Add to List
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -258,7 +266,7 @@ export default function AcademicSessionSettingsPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            {s.id !== activeSession && (
+                            {s.id !== activeSession && editable && (
                               <button
                                 onClick={() => removeSession(s.id)}
                                 className="opacity-0 group-hover:opacity-100 p-2 text-red-500/60 hover:text-red-600 hover:bg-red-500/10 rounded-lg transition-all"

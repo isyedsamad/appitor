@@ -11,9 +11,12 @@ import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import Loading from "@/components/ui/Loading";
 
+import Loading from "@/components/ui/Loading";
+import { canManage } from "@/lib/school/permissionUtils";
+
 export default function EditTimetablePage() {
   const { schoolUser, classData, setLoading, employeeData, subjectData } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const [teacherTimetables, setTeacherTimetables] = useState({});
   const [conflict, setConflict] = useState(null);
 
@@ -119,6 +122,9 @@ export default function EditTimetablePage() {
       setLoading(false);
     }
   };
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "timetable.edit.manage", currentPlan);
 
   useEffect(() => {
     if (employeeData) setTeachers(employeeData);
@@ -503,7 +509,7 @@ export default function EditTimetablePage() {
               </p>
             </div>
           </div>
-          {searched && (
+          {searched && editable && (
             <button className="btn-primary gap-2" onClick={saveTimetable}>
               <Save size={16} /> Save Changes
             </button>
@@ -596,15 +602,17 @@ export default function EditTimetablePage() {
                                 <div className="text-(--text) text-sm font-semibold">{sub?.name}</div>
                                 <div className="text-(--status-m-text) text-xs capitalize font-medium">{t?.name}</div>
                               </div>
-                              <button
-                                className="p-1 hover:text-red-500"
-                                onClick={ev => {
-                                  ev.stopPropagation();
-                                  removeEntry(d, p, i);
-                                }}
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              {editable && (
+                                <button
+                                  className="p-1 hover:text-red-500"
+                                  onClick={ev => {
+                                    ev.stopPropagation();
+                                    removeEntry(d, p, i);
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           );
                         })}

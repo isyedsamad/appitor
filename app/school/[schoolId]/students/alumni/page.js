@@ -25,6 +25,7 @@ import { useBranch } from "@/context/BranchContext";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
 import secureAxios from "@/lib/secureAxios";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function AlumniPage() {
     const { classData, schoolUser, setLoading, loading, sessionList, currentSession } = useSchool();
@@ -366,7 +367,7 @@ export default function AlumniPage() {
 
                                 <button
                                     onClick={revertStudents}
-                                    disabled={!toSection || !toSession || loading}
+                                    disabled={!toSection || !toSession || loading || !editable}
                                     className="btn-primary flex items-center gap-2 py-2.5 px-6 shadow-xl shadow-orange-500/10"
                                 >
                                     <ArrowUp size={16} />

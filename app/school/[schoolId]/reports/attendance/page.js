@@ -11,6 +11,7 @@ import { useTheme } from "next-themes";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import RequirePermission from "@/components/school/RequirePermission";
 
 export default function AttendanceReportsPage() {
     const { classData, schoolUser, employeeData } = useSchool();
@@ -307,209 +308,211 @@ export default function AttendanceReportsPage() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-5">
-            {/* Header & Controls */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-                        <BarChart3 size={24} />
+        <RequirePermission permission="report.attendance.view">
+            <div className="max-w-7xl mx-auto space-y-5">
+                {/* Header & Controls */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+                            <BarChart3 size={24} />
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-semibold text-(--text)">Attendance Reports</h1>
+                            <p className="text-sm text-(--text-muted)">Monthly attendance summaries</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-lg font-semibold text-(--text)">Attendance Reports</h1>
-                        <p className="text-sm text-(--text-muted)">Monthly attendance summaries</p>
+
+                    <div className="flex flex-col md:flex-row gap-4 items-center">
+                        {/* Export Buttons */}
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <button
+                                onClick={exportToCSV}
+                                disabled={records.length === 0}
+                                className="btn-outline flex-1 md:flex-none justify-center items-center gap-2"
+                            >
+                                <FileText size={16} color="green" /> Export Excel
+                            </button>
+                            <button
+                                onClick={exportToPDF}
+                                disabled={records.length === 0}
+                                className="btn-outline flex-1 md:flex-none justify-center items-center gap-2"
+                            >
+                                <Download size={16} color="red" /> Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter Card */}
+                <div className="flex flex-col gap-4">
+                    {/* Scope Selection */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex border border-(--border) bg-(--bg-card) rounded-lg overflow-hidden">
+                            <button
+                                onClick={() => { setReportType("students"); setRecords([]); }}
+                                className={`px-4 py-2 rounded-none rounded-l-md text-sm font-semibold flex items-center gap-2 ${reportType === "students"
+                                    ? "bg-(--primary) text-white"
+                                    : "text-(--text-muted) hover:bg-(--bg-soft)"
+                                    }`}
+                            >
+                                <Users size={16} /> Students
+                            </button>
+                            <button
+                                onClick={() => { setReportType("employees"); setRecords([]); }}
+                                className={`px-4 py-2 rounded-none rounded-r-md text-sm font-semibold flex items-center gap-2 ${reportType === "employees"
+                                    ? "bg-(--primary) text-white"
+                                    : "text-(--text-muted) hover:bg-(--bg-soft)"
+                                    }`}
+                            >
+                                <LayoutList size={16} /> Employees
+                            </button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div>
+                            <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Month & Year <span className="text-red-500">*</span></label>
+                            <input
+                                type="month"
+                                className="input w-full"
+                                value={filters.monthYear}
+                                onChange={(e) => handleFilterChange('monthYear', e.target.value)}
+                            />
+                        </div>
+
+                        {reportType === "students" && (
+                            <>
+                                <div>
+                                    <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Class <span className="text-red-500">*</span></label>
+                                    <select
+                                        className="input w-full"
+                                        value={filters.className}
+                                        onChange={e => handleFilterChange('className', e.target.value)}
+                                    >
+                                        <option value="">Select class</option>
+                                        {classData?.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Section</label>
+                                    <select
+                                        className="input w-full"
+                                        value={filters.section}
+                                        disabled={!filters.className}
+                                        onChange={e => handleFilterChange('section', e.target.value)}
+                                    >
+                                        <option value="">All sections</option>
+                                        {selectedClass?.sections?.map(sec => (
+                                            <option key={sec.id} value={sec.id}>{sec.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="flex items-end">
+                            <button
+                                onClick={fetchAttendanceReport}
+                                disabled={loading}
+                                className="btn-primary w-full h-10 flex items-center justify-center gap-2"
+                            >
+                                {loading ? "Generating..." : "Generate Report"}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-4 items-center">
-                    {/* Export Buttons */}
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <button
-                            onClick={exportToCSV}
-                            disabled={records.length === 0}
-                            className="btn-outline flex-1 md:flex-none justify-center items-center gap-2"
-                        >
-                            <FileText size={16} color="green" /> Export Excel
-                        </button>
-                        <button
-                            onClick={exportToPDF}
-                            disabled={records.length === 0}
-                            className="btn-outline flex-1 md:flex-none justify-center items-center gap-2"
-                        >
-                            <Download size={16} color="red" /> Export PDF
-                        </button>
+                {/* Data Table */}
+                <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg) shadow-sm">
+                    <div className="p-4 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)">
+                        <h2 className="text-sm font-semibold flex items-center gap-2 text-(--text)">
+                            Report Preview
+                        </h2>
+                        <span className="text-xs font-medium px-2 py-1 rounded-md bg-(--primary-soft) text-(--primary)">
+                            {records.length} Records Found
+                        </span>
                     </div>
-                </div>
-            </div>
-
-            {/* Filter Card */}
-            <div className="flex flex-col gap-4">
-                {/* Scope Selection */}
-                <div className="flex items-center gap-3">
-                    <div className="flex border border-(--border) bg-(--bg-card) rounded-lg overflow-hidden">
-                        <button
-                            onClick={() => { setReportType("students"); setRecords([]); }}
-                            className={`px-4 py-2 rounded-none rounded-l-md text-sm font-semibold flex items-center gap-2 ${reportType === "students"
-                                ? "bg-(--primary) text-white"
-                                : "text-(--text-muted) hover:bg-(--bg-soft)"
-                                }`}
-                        >
-                            <Users size={16} /> Students
-                        </button>
-                        <button
-                            onClick={() => { setReportType("employees"); setRecords([]); }}
-                            className={`px-4 py-2 rounded-none rounded-r-md text-sm font-semibold flex items-center gap-2 ${reportType === "employees"
-                                ? "bg-(--primary) text-white"
-                                : "text-(--text-muted) hover:bg-(--bg-soft)"
-                                }`}
-                        >
-                            <LayoutList size={16} /> Employees
-                        </button>
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-                    <div>
-                        <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Month & Year <span className="text-red-500">*</span></label>
-                        <input
-                            type="month"
-                            className="input w-full"
-                            value={filters.monthYear}
-                            onChange={(e) => handleFilterChange('monthYear', e.target.value)}
-                        />
-                    </div>
-
-                    {reportType === "students" && (
-                        <>
-                            <div>
-                                <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Class <span className="text-red-500">*</span></label>
-                                <select
-                                    className="input w-full"
-                                    value={filters.className}
-                                    onChange={e => handleFilterChange('className', e.target.value)}
-                                >
-                                    <option value="">Select class</option>
-                                    {classData?.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Section</label>
-                                <select
-                                    className="input w-full"
-                                    value={filters.section}
-                                    disabled={!filters.className}
-                                    onChange={e => handleFilterChange('section', e.target.value)}
-                                >
-                                    <option value="">All sections</option>
-                                    {selectedClass?.sections?.map(sec => (
-                                        <option key={sec.id} value={sec.id}>{sec.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </>
-                    )}
-
-                    <div className="flex items-end">
-                        <button
-                            onClick={fetchAttendanceReport}
-                            disabled={loading}
-                            className="btn-primary w-full h-10 flex items-center justify-center gap-2"
-                        >
-                            {loading ? "Generating..." : "Generate Report"}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Data Table */}
-            <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg) shadow-sm">
-                <div className="p-4 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)">
-                    <h2 className="text-sm font-semibold flex items-center gap-2 text-(--text)">
-                        Report Preview
-                    </h2>
-                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-(--primary-soft) text-(--primary)">
-                        {records.length} Records Found
-                    </span>
-                </div>
-                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                    <table className="min-w-full text-sm shrink-0">
-                        <thead className="bg-(--bg-soft) sticky top-0 z-10 shadow-sm">
-                            <tr className="text-left text-(--text-muted)">
-                                {reportType === 'students' ? (
-                                    <>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Roll No</th>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">App ID</th>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Name</th>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Class - Section</th>
-                                    </>
-                                ) : (
-                                    <>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Emp ID</th>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Name</th>
-                                        <th className="px-4 py-3 font-semibold whitespace-nowrap">Role</th>
-                                    </>
-                                )}
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">P</th>
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">A</th>
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">L</th>
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">M</th>
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Marked</th>
-                                <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Total %</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-(--border)">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="12" className="px-4 py-12 text-center text-(--text-muted)">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--primary) mx-auto mb-4"></div>
-                                        Crunching numbers...
-                                    </td>
+                    <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                        <table className="min-w-full text-sm shrink-0">
+                            <thead className="bg-(--bg-soft) sticky top-0 z-10 shadow-sm">
+                                <tr className="text-left text-(--text-muted)">
+                                    {reportType === 'students' ? (
+                                        <>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Roll No</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">App ID</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Name</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Class - Section</th>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Emp ID</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Name</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap">Role</th>
+                                        </>
+                                    )}
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">P</th>
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">A</th>
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">L</th>
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">M</th>
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Marked</th>
+                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Total %</th>
                                 </tr>
-                            ) : records.length === 0 ? (
-                                <tr>
-                                    <td colSpan="12" className="px-4 py-12 text-center text-(--text-muted)">
-                                        Set your filters and click "Generate Report"
-                                    </td>
-                                </tr>
-                            ) : (
-                                records.map((r) => (
-                                    <tr key={r.uid} className="hover:bg-(--bg-soft) transition-colors">
-                                        {reportType === 'students' ? (
-                                            <>
-                                                <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{(r.rollNo?.toString() || "").padStart(2, '0') || "-"}</td>
-                                                <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{r.appId || "-"}</td>
-                                                <td className="px-4 py-3 font-medium capitalize whitespace-nowrap text-(--text)">{r.name || "-"}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap text-(--text)">
-                                                    {classData?.find((c) => c.id === r.classId)?.name || "-"} - {" "}
-                                                    {classData?.find((c) => c.id === r.classId)?.sections?.find((sec) => sec.id === r.sectionId)?.name || "-"}
-                                                </td>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{r.employeeId || "-"}</td>
-                                                <td className="px-4 py-3 font-medium capitalize whitespace-nowrap text-(--text)">{r.name || "-"}</td>
-                                                <td className="px-4 py-3 capitalize whitespace-nowrap text-(--text)">{r.role || "-"}</td>
-                                            </>
-                                        )}
-
-                                        <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-p-bg)] text-[var(--status-p-text)] bg-opacity-20">{r.stats.P}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-a-bg)] text-[var(--status-a-text)] bg-opacity-20">{r.stats.A}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-l-bg)] text-[var(--status-l-text)] bg-opacity-20">{r.stats.L}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-m-bg)] text-[var(--status-m-text)] bg-opacity-20">{r.stats.M}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center text-(--text-muted)">{r.stats.totalMarked}</td>
-                                        <td className="px-4 py-3 whitespace-nowrap text-center">
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${getStatusColor(r.stats.percent)}`}>
-                                                {r.stats.percent}%
-                                            </span>
+                            </thead>
+                            <tbody className="divide-y divide-(--border)">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="12" className="px-4 py-12 text-center text-(--text-muted)">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-(--primary) mx-auto mb-4"></div>
+                                            Crunching numbers...
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : records.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="12" className="px-4 py-12 text-center text-(--text-muted)">
+                                            Set your filters and click "Generate Report"
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    records.map((r) => (
+                                        <tr key={r.uid} className="hover:bg-(--bg-soft) transition-colors">
+                                            {reportType === 'students' ? (
+                                                <>
+                                                    <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{(r.rollNo?.toString() || "").padStart(2, '0') || "-"}</td>
+                                                    <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{r.appId || "-"}</td>
+                                                    <td className="px-4 py-3 font-medium capitalize whitespace-nowrap text-(--text)">{r.name || "-"}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-(--text)">
+                                                        {classData?.find((c) => c.id === r.classId)?.name || "-"} - {" "}
+                                                        {classData?.find((c) => c.id === r.classId)?.sections?.find((sec) => sec.id === r.sectionId)?.name || "-"}
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="px-4 py-3 font-medium whitespace-nowrap text-(--text)">{r.employeeId || "-"}</td>
+                                                    <td className="px-4 py-3 font-medium capitalize whitespace-nowrap text-(--text)">{r.name || "-"}</td>
+                                                    <td className="px-4 py-3 capitalize whitespace-nowrap text-(--text)">{r.role || "-"}</td>
+                                                </>
+                                            )}
+
+                                            <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-p-bg)] text-[var(--status-p-text)] bg-opacity-20">{r.stats.P}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-a-bg)] text-[var(--status-a-text)] bg-opacity-20">{r.stats.A}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-l-bg)] text-[var(--status-l-text)] bg-opacity-20">{r.stats.L}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-m-bg)] text-[var(--status-m-text)] bg-opacity-20">{r.stats.M}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-center text-(--text-muted)">{r.stats.totalMarked}</td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-center">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${getStatusColor(r.stats.percent)}`}>
+                                                    {r.stats.percent}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+        </RequirePermission>
     );
 }

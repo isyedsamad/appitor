@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyAppCheck } from "@/lib/verifyAppCheck";
 import { verifySuperAdmin } from "@/lib/verifySuperAdmin";
 import { NextResponse } from "next/server";
+import { syncSchoolListIndex } from "@/lib/admin/schoolListService";
 
 export async function POST(req) {
   try {
@@ -23,6 +24,7 @@ export async function POST(req) {
     }
 
     await batch.commit();
+    await syncSchoolListIndex();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("School lock error:", error);

@@ -28,6 +28,7 @@ import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
+import { canManage } from "@/lib/school/permissionUtils";
 
 export default function StudentFeeAssignmentPage() {
   const { schoolUser, setLoading, classData } = useSchool();
@@ -118,6 +119,10 @@ export default function StudentFeeAssignmentPage() {
     }
     loadStudents();
   };
+
+  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
+  const editable = canManage(schoolUser, "fee.setup.manage", currentPlan);
+
   const toggleSelectAll = () => {
     if (selectedIds.length === students.length) {
       setSelectedIds([]);
@@ -125,6 +130,7 @@ export default function StudentFeeAssignmentPage() {
       setSelectedIds(students.map(s => s.id));
     }
   };
+
   return (
     <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
@@ -260,7 +266,7 @@ export default function StudentFeeAssignmentPage() {
             </div>
           </div>
         )}
-        {selectedIds.length > 0 && (
+        {selectedIds.length > 0 && editable && (
           <div className="flex justify-end">
             <button
               onClick={() => {
