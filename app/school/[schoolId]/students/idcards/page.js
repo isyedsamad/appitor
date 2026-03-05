@@ -493,7 +493,7 @@ function DesignStep({
                     <Toggle label="Include QR Code" active={showQr} onClick={() => setShowQr(!showQr)} />
                 </section>
 
-                <button onClick={onPrint} disabled={!editable} className="btn-primary w-full h-[50px] shadow-lg shadow-orange-500/20 flex items-center justify-center gap-3">
+                <button onClick={onPrint} className="btn-primary w-full h-[50px] shadow-lg shadow-orange-500/20 flex items-center justify-center gap-3">
                     <Printer size={20} /> <span className="text-base">Print {selectedIds.size} Cards</span>
                 </button>
             </div>
