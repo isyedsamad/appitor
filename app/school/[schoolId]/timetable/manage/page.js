@@ -10,8 +10,6 @@ import { collection, doc, getDoc, getDocs, query, where } from "firebase/firesto
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
 import Loading from "@/components/ui/Loading";
-
-import Loading from "@/components/ui/Loading";
 import { canManage } from "@/lib/school/permissionUtils";
 
 export default function EditTimetablePage() {
