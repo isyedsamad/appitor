@@ -15,7 +15,7 @@ export async function POST(req) {
       sectionId,
       subjectId,
       teacherId,
-      periodsPerWeek,
+      mappings,
     } = body;
     if (!branch) {
       return NextResponse.json(
@@ -23,18 +23,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    if (!classId || !sectionId || !subjectId || !teacherId) {
-      return NextResponse.json(
-        { error: "Invalid payload" },
-        { status: 400 }
-      );
-    }
-    if (!periodsPerWeek || Number(periodsPerWeek) <= 0) {
-      return NextResponse.json(
-        { error: "Invalid periods per week" },
-        { status: 400 }
-      );
-    }
+
     const mappingCol = adminDb
       .collection("schools")
       .doc(schoolId)
@@ -43,6 +32,52 @@ export async function POST(req) {
       .collection('timetable')
       .doc('items')
       .collection("subjectTeacherMapping");
+
+    if (mappings && Array.isArray(mappings)) {
+      if (!classId || !sectionId) {
+        return NextResponse.json(
+          { error: "Invalid payload for bulk mapping" },
+          { status: 400 }
+        );
+      }
+      const existingSnap = await mappingCol
+        .where("classId", "==", classId)
+        .where("sectionId", "==", sectionId)
+        .get();
+
+      const batch = adminDb.batch();
+      existingSnap.docs.forEach(doc => batch.delete(doc.ref));
+
+      mappings.forEach(m => {
+        if (!m.subjectId || !m.teacherId) return;
+        const newRef = mappingCol.doc();
+        batch.set(newRef, {
+          classId,
+          sectionId,
+          subjectId: m.subjectId,
+          teacherId: m.teacherId,
+          schoolId,
+          branchId: branch,
+          updatedBy: uid,
+          updatedAt: FieldValue.serverTimestamp(),
+          createdBy: uid,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+      return NextResponse.json({
+        success: true,
+        message: "Mappings saved successfully",
+      });
+    }
+
+    if (!classId || !sectionId || !subjectId || !teacherId) {
+      return NextResponse.json(
+        { error: "Invalid payload" },
+        { status: 400 }
+      );
+    }
     const duplicateSnap = await mappingCol
       .where("classId", "==", classId)
       .where("sectionId", "==", sectionId)
@@ -69,7 +104,6 @@ export async function POST(req) {
         sectionId,
         subjectId,
         teacherId,
-        periodsPerWeek: Number(periodsPerWeek),
         schoolId,
         branchId: branch,
         updatedBy: uid,

@@ -780,7 +780,7 @@ export default function StudentProfilePage() {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-(--text-muted)">Password</span>
-                      <span className="font-mono font-semibold">{password}</span>
+                      <span className="font-mono font-semibold">{editable ? password : "********"}</span>
                     </div>
                   </div>
 

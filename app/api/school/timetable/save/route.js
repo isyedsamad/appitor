@@ -21,34 +21,11 @@ export async function POST(req) {
       .collection("timetable")
       .doc("items");
 
-    const mappingSnap = await baseRef
-      .collection("subjectTeacherMapping")
-      .where("classId", "==", classId)
-      .where("sectionId", "==", sectionId)
-      .get();
-
-    const limitMap = {};
-    mappingSnap.forEach(d => {
-      const m = d.data();
-      limitMap[`${m.subjectId}_${m.teacherId}`] = m.periodsPerWeek;
-    });
-
-    const weeklyCount = {};
     const conflicts = [];
 
     for (const day of Object.keys(days)) {
       for (const slot of days[day] || []) {
         for (const e of slot.entries || []) {
-          const key = `${e.subjectId}_${e.teacherId}`;
-          weeklyCount[key] = (weeklyCount[key] || 0) + 1;
-
-          if (weeklyCount[key] > (limitMap[key] || 0)) {
-            return NextResponse.json(
-              { message: "Weekly limit exceeded", teacherId: e.teacherId },
-              { status: 400 }
-            );
-          }
-
           conflicts.push({
             teacherId: e.teacherId,
             subjectId: e.subjectId,

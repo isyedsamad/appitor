@@ -18,10 +18,11 @@ export default function Sidebar() {
   if (!schoolUser) return null;
   const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
   const basePath = `/school/${schoolUser.schoolId}`;
+
   return (
     <aside
       className={`min-h-dvh border-r border-(--border) bg-(--bg-card)
-        transition-all duration-300 ${collapsed ? "w-15" : "w-55"}`}
+        transition-all duration-300 ${collapsed ? "w-15" : "w-58"}`}
     >
       <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--bg-card)">
         {!collapsed && (
@@ -106,7 +107,7 @@ export default function Sidebar() {
                 </button>
               )}
               {!collapsed && isMainOpen && hasMainChildren && !isMainLocked && (
-                <div className="ml-3 mt-1">
+                <div className="ml-3 pl-3 mt-1 space-y-1 border-l border-(--border)/70">
                   {main.children.map(sub => {
                     const subKey = `${main.label}__${sub.label}`;
                     const isSubOpen = openSubMenu === subKey;
@@ -119,7 +120,7 @@ export default function Sidebar() {
                         return (
                           <div
                             key={sub.href ?? sub.label}
-                            className="flex items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
+                            className="flex font-medium items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
                           >
                             <span className="flex items-center gap-2">
                               {sub.label}
@@ -133,7 +134,7 @@ export default function Sidebar() {
                         <Link
                           key={sub.href ?? sub.label}
                           href={subHref}
-                          className="flex items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
+                          className="flex font-medium items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
                         >
                           <span>{sub.label}</span>
                         </Link>
@@ -148,7 +149,7 @@ export default function Sidebar() {
                       <div key={sub.label} className="mt-1">
                         {isGroupLocked ? (
                           <div className="flex items-center justify-between rounded px-3 py-1.5 text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale">
-                            <span className="flex items-center gap-2">
+                            <span className="flex font-medium items-center gap-2">
                               {sub.label} <Lock size={10} />
                             </span>
                           </div>
@@ -156,7 +157,7 @@ export default function Sidebar() {
                           <Link
                             href={subHref}
                             onClick={e => setOpenSubMenu(prev => prev === subKey ? null : subKey)}
-                            className="flex items-center justify-between rounded hover:bg-(--primary-soft)"
+                            className="flex font-medium items-center justify-between rounded hover:bg-(--primary-soft)"
                           >
                             <span className="flex-1 px-3 py-1.5 text-sm text-(--text)">
                               {sub.label}
@@ -167,7 +168,7 @@ export default function Sidebar() {
                           </Link>
                         )}
                         {isSubOpen && !isGroupLocked && (
-                          <div className="ml-3 mt-1">
+                          <div className="ml-3 pl-3 mt-1 space-y-1 border-l border-(--border)/70">
                             {sub.children.map(page => {
                               const isPageLocked = page.permission && !hasPermission(schoolUser, page.permission, false, currentPlan);
 
@@ -175,7 +176,7 @@ export default function Sidebar() {
                                 return (
                                   <div
                                     key={page.href}
-                                    className="flex items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
+                                    className="flex font-medium items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
                                   >
                                     <span className="flex items-center gap-2">
                                       {page.label} <Lock size={10} />
@@ -188,7 +189,7 @@ export default function Sidebar() {
                                 <Link
                                   key={page.href}
                                   href={`${basePath}/${page.href}`}
-                                  className="flex items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
+                                  className="flex font-medium items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
                                 >
                                   <span>{page.label}</span>
                                 </Link>

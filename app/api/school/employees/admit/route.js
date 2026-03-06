@@ -87,7 +87,7 @@ export async function POST(req) {
         branchIds,
         currentBranch: primaryBranch,
         branchNames,
-        status: "pending",
+        status: "active",
         createdBy: user.uid,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -108,7 +108,7 @@ export async function POST(req) {
         mobile,
         roleId,
         role,
-        status: "pending",
+        status: "active",
       };
 
       if (!metaSnap.exists) {

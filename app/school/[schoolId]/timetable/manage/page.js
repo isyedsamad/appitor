@@ -180,17 +180,6 @@ export default function EditTimetablePage() {
     }
   };
 
-  const getUsageCount = (subjectId, teacherId) => {
-    let count = 0;
-    Object.values(timetable).forEach((day) =>
-      day.forEach((p) =>
-        p.entries?.forEach((e) => {
-          if (e.subjectId === subjectId && e.teacherId === teacherId) count++;
-        })
-      )
-    );
-    return count;
-  };
   const canAssign = (day, period, teacherId) => {
     return !timetable[day]?.some(
       (p) =>
@@ -333,12 +322,7 @@ export default function EditTimetablePage() {
   // };
 
   const applySingleMapping = async (mapping) => {
-    const { subjectId, teacherId, periodsPerWeek } = mapping;
-    const used = getUsageCount(subjectId, teacherId);
-    if (used >= periodsPerWeek) {
-      toast.error("Weekly limit reached");
-      return;
-    }
+    const { subjectId, teacherId } = mapping;
 
     const slots = await fetchTeacherTimetable(teacherId);
     if (!slots) return;
@@ -646,24 +630,18 @@ export default function EditTimetablePage() {
                   <button className="p-1 hover:text-red-500" onClick={() => setSidebar(null)}>✕</button>
                 </div>
                 {mappings.map((m, i) => {
-                  const used = getUsageCount(m.subjectId, m.teacherId);
-                  const max = m.periodsPerWeek;
                   const sub = subjects.find(s => s.id === m.subjectId);
                   const t = teachers.find(t => t.uid === m.teacherId);
-                  const exhausted = used >= max;
 
                   return (
                     <div
                       key={i}
-                      onClick={() => !exhausted && applySingleMapping(m)}
+                      onClick={() => applySingleMapping(m)}
                       className={`
                       relative rounded-lg border border-(--border)
                       bg-(--bg-card)
                       p-4 transition-all
-                      ${exhausted
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer hover:border-(--primary) hover:shadow-sm"
-                        }
+                      cursor-pointer hover:border-(--primary) hover:shadow-sm
                     `}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -683,31 +661,6 @@ export default function EditTimetablePage() {
                               </span>
                             </div>
                           </div>
-                        </div>
-                        {exhausted && (
-                          <div className="flex items-center gap-1 bg-(--status-a-bg) text-(--status-a-text) px-2 py-1 rounded-md text-xs font-medium">
-                            <AlertTriangle size={14} />
-                            Full
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-4 space-y-1.5">
-                        <div className="flex justify-between text-[11px] text-(--text-muted)">
-                          <span>Weekly allocation</span>
-                          <span className={exhausted ? "text-red-600 font-medium" : ""}>
-                            {used} / {max}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                          <div
-                            className={`
-                            h-full rounded-full transition-all
-                            ${exhausted ? "bg-red-500" : "bg-(--primary)"}
-                          `}
-                            style={{
-                              width: `${Math.min((used / max) * 100, 100)}%`,
-                            }}
-                          />
                         </div>
                       </div>
                     </div>

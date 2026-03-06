@@ -18,7 +18,7 @@ export default function SchoolHolidayPage() {
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const canCreate = hasPermission(
     schoolUser,
-    "holiday.create",
+    "holiday.manage",
     false,
     currentPlan
   );

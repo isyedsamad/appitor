@@ -10,11 +10,12 @@ import {
     Layers,
     BookMarked,
     Sparkles,
-    ChevronRight
+    ChevronRight,
+    CalendarClock
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
-export default function OnboardingWizard({ schoolId, sessions = [], classes = [], subjects = [] }) {
+export default function OnboardingWizard({ schoolId, sessions = [], classes = [], subjects = [], timetableReady = false }) {
     const pathname = usePathname();
 
     const steps = [
@@ -41,6 +42,14 @@ export default function OnboardingWizard({ schoolId, sessions = [], classes = []
             path: `/school/${schoolId}/academics/subjects`,
             isComplete: (subjects || []).length > 0,
             icon: BookMarked
+        },
+        {
+            id: 'timetable',
+            title: 'Timetable Settings',
+            description: 'Define your school hours and periods.',
+            path: `/school/${schoolId}/timetable/settings`,
+            isComplete: timetableReady,
+            icon: CalendarClock
         }
     ];
 

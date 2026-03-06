@@ -1,55 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Save, X, Pencil, Trash2, Search } from "lucide-react";
+import { BookOpen, Plus, Save, Trash2, Search, AlertTriangle, Info, Copy, Users, BookMarked, LayoutGrid } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
-import { limit, startAfter } from "firebase/firestore";
-
 import { canManage } from "@/lib/school/permissionUtils";
+
+// Simple ID generator for client-side keys
+const generateId = () => Math.random().toString(36).substring(2, 11);
 
 export default function SubjectTeacherMappingPage() {
   const { setLoading, schoolUser, classData, employeeData, subjectData } = useSchool();
   const { branch, branchInfo } = useBranch();
+
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [selectedSectionId, setSelectedSectionId] = useState('');
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-  const PAGE_SIZE = 5;
-  const [mappings, setMappings] = useState([]);
+  const [selectedSectionId, setSelectedSectionId] = useState("");
+  const [bulkMappings, setBulkMappings] = useState([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const selectedClass = classData?.find(c => c.id === selectedClassId);
-  const [form, setForm] = useState({
-    classId: "",
-    className: "",
-    sectionId: "",
-    sectionName: "",
-    subjectId: "",
-    subjectName: "",
-    teacherId: "",
-    teacherName: "",
-    periodsPerWeek: "",
+
+  // Metrics
+  const validMappings = bulkMappings.filter(m => m.subjectId && m.teacherId);
+  const uniqueSubjects = new Set(validMappings.map(m => m.subjectId)).size;
+  const uniqueTeachers = new Set(validMappings.map(m => m.teacherId)).size;
+
+  const filteredMappings = bulkMappings.filter(m => {
+    if (!searchQuery) return true;
+    const sName = subjects.find(s => s.id === m.subjectId)?.name?.toLowerCase() || "";
+    const tName = teachers.find(t => t.uid === m.teacherId)?.name?.toLowerCase() || "";
+    const query = searchQuery.toLowerCase();
+    return sName.includes(query) || tName.includes(query);
   });
+
   useEffect(() => {
-    if (!branch || !schoolUser?.schoolId || !classData || !subjectData || !employeeData) return;
-    setSubjects(subjectData);
-    setTeachers(employeeData);
-  }, [branch, schoolUser?.schoolId, classData, subjectData, employeeData]);
+    if (subjectData) setSubjects(subjectData);
+    if (employeeData) setTeachers(employeeData);
+  }, [subjectData, employeeData]);
+
+  const selectedClass = classData?.find(c => c.id === selectedClassId);
+  const sections = selectedClass?.sections || [];
 
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const editable = canManage(schoolUser, "timetable.mapping.manage", currentPlan);
 
-  const fetchMapping = async (reset = false) => {
-    if (!selectedClassId || !selectedSectionId) return;
+  const fetchMapping = async () => {
+    if (!selectedClassId || !selectedSectionId) {
+      toast.error("Please select a Class and Section first");
+      return;
+    }
     try {
       setLoading(true);
       const baseRef = collection(
@@ -63,18 +70,21 @@ export default function SubjectTeacherMappingPage() {
         "subjectTeacherMapping"
       );
 
-      let q = query(
+      const q = query(
         baseRef,
         where("classId", "==", selectedClassId),
-        where("sectionId", "==", selectedSectionId),
-        ...(lastDoc && !reset ? [startAfter(lastDoc)] : []),
-        limit(PAGE_SIZE)
+        where("sectionId", "==", selectedSectionId)
       );
+
       const snap = await getDocs(q);
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setMappings(prev => (reset ? docs : [...prev, ...docs]));
-      setLastDoc(snap.docs[snap.docs.length - 1] || null);
-      setHasMore(snap.docs.length === PAGE_SIZE);
+      const docs = snap.docs.map(d => d.data());
+
+      setBulkMappings(docs.map(d => ({
+        id: generateId(),
+        subjectId: d.subjectId || "",
+        teacherId: d.teacherId || "",
+      })));
+      setIsLoaded(true);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load mappings");
@@ -82,55 +92,69 @@ export default function SubjectTeacherMappingPage() {
       setLoading(false);
     }
   };
-  const handleClassChange = (classId) => {
-    const cls = classData.find(c => c.id === classId);
-    setForm({
-      ...form,
-      classId: cls.id,
-      className: cls.name,
-      sectionId: "",
-      sectionName: "",
-    });
-    setSections(cls.sections || []);
+  const addRow = () => {
+    setBulkMappings([
+      ...bulkMappings,
+      { id: generateId(), subjectId: "", teacherId: "" }
+    ]);
   };
-  const saveMapping = async () => {
-    if (!form.classId || !form.sectionId || !form.subjectId || !form.teacherId || !form.periodsPerWeek) {
-      toast.error("Please enter all the required credentials!");
+
+  const duplicateRow = (row) => {
+    setBulkMappings([
+      ...bulkMappings,
+      { id: generateId(), subjectId: row.subjectId, teacherId: row.teacherId }
+    ]);
+  };
+
+  const removeRow = (id) => {
+    setBulkMappings(bulkMappings.filter(m => m.id !== id));
+  };
+
+  const updateRow = (id, field, value) => {
+    setBulkMappings(bulkMappings.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const saveAllMappings = async () => {
+    if (!editable) return;
+
+    const invalid = bulkMappings.some(m => !m.subjectId || !m.teacherId);
+    if (invalid) {
+      toast.error("Please ensure all rows have a subject and teacher");
       return;
     }
+
+    // Check for duplicates
+    const seen = new Set();
+    let hasDuplicates = false;
+    for (const m of bulkMappings) {
+      const key = `${m.subjectId}-${m.teacherId}`;
+      if (seen.has(key)) hasDuplicates = true;
+      seen.add(key);
+    }
+    if (hasDuplicates) {
+      toast.error("A teacher is mapped multiple times to the same subject in this list. Please combine their periods.");
+      return;
+    }
+
     try {
       setLoading(true);
       await secureAxios.post("/api/school/academics/subject-mapping", {
         branch,
-        ...form,
-        id: editing?.id || null,
+        classId: selectedClassId,
+        sectionId: selectedSectionId,
+        mappings: bulkMappings
       });
-      toast.success(editing ? "Mapping updated" : "Mapping created");
-      setOpen(false);
-      setEditing(null);
-      if (form.classId === selectedClassId && form.sectionId == selectedSectionId) {
-        setMappings([]);
-        setLastDoc(null);
-        fetchMapping(true);
-      } else {
-        setLoading(false);
-      }
+      toast.success("All mappings saved successfully");
     } catch (err) {
+      toast.error("Failed to save mappings: " + (err.response?.data?.message || err.message));
+    } finally {
       setLoading(false);
-      toast.error("Failed: " + err.response.data.message);
     }
-  };
-  const openEdit = (row) => {
-    setForm(row);
-    const cls = classData.find(c => c.id === row.classId);
-    setSections(cls?.sections || []);
-    setEditing(row);
-    setOpen(true);
   };
 
   return (
     <RequirePermission permission="timetable.mapping.view">
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
@@ -138,271 +162,270 @@ export default function SubjectTeacherMappingPage() {
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">
-                Subject – Teacher Mapping
+                Subject–Teacher Mapping
               </h1>
               <p className="text-sm text-(--text-muted)">
-                Who teaches which subject for which section
+                Optimized bulk assignment
               </p>
             </div>
           </div>
-          {editable && (
+        </div>
+
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-(--text-muted)">Class</label>
+              <select
+                className="input"
+                value={selectedClassId}
+                onChange={(e) => {
+                  setSelectedClassId(e.target.value);
+                  setSelectedSectionId("");
+                  setIsLoaded(false);
+                }}
+              >
+                <option value="">Select Class</option>
+                {classData && classData.map(cls => (
+                  <option key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-(--text-muted)">Section</label>
+              <select
+                className="input"
+                value={selectedSectionId}
+                disabled={!selectedClassId}
+                onChange={(e) => {
+                  setSelectedSectionId(e.target.value);
+                  setIsLoaded(false);
+                }}
+              >
+                <option value="">Select Section</option>
+                {sections.map(sec => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
-              onClick={() => {
-                setForm({
-                  classId: "",
-                  className: "",
-                  sectionId: "",
-                  sectionName: "",
-                  subjectId: "",
-                  subjectName: "",
-                  teacherId: "",
-                  teacherName: "",
-                  periodsPerWeek: "",
-                });
-                setSections([]);
-                setEditing(null);
-                setOpen(true);
-              }}
+              onClick={fetchMapping}
+              disabled={!selectedClassId || !selectedSectionId}
               className="btn-primary"
             >
-              <Plus size={18} />
-              Add Mapping
+              <Search size={16} /> Load Data
             </button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 max-w-xl gap-3 items-start md:items-end justify-start w-full">
-          <div className="flex flex-col flex-1">
-            <p className="text-xs font-medium text-(--text-muted)">Class</p>
-            <select
-              className="input"
-              value={selectedClassId}
-              onChange={(e) => {
-                setSelectedClassId(e.target.value);
-              }}
-            >
-              <option value="">Select Class</option>
-              {classData && classData.map(cls => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
           </div>
-          <div className="flex flex-col">
-            <p className="text-xs font-medium text-(--text-muted)">Section</p>
-            <select
-              className="input"
-              value={selectedSectionId}
-              onChange={(e) => {
-                setSelectedSectionId(e.target.value);
-              }}
-            >
-              <option value="">Select Section</option>
-              {selectedClass?.sections.map(cls => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button onClick={() => {
-            setMappings([]);
-            setLastDoc(null);
-            setHasMore(true);
-            fetchMapping(true);
-          }} className="btn-primary"><Search size={15} /> Load Data</button>
         </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-(--bg) border-b border-(--border)">
-              <tr className="text-left text-(--text-muted)">
-                <th className="px-4 py-3 text-left">Class</th>
-                <th className="px-4 py-3 text-left">Subject</th>
-                <th className="px-4 py-3 text-left">Teacher</th>
-                <th className="px-4 py-3 text-left">Periods / Week</th>
-                <th className="px-4 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mappings && mappings.map(row => (
-                <tr key={row.id} className="border-b border-(--border)">
-                  <td className="px-4 py-3">
-                    {classData.filter(c => c.id == row.classId).map(c => c.name)} {classData.filter(c => c.id == row.classId).map(c =>
-                      c.sections.filter(s => s.id == row.sectionId).map(s => s.name)
-                    )}
-                  </td>
-                  <td className="px-4 py-3">{subjects.filter(s => s.id == row.subjectId).map(s => s.name)}</td>
-                  <td className="px-4 py-3 capitalize">{teachers.filter(t => t.uid == row.teacherId).map(t => t.name)}</td>
-                  <td className="px-4 py-3">{(row.periodsPerWeek >= 10 || row.periodsPerWeek == 0) ? row.periodsPerWeek : '0' + row.periodsPerWeek}</td>
-                  <td className="px-4 py-3 text-right">
-                    {editable && (
-                      <div className="flex justify-end items-center gap-2">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="action-btn hover:text-yellow-600"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="action-btn hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {selectedClassId && !mappings.length && (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-(--text-muted)">
-                    No mappings created yet
-                  </td>
-                </tr>
-              )}
-              {!selectedClassId && (
-                <tr>
-                  <td colSpan={5} className="p-6 text-center text-(--text-muted)">
-                    Select a Class to Search Mapping
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={5} className="px-4 py-3 text-center">
-                  {hasMore && selectedClassId && (
-                    <button
-                      onClick={() => fetchMapping(false)}
-                      className="text-sm text-(--primary) hover:underline"
-                    >
-                      Load more
-                    </button>
-                  )}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-        {open && (
-          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex justify-end">
-            <div className="w-full max-w-md bg-(--bg-card) h-full p-5 space-y-4 border-l-2 border-(--primary) overflow-y-auto">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-(--text)">
-                  {editing ? "Edit Teacher Mapping" : "Add Teacher Mapping"}
-                </h2>
-                <button onClick={() => setOpen(false)}>
-                  <X />
-                </button>
+
+        {!isLoaded && (
+          <div className="bg-(--status-m-bg) border border-(--status-m-border) rounded-2xl p-5 md:p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="bg-(--status-m-text)/10 p-3 rounded-full text-(--status-m-text) shrink-0">
+                <Info size={24} />
               </div>
-              <Field label="Class">
-                <select
-                  className="input"
-                  value={form.classId}
-                  onChange={(e) => handleClassChange(e.target.value)}
-                >
-                  <option value="">Select Class</option>
-                  {classData.map(cls => (
-                    <option key={cls.id} value={cls.id}>
-                      {cls.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Section">
-                <select
-                  className="input"
-                  value={form.sectionId}
-                  disabled={!sections.length}
-                  onChange={(e) => {
-                    const sec = sections.find(s => s.id === e.target.value);
-                    setForm({
-                      ...form,
-                      sectionId: sec.id,
-                      sectionName: sec.name,
-                    });
-                  }}
-                >
-                  <option value="">
-                    {sections.length ? "Select Section" : "Select class first"}
-                  </option>
-                  {sections.map(sec => (
-                    <option key={sec.id} value={sec.id}>
-                      {sec.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Subject">
-                <select
-                  className="input"
-                  value={form.subjectId}
-                  onChange={(e) => {
-                    const subj = subjects.find(s => s.id === e.target.value);
-                    setForm({
-                      ...form,
-                      subjectId: subj.id,
-                      subjectName: subj.name,
-                    });
-                  }}
-                >
-                  <option value="">Select Subject</option>
-                  {subjects.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Teacher">
-                <select
-                  className="input capitalize"
-                  value={form.teacherId}
-                  onChange={(e) => {
-                    const t = teachers.find(t => t.uid === e.target.value);
-                    setForm({
-                      ...form,
-                      teacherId: t.uid,
-                      teacherName: t.name,
-                    });
-                  }}
-                >
-                  <option value="">Select Teacher</option>
-                  {teachers.map(t => (
-                    <option key={t.uid} value={t.uid}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Periods per Week">
-                <input
-                  type="number"
-                  className="input"
-                  value={form.periodsPerWeek}
-                  onChange={(e) =>
-                    setForm({ ...form, periodsPerWeek: Number(e.target.value) })
-                  }
-                />
-              </Field>
-              <button onClick={saveMapping} className="btn-primary w-full">
-                <Save size={18} />
-                Save Mapping
-              </button>
+              <div>
+                <h3 className="text-(--status-m-text) font-semibold text-base mb-1">
+                  How does Subject-Teacher Mapping work?
+                </h3>
+                <p className="text-(--status-m-text) text-sm leading-relaxed mb-3">
+                  This page allows you to define exactly which teacher is responsible for teaching a specific subject to a particular Class and Section. These mappings operate as the foundational rules for generating your timetable.
+                </p>
+                <ul className="text-sm text-(--status-m-text) space-y-2 list-none p-0">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-(--status-m-text)" />
+                    First, select a <strong>Class</strong> and <strong>Section</strong> below to load existing mappings or start fresh.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-(--status-m-text)" />
+                    Then, add rows linking a Subject to a Teacher. You can copy rows if multiple teachers share a subject.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-(--status-m-text)" />
+                    Once saved, these linked teachers will be available to schedule in the Timetable Manager.
+                  </li>
+                </ul>
+              </div>
             </div>
+          </div>
+        )}
+
+        {isLoaded && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {bulkMappings.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-(--bg-card) border border-(--border) py-4 px-5 rounded-xl flex items-center gap-4">
+                  <div className="p-3 bg-(--primary-soft) text-(--primary) rounded-lg">
+                    <LayoutGrid size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-(--text-muted) font-medium">Total Mappings</p>
+                    <p className="text-2xl font-bold text-(--text)">{bulkMappings.length}</p>
+                  </div>
+                </div>
+                <div className="bg-(--bg-card) border border-(--border) py-4 px-5 rounded-xl flex items-center gap-4">
+                  <div className="p-3 bg-(--status-i-bg) text-(--status-i-text) rounded-lg">
+                    <BookMarked size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-(--text-muted) font-medium">Unique Subjects</p>
+                    <p className="text-2xl font-bold text-(--text)">{uniqueSubjects}</p>
+                  </div>
+                </div>
+                <div className="bg-(--bg-card) border border-(--border) py-4 px-5 rounded-xl flex items-center gap-4">
+                  <div className="p-3 bg-(--status-m-bg) text-(--status-m-text) rounded-lg">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-(--text-muted) font-medium">Unique Teachers</p>
+                    <p className="text-2xl font-bold text-(--text)">{uniqueTeachers}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {bulkMappings.length > 0 && (
+              <div className="flex items-center justify-between hidden">
+                <div className="relative max-w-sm w-full">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted)" />
+                  <input
+                    type="text"
+                    placeholder="Search by subject or teacher..."
+                    className="input pl-9 w-full bg-(--bg-card) border-(--border)"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {filteredMappings.length > 0 ? (
+                <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-(--bg) border-b border-(--border)">
+                      <tr className="text-left text-(--text-muted)">
+                        <th className="px-4 py-3 text-left w-1/3">Subject</th>
+                        <th className="px-4 py-3 text-left w-1/2">Teacher</th>
+                        {editable && <th className="px-4 py-3 text-right">Action</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMappings.map((row) => (
+                        <tr key={row.id} className="border-b border-(--border) hover:bg-(--bg)/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <select
+                              className="input"
+                              value={row.subjectId}
+                              disabled={!editable}
+                              onChange={(e) => updateRow(row.id, "subjectId", e.target.value)}
+                            >
+                              <option value="">Select Subject</option>
+                              {subjects.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              className="input"
+                              value={row.teacherId}
+                              disabled={!editable}
+                              onChange={(e) => updateRow(row.id, "teacherId", e.target.value)}
+                            >
+                              <option value="">Select Teacher</option>
+                              {teachers.map(t => (
+                                <option key={t.uid} value={t.uid}>{t.name}</option>
+                              ))}
+                            </select>
+                          </td>
+                          {editable && (
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => duplicateRow(row)}
+                                  className="p-2 text-(--text-muted) hover:text-(--primary) hover:bg-(--primary-soft) rounded-lg transition-colors"
+                                  title="Duplicate mapping"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <button
+                                  onClick={() => removeRow(row.id)}
+                                  className="p-2 text-(--text-muted) hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Remove mapping"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : bulkMappings.length > 0 ? (
+                <div className="bg-(--bg-card) border border-(--border) rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+                  <div className="h-16 w-16 bg-(--bg) rounded-full flex items-center justify-center mb-4 text-(--text-muted)">
+                    <Search size={24} />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-1">No mappings found</h3>
+                  <p className="text-(--text-muted) text-sm max-w-md mx-auto">
+                    We couldn't find any mapped subjects or teachers matching "{searchQuery}".
+                  </p>
+                  <button onClick={() => setSearchQuery("")} className="mt-4 text-(--primary) text-sm font-medium hover:underline">
+                    Clear Search
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-(--bg-card) border border-dashed border-(--border) rounded-2xl p-12 text-center flex flex-col items-center justify-center group overflow-hidden relative">
+                  <div className="absolute inset-0 bg-linear-to-b from-transparent to-(--bg)/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative z-10 w-full flex flex-col items-center">
+                    <div className="h-20 w-20 bg-(--primary-soft) rounded-full flex items-center justify-center mb-5 text-(--primary) shadow-inner">
+                      <LayoutGrid size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold mb-2">Build Your Mapping</h3>
+                    <p className="text-(--text-muted) text-sm max-w-md mx-auto mb-8 leading-relaxed">
+                      Link subjects to the teachers responsible for teaching them in this class section. This data is the foundation of your timetable generation.
+                    </p>
+                    {editable && (
+                      <button
+                        onClick={addRow}
+                        className="btn-primary px-6 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                      >
+                        <Plus size={18} className="mr-2" /> Quick Start
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {editable && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button
+                  onClick={addRow}
+                  className="btn-outline flex items-center gap-2 border-dashed border-2 hover:bg-(--bg) w-full sm:w-auto"
+                >
+                  <Plus size={16} /> Add Subject / Teacher
+                </button>
+
+                {bulkMappings.length > 0 && (
+                  <button
+                    onClick={saveAllMappings}
+                    className="btn-primary w-full sm:w-auto px-8"
+                  >
+                    <Save size={18} /> Save All Mappings
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
     </RequirePermission>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <div>
-      <label className="text-sm text-(--text-muted)">{label}</label>
-      <div className="mt-1">{children}</div>
-    </div>
   );
 }

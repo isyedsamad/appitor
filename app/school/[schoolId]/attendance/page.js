@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, ArrowUp, ArrowDown, ArrowUpDown, UserCog, Zap } from "lucide-react";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -30,6 +30,7 @@ const EMPLOYEE_STATUS = {
 export default function MarkAttendancePage() {
   const { classData, employeeData, schoolUser, setLoading } = useSchool();
   const { branchInfo, branch } = useBranch();
+  const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
   const today = todayDDMMYYYY();
   const [mode, setMode] = useState("student");
   const [date, setDate] = useState(toInputDate(today));
@@ -50,6 +51,10 @@ export default function MarkAttendancePage() {
     }
     setSortConfig({ key, direction });
   };
+
+  useEffect(() => {
+    setList([]);
+  }, [date, className, section]);
 
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
@@ -80,14 +85,30 @@ export default function MarkAttendancePage() {
 
   const selectedClass = classData?.find(c => c.id === className);
   const isPastDate = date < toInputDate(today);
-  const canModifyPast = hasPermission(schoolUser, 'attendance.mark.manage', false);
+  const canModifyPast = hasPermission(schoolUser, 'attendance.mark.past.manage', false, currentPlan);
+  const canViewStudent = hasPermission(schoolUser, 'attendance.mark.student.view', false, currentPlan);
+  const canViewEmployee = hasPermission(schoolUser, 'attendance.mark.employee.view', false, currentPlan);
+  const editable = mode === "student"
+    ? canManage(schoolUser, "attendance.mark.student.manage", currentPlan)
+    : canManage(schoolUser, "attendance.mark.employee.manage", currentPlan);
   const STATUS = mode === "student" ? STUDENT_STATUS : EMPLOYEE_STATUS;
+
+  // Initialize mode based on permissions if current mode is restricted
+  useState(() => {
+    if (mode === "student" && !canViewStudent && canViewEmployee) {
+      setMode("employee");
+    } else if (mode === "employee" && !canViewEmployee && canViewStudent) {
+      setMode("student");
+    }
+  }, [canViewStudent, canViewEmployee]);
+
   function getAttendanceDocId() {
     if (mode === "student") {
       return `student_${formatInputDate(date)}_${className}_${section}`;
     }
     return `employee_${formatInputDate(date)}`;
   }
+
   async function loadStudents() {
     if (!className || !section) {
       toast.error("Select class & section");
@@ -145,24 +166,11 @@ export default function MarkAttendancePage() {
       setLoading(false);
     }
   }
+
   async function loadEmployees() {
     setLoading(true);
     try {
       const docId = getAttendanceDocId();
-      // const ref = collection(
-      //   db,
-      //   "schools",
-      //   schoolUser.schoolId,
-      //   "branches",
-      //   branch,
-      //   "employees"
-      // );
-      // const q = query(ref, where("status", "!=", "disabled"));
-      // const snap = await getDocs(q);
-      // const data = snap.docs.map(d => ({
-      //   uid: d.id,
-      //   ...d.data(),
-      // }));
       setList(employeeData.filter(e => e.status != 'disabled'));
       const snapAtt = await getDoc(
         doc(
@@ -180,9 +188,7 @@ export default function MarkAttendancePage() {
         setAttendance(snapAtt.data().records || {});
       } else {
         setIsMarked(false);
-        const initial = {};
-        // data.forEach(e => (initial[e.uid] = "P"));
-        setAttendance(initial);
+        setAttendance({});
       }
     } catch {
       toast.error("Failed to load employees");
@@ -190,19 +196,23 @@ export default function MarkAttendancePage() {
       setLoading(false);
     }
   }
+
   function setStatus(uid, status) {
     setAttendance(prev => ({ ...prev, [uid]: status }));
   }
+
   function markAllPresent() {
     const updated = {};
     list.forEach(i => (updated[i.uid] = "P"));
     setAttendance(updated);
   }
+
   function markAllAbsent() {
     const updated = {};
     list.forEach(i => (updated[i.uid] = "A"));
     setAttendance(updated);
   }
+
   async function handleSave() {
     if (!list.length) return;
     if (isPastDate && !canModifyPast) {
@@ -215,6 +225,7 @@ export default function MarkAttendancePage() {
     }
     await saveNormal();
   }
+
   async function saveNormal() {
     setLoading(true);
     try {
@@ -235,6 +246,7 @@ export default function MarkAttendancePage() {
       setLoading(false);
     }
   }
+
   async function savePending(reason) {
     setLoading(true);
     try {
@@ -256,15 +268,14 @@ export default function MarkAttendancePage() {
       setLoading(false);
     }
   }
-  const editable = canManage(schoolUser, "attendance.mark.manage", branchInfo?.plan || schoolUser.plan || "trial");
 
   return (
-    <RequirePermission permission="attendance.mark.view">
-      <div className="max-w-7xl mx-auto space-y-3">
+    <RequirePermission permission={["attendance.mark.student.view", "attendance.mark.employee.view"]}>
+      <div className="space-y-3">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
-              <Users size={20} />
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Zap size={20} fill="currentColor" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">
@@ -276,34 +287,51 @@ export default function MarkAttendancePage() {
             </div>
           </div>
           <div className="flex border border-(--border) rounded-lg overflow-hidden">
-            {["student", "employee"].map(m => (
+            {canViewStudent && (
               <button
-                key={m}
                 onClick={() => {
-                  setMode(m);
+                  setMode("student");
                   setList([]);
                   setAttendance({});
                 }}
-                className={`px-4 py-2 text-sm font-medium ${mode === m
+                className={`px-4 py-2 text-sm font-medium ${mode === "student"
                   ? "bg-(--primary) text-white"
                   : "text-(--text-muted) bg-(--bg-card)"
                   }`}
               >
-                {m === "student" ? "Students" : "Employees"}
+                <Users size={15} /> Students
               </button>
-            ))}
+            )}
+            {canViewEmployee && (
+              <button
+                onClick={() => {
+                  setMode("employee");
+                  setList([]);
+                  setAttendance({});
+                }}
+                className={`px-4 py-2 text-sm font-medium ${mode === "employee"
+                  ? "bg-(--primary) text-white"
+                  : "text-(--text-muted) bg-(--bg-card)"
+                  }`}
+              >
+                <UserCog size={15} /> Employees
+              </button>
+            )}
           </div>
         </div>
         <div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
               <label className="text-sm font-semibold text-(--text-muted)">Date</label>
               <div className="input flex items-center gap-2">
                 <input
                   type="date"
-                  className="bg-(--bg-card) outline-none w-full"
+                  className="bg-(--bg-card) outline-none w-full disabled:opacity-50"
                   value={date}
                   onChange={e => setDate(e.target.value)}
+                  disabled={!canModifyPast && date === toInputDate(today)}
+                  max={!canModifyPast ? toInputDate(today) : undefined}
+                  min={!canModifyPast ? toInputDate(today) : undefined}
                 />
               </div>
             </div>
@@ -345,7 +373,7 @@ export default function MarkAttendancePage() {
             )}
             <button
               onClick={mode === "student" ? loadStudents : loadEmployees}
-              className="btn-primary w-full"
+              className="btn-primary"
             >
               <Search size={15} />
               Load Attendance
@@ -506,6 +534,6 @@ export default function MarkAttendancePage() {
           onSubmit={savePending}
         />
       </div>
-    </RequirePermission>
+    </RequirePermission >
   );
 }

@@ -14,7 +14,9 @@ function getStatusDelta(from, to) {
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "attendance.mark.manage");
+    // Basic auth check first to load user and identify school, 
+    // we'll check the strict permission after we know what the request is.
+    const user = await verifyUser(req);
     const { requestId, branch } = await req.json();
     const pendingRef = adminDb
       .collection("schools")
@@ -32,6 +34,13 @@ export async function POST(req) {
     if (pending.status !== "pending") {
       return NextResponse.json({ message: "Already processed" }, { status: 400 });
     }
+
+    // Now verify specific permission based on the requested record type
+    const requiredPermission = pending.type === "student"
+      ? "attendance.mark.student.manage"
+      : "attendance.mark.employee.manage";
+
+    await verifyUser(req, requiredPermission);
 
     const batch = adminDb.batch();
     const dayDocId =

@@ -6,18 +6,30 @@ import { updateAttendanceAnalytics } from "@/lib/school/analyticsUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "attendance.mark.manage");
-    const {
-      type,
-      date,
-      session,
-      className,
-      section,
-      branch,
-      records
-    } = await req.json();
+    const { type, date, session, className, section, branch, records } = await req.json();
     if (!type || !date || !session || !branch || !records) {
       return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
+    }
+
+    const requiredPermission = type === "student"
+      ? "attendance.mark.student.manage"
+      : "attendance.mark.employee.manage";
+
+    const user = await verifyUser(req, requiredPermission);
+    const today = new Date();
+    const serverTodayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(today);
+    const serverToday = serverTodayStr;
+
+    const [dd, mm, yyyy] = date.split("-");
+    const clientDate = `${yyyy}-${mm}-${dd}`;
+
+    if (clientDate < serverToday) {
+      await verifyUser(req, "attendance.mark.past.manage");
     }
 
     const dayDocId =
@@ -33,16 +45,13 @@ export async function POST(req) {
       .collection("attendance")
       .doc(dayDocId);
 
-    const [dd, mm, yyyy] = date.split("-");
     const monthKey = `${yyyy}-${mm}`;
     const dayNumber = Number(dd);
 
     await adminDb.runTransaction(async (tx) => {
-      // 1. Get existing attendance to calculate diff
       const existingSnap = await tx.get(dayRef);
       const oldRecords = existingSnap.exists ? existingSnap.data().records || {} : {};
 
-      // 2. Update Daily Doc
       tx.set(
         dayRef,
         {
@@ -59,7 +68,6 @@ export async function POST(req) {
         { merge: true }
       );
 
-      // 3. Update Monthly/Session Logs & Local Counters
       for (const [uid, status] of Object.entries(records)) {
         const baseRef = adminDb
           .collection("schools")
@@ -75,12 +83,10 @@ export async function POST(req) {
         const monthIncMap = { P: "totalP", A: "totalA", L: "totalL", M: "totalM", H: "totalH", O: "totalO" };
         const oldStatus = oldRecords[uid];
 
-        if (oldStatus === status) continue; // No change, skip updates
+        if (oldStatus === status) continue;
 
         const incField = monthIncMap[status];
         const decField = oldStatus ? monthIncMap[oldStatus] : null;
-
-        // Monthly breakdown update
         const monthUpdate = {
           month: monthKey,
           session,
@@ -94,7 +100,6 @@ export async function POST(req) {
 
         tx.set(monthRef, monthUpdate, { merge: true });
 
-        // Session breakdown update
         const sessionUpdate = {
           session,
           months: {
@@ -109,7 +114,6 @@ export async function POST(req) {
         tx.set(sessionRef, sessionUpdate, { merge: true });
       }
 
-      // 4. Update Global Analytics
       await updateAttendanceAnalytics(tx, adminDb, user.schoolId, branch, type, date, oldRecords, records);
     });
     return NextResponse.json({ success: true });

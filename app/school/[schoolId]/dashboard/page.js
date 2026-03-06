@@ -60,6 +60,7 @@ export default function SchoolDashboard() {
   const [analytics, setAnalytics] = useState(null);
   const [dayAnalytics, setDayAnalytics] = useState(null);
   const [holidays, setHolidays] = useState([]);
+  const [timetableReady, setTimetableReady] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -118,6 +119,18 @@ export default function SchoolDashboard() {
     );
     return () => unsubHoliday();
   }, [branch, schoolUser?.schoolId, branchInfo?.currentSession]);
+
+  useEffect(() => {
+    if (!branch || !schoolUser?.schoolId) return;
+    const unsubTimetable = onSnapshot(
+      doc(db, "schools", schoolUser.schoolId, "branches", branch, "timetable", "items", "timetableSettings", "global"),
+      (docSnap) => {
+        setTimetableReady(docSnap.exists());
+      },
+      (err) => console.error("Timetable Settings Snapshot Error:", err)
+    );
+    return () => unsubTimetable();
+  }, [branch, schoolUser?.schoolId]);
 
   if (loading) {
     return (
@@ -196,6 +209,7 @@ export default function SchoolDashboard() {
           sessions={sessionList}
           classes={classData}
           subjects={subjectData}
+          timetableReady={timetableReady}
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <VitalCard label="Total Students" value={analytics?.studentCount ? analytics.studentCount > 0 ? analytics.studentCount.toString().padStart(2, '0') : 0 : 0} icon={Users2} />

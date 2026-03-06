@@ -22,6 +22,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
+  where
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -43,8 +45,11 @@ export default function StudentsListPage() {
   const [section, setSection] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchId, setSearchId] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const getClassName = id => classData.find(c => c.id === id)?.name;
+  const getSectionName = (cid, sid) =>
+    classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -76,13 +81,50 @@ export default function StudentsListPage() {
   }, [students]);
 
   const filteredStudents = useMemo(() => {
-    if (!searchTerm) return students;
-    const lower = searchTerm.toLowerCase();
-    return students.filter(s =>
-      s.name.toLowerCase().includes(lower) ||
-      s.appId.toLowerCase().includes(lower)
-    );
-  }, [students, searchTerm]);
+    return students;
+  }, [students]);
+
+  const handleIdSearch = async () => {
+    if (!searchId) return;
+    let tempId = searchId.trim();
+    if (!tempId) return;
+
+    const appCode = branchInfo?.appitorCode || "";
+    let finalId = tempId;
+
+    if (appCode && tempId.charAt(0).toUpperCase() !== appCode.toUpperCase()) {
+      finalId = appCode + tempId;
+    }
+    finalId = finalId.toUpperCase();
+
+    setLoading(true);
+    try {
+      const q = query(
+        collection(db, "schools", branchInfo.schoolId, "branches", branchInfo.id, "students"),
+        where("appId", "==", finalId)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        toast.info("No student found with ID: " + finalId);
+        setStudents([]);
+      } else {
+        const results = snap.docs.map(d => ({
+          ...d.data(),
+          uid: d.id,
+          classId: d.data().className,
+          sectionId: d.data().section
+        }));
+        console.log(results);
+
+        setStudents(results);
+      }
+    } catch (err) {
+      console.error("ID SEARCH ERROR:", err);
+      toast.error("Search failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...filteredStudents];
@@ -161,7 +203,7 @@ export default function StudentsListPage() {
 
   return (
     <RequirePermission permission="student.profile.view">
-      <div className="space-y-5 pb-20 text-sm">
+      <div className="space-y-4 pb-20 text-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -182,18 +224,19 @@ export default function StudentsListPage() {
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--text-muted) group-focus-within:text-(--primary) transition-colors" />
               <input
                 type="text"
-                placeholder="Search students..."
-                className="input pl-10 w-full md:w-64 bg-(--bg-card) border-(--border) focus:ring-1 focus:ring-(--primary) transition-all"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search App ID..."
+                className="input pl-10 w-full md:w-48 bg-(--bg-card) border-(--border) focus:ring-1 focus:ring-(--primary) transition-all"
+                value={searchId}
+                onChange={e => setSearchId(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleIdSearch()}
               />
             </div>
             <button
-              onClick={fetchStudents}
-              disabled={loading || !className}
-              className="p-2.5 rounded-xl border border-(--border) hover:bg-(--bg-soft) text-(--text-muted) hover:text-(--text) transition-all disabled:opacity-50"
+              onClick={handleIdSearch}
+              disabled={loading || !branchInfo}
+              className="btn-primary py-2 px-4 h-[42px]"
             >
-              <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+              {loading ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
             </button>
           </div>
         </div>
@@ -295,13 +338,13 @@ export default function StudentsListPage() {
                 ) : sortedStudents.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-5 py-20 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 rounded-full bg-(--bg-soft) flex items-center justify-center text-(--text-muted)">
+                      <div className="flex flex-col items-center">
+                        <div className="w-16 h-16 rounded-full bg-(--bg) flex items-center justify-center text-(--text-muted)">
                           <Search size={32} />
                         </div>
-                        <h3 className="text-lg font-semibold text-(--text)">No students found</h3>
+                        <h3 className="text-lg font-semibold text-(--text) mt-3">No students found</h3>
                         <p className="text-sm text-(--text-muted) max-w-xs mx-auto">
-                          {searchTerm ? `No results for "${searchTerm}"` : "Adjust your filters or select a class to view students."}
+                          {searchId ? `No results for "${searchId}"` : "Adjust your filters or select a class to view students."}
                         </p>
                       </div>
                     </td>
