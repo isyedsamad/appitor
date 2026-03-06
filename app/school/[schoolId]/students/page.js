@@ -11,9 +11,11 @@ import {
   ChevronRight,
   MoreVertical,
   LayoutGrid,
-  List as ListIcon,
   RefreshCw,
-  SearchIcon
+  SearchIcon,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from "lucide-react";
 import {
   collection,
@@ -42,6 +44,20 @@ export default function StudentsListPage() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 text-(--primary)" /> : <ArrowDown size={14} className="ml-1 text-(--primary)" />;
+  };
 
   // Sync session when currentSession is available
   useMemo(() => {
@@ -67,6 +83,27 @@ export default function StudentsListPage() {
       s.appId.toLowerCase().includes(lower)
     );
   }, [students, searchTerm]);
+
+  const sortedStudents = useMemo(() => {
+    let sortableItems = [...filteredStudents];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'rollNo') {
+          aValue = aValue ? parseInt(aValue, 10) : 999999;
+          bValue = bValue ? parseInt(bValue, 10) : 999999;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredStudents, sortConfig]);
 
   async function fetchStudents() {
     if (!session || !className) {
@@ -232,9 +269,15 @@ export default function StudentsListPage() {
             <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="bg-(--bg-soft)/50 border-b border-(--border)">
-                  <th className="px-5 py-3.5 font-semibold text-(--text-muted)">Roll No</th>
-                  <th className="px-5 py-3.5 font-semibold text-(--text-muted)">Student ID</th>
-                  <th className="px-5 py-3.5 font-semibold text-(--text-muted)">Name</th>
+                  <th className="px-5 py-3.5 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('rollNo')}>
+                    <div className="flex items-center">Roll No {getSortIcon('rollNo')}</div>
+                  </th>
+                  <th className="px-5 py-3.5 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('appId')}>
+                    <div className="flex items-center">Student ID {getSortIcon('appId')}</div>
+                  </th>
+                  <th className="px-5 py-3.5 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('name')}>
+                    <div className="flex items-center">Name {getSortIcon('name')}</div>
+                  </th>
                   <th className="px-5 py-3.5 font-semibold text-(--text-muted) text-center">Class / Section</th>
                   <th className="px-5 py-3.5 font-semibold text-(--text-muted) text-center">Status</th>
                   <th className="px-5 py-3.5 font-semibold text-(--text-muted) text-right">Action</th>
@@ -249,7 +292,7 @@ export default function StudentsListPage() {
                       </td>
                     </tr>
                   ))
-                ) : filteredStudents.length === 0 ? (
+                ) : sortedStudents.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="px-5 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
@@ -264,10 +307,10 @@ export default function StudentsListPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student) => (
+                  sortedStudents.map((student) => (
                     <tr key={student.uid} className="group hover:bg-(--bg)/50 transition-colors">
                       <td className="px-5 py-2 font-medium text-(--text-muted)">
-                        {student.rollNo.toString().padStart(2, "0") || "N/A"}
+                        {student.rollNo ? student.rollNo.toString().padStart(2, "0") : "--"}
                       </td>
                       <td className="px-5 py-2 uppercase tracking-tight font-semibold">
                         {student.appId}
@@ -314,7 +357,7 @@ export default function StudentsListPage() {
           {students.length > 0 && (
             <div className="px-6 py-4 bg-(--bg-soft)/30 border-t border-(--border) flex items-center justify-between">
               <p className="text-[10px] font-semibold text-(--text-muted) uppercase">
-                Showing <span className="text-(--text)">{filteredStudents.length}</span> of <span className="text-(--text)">{students.length}</span> students
+                Showing <span className="text-(--text)">{sortedStudents.length}</span> of <span className="text-(--text)">{students.length}</span> students
               </p>
               <div className="flex items-center gap-2">
                 <button className="p-1.5 rounded-lg border border-(--border) text-(--text-muted) opacity-50 cursor-not-allowed">

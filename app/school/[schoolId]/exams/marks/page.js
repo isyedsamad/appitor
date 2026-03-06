@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ClipboardCheck, Search, Save, Calendar, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { ClipboardCheck, Search, Save, Calendar, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -39,6 +39,41 @@ export default function MarksEntryPage() {
     sectionId: ""
   });
   const [searched, setSearched] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 text-(--primary)" /> : <ArrowDown size={14} className="ml-1 text-(--primary)" />;
+  };
+
+  const sortedStudents = useMemo(() => {
+    let sortableItems = [...students];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'rollNo') {
+          aValue = aValue ? parseInt(aValue, 10) : 999999;
+          bValue = bValue ? parseInt(bValue, 10) : 999999;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [students, sortConfig]);
 
   const getClassName = id => classData.find(c => c.id === id)?.name;
   const getSectionName = (cid, sid) =>
@@ -255,11 +290,15 @@ export default function MarksEntryPage() {
               <table className="w-full text-[13px] border-collapse">
                 <thead className="sticky top-0 z-20 bg-(--bg)">
                   <tr className="border-b border-(--border)">
-                    <th className="px-3 py-2 text-center font-semibold">
-                      Roll
+                    <th className="px-3 py-2 text-center font-semibold cursor-pointer hover:bg-(--bg-soft) transition-colors select-none" onClick={() => handleSort('rollNo')}>
+                      <div className="flex items-center justify-center">
+                        Roll {getSortIcon('rollNo')}
+                      </div>
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[150px]">
-                      Student
+                    <th className="px-3 py-2 text-left font-semibold min-w-[80px] md:min-w-[150px] cursor-pointer hover:bg-(--bg-soft) transition-colors select-none" onClick={() => handleSort('name')}>
+                      <div className="flex items-center">
+                        Student {getSortIcon('name')}
+                      </div>
                     </th>
                     {setups.map(s => (
                       <th
@@ -286,7 +325,7 @@ export default function MarksEntryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {students.map((stu, rowIndex) => {
+                  {sortedStudents.map((stu, rowIndex) => {
                     let totalMarks = 0;
                     let maxTotal = 0;
                     let gradePointsSum = 0;

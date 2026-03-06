@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Users,
   GraduationCap,
@@ -12,6 +12,9 @@ import {
   Search,
   CheckCircle2,
   XCircle,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from "lucide-react";
 import {
   collection,
@@ -41,6 +44,42 @@ export default function StudentFeeAssignmentPage() {
   const [open, setOpen] = useState(false);
   const [templateId, setTemplateId] = useState("");
   const [templateName, setTemplateName] = useState('');
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 text-(--primary)" /> : <ArrowDown size={14} className="ml-1 text-(--primary)" />;
+  };
+
+  const sortedStudents = useMemo(() => {
+    let sortableItems = [...students];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'rollNo') {
+          aValue = aValue ? parseInt(aValue, 10) : 999999;
+          bValue = bValue ? parseInt(bValue, 10) : 999999;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [students, sortConfig]);
+
   const getClassName = id => classData.find(c => c.id === id)?.name;
   const getSectionName = (cid, sid) =>
     classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
@@ -202,14 +241,20 @@ export default function StudentFeeAssignmentPage() {
                         )}
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left">Roll</th>
-                    <th className="px-4 py-3 text-left">Admission ID</th>
-                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('rollNo')}>
+                      <div className="flex items-center">Roll {getSortIcon('rollNo')}</div>
+                    </th>
+                    <th className="px-4 py-3 text-left cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('appId')}>
+                      <div className="flex items-center">Admission ID {getSortIcon('appId')}</div>
+                    </th>
+                    <th className="px-4 py-3 text-left cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('name')}>
+                      <div className="flex items-center">Name {getSortIcon('name')}</div>
+                    </th>
                     <th className="px-4 py-3 text-left">Assignment</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students && students.map(s => (
+                  {sortedStudents && sortedStudents.map(s => (
                     <tr key={s.id} className="border-t border-(--border)">
                       <td className="px-4 py-3 text-left">
                         <button

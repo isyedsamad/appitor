@@ -14,7 +14,9 @@ import {
   ArrowRight,
   ChartNoAxesCombined,
   ChevronRight,
-  Check
+  Check,
+  ArrowDown,
+  ArrowUpDown
 } from "lucide-react";
 import {
   collection,
@@ -44,6 +46,20 @@ export default function PromoteDemotePage() {
   const [toSection, setToSection] = useState("");
   const [loadingList, setLoadingList] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 text-(--primary)" /> : <ArrowDown size={14} className="ml-1 text-(--primary)" />;
+  };
 
   const sourceClass = classData?.find(c => c.id === fromClass);
   const targetClass = classData?.find(c => c.id === toClass);
@@ -64,6 +80,27 @@ export default function PromoteDemotePage() {
       (s.rollNo && s.rollNo.toString().includes(lower))
     );
   }, [students, searchTerm]);
+
+  const sortedStudents = useMemo(() => {
+    let sortableItems = [...filteredStudents];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (sortConfig.key === 'rollNo') {
+          aValue = aValue ? parseInt(aValue, 10) : 999999;
+          bValue = bValue ? parseInt(bValue, 10) : 999999;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredStudents, sortConfig]);
 
   async function loadStudents() {
     if (!fromSession || !fromClass || !fromSection) {
@@ -118,10 +155,10 @@ export default function PromoteDemotePage() {
   }
 
   function toggleAll() {
-    if (selected.length === filteredStudents.length && filteredStudents.length > 0) {
+    if (selected.length === sortedStudents.length && sortedStudents.length > 0) {
       setSelected([]);
     } else {
-      setSelected(filteredStudents.map(s => s.uid));
+      setSelected(sortedStudents.map(s => s.uid));
     }
   }
 
@@ -259,16 +296,22 @@ export default function PromoteDemotePage() {
                       onClick={toggleAll}
                       className="w-5 h-5 rounded border border-(--border) flex items-center justify-center bg-(--bg)"
                     >
-                      {selected.length === filteredStudents.length && filteredStudents.length > 0 ? (
+                      {selected.length === sortedStudents.length && sortedStudents.length > 0 ? (
                         <Check size={14} className="text-(--primary)" />
                       ) : (
                         <Square size={14} className="text-(--text-muted)" />
                       )}
                     </button>
                   </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted)">Roll No</th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted)">App ID</th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted)">Name</th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('rollNo')}>
+                    <div className="flex items-center">Roll No {getSortIcon('rollNo')}</div>
+                  </th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('appId')}>
+                    <div className="flex items-center">App ID {getSortIcon('appId')}</div>
+                  </th>
+                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('name')}>
+                    <div className="flex items-center">Name {getSortIcon('name')}</div>
+                  </th>
                   <th className="px-5 py-3 font-semibold text-(--text-muted) text-right">Status</th>
                 </tr>
               </thead>
@@ -281,7 +324,7 @@ export default function PromoteDemotePage() {
                       </td>
                     </tr>
                   ))
-                ) : filteredStudents.length === 0 ? (
+                ) : sortedStudents.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-5 py-10 text-center">
                       <div className="flex flex-col items-center">
@@ -294,7 +337,7 @@ export default function PromoteDemotePage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student) => {
+                  sortedStudents.map((student) => {
                     const isSelected = selected.includes(student.uid);
                     return (
                       <tr

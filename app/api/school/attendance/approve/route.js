@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
+import { updateAttendanceAnalytics } from "@/lib/school/analyticsUtils";
 
 function getStatusDelta(from, to) {
   const delta = {};
@@ -58,6 +59,7 @@ export async function POST(req) {
           records: pending.records,
           updatedAt: FieldValue.serverTimestamp(),
           updatedBy: user.uid,
+          locked: true,
         },
         { merge: true }
       );
@@ -72,6 +74,7 @@ export async function POST(req) {
       batch.update(dayRef, {
         updatedAt: FieldValue.serverTimestamp(),
         updatedBy: user.uid,
+        locked: true,
       });
     }
 
@@ -157,6 +160,29 @@ export async function POST(req) {
       },
       reviewedAt: FieldValue.serverTimestamp(),
     });
+
+    let oldRecords = {};
+    let newRecords = {};
+
+    if (pending.mode === "full") {
+      newRecords = { ...pending.records };
+    } else if (pending.mode === "diff") {
+      Object.entries(pending.changes).forEach(([uid, c]) => {
+        if (c.from) oldRecords[uid] = c.from;
+        newRecords[uid] = c.to;
+      });
+    }
+
+    await updateAttendanceAnalytics(
+      batch,
+      adminDb,
+      user.schoolId,
+      branch,
+      pending.type,
+      pending.date,
+      oldRecords,
+      newRecords
+    );
 
     await batch.commit();
 

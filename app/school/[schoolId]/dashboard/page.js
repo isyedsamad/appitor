@@ -259,7 +259,7 @@ export default function SchoolDashboard() {
           <div className="lg:col-span-12 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm h-[300px] flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-semibold flex items-center gap-2">
-                <TrendingUp size={16} className="text-(--primary)" /> Attendance Velocity
+                <TrendingUp size={16} className="text-(--primary)" /> Employee Attendance Velocity
               </h3>
               <div className="flex items-center gap-4">
                 <Legend label="Present" color="var(--status-p-text)" />

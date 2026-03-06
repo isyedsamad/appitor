@@ -32,10 +32,9 @@ const TABS = [
 ];
 
 export default function PendingAttendancePage() {
-  const { schoolUser, loading, setLoading, classData } = useSchool();
+  const { schoolUser, loading, setLoading, classData, currentSession, sessionList } = useSchool();
   const { branchInfo, branch } = useBranch();
-  const [session, setSession] = useState("");
-  const [sessions, setSessions] = useState([]);
+  const [session, setSession] = useState(currentSession || '');
   const [activeTab, setActiveTab] = useState("pending");
   const [data, setData] = useState([]);
   const getClassName = id => classData.find(c => c.id === id)?.name;
@@ -106,22 +105,9 @@ export default function PendingAttendancePage() {
   useEffect(() => {
     if (session != '') changeTab('pending');
   }, [session])
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await secureAxios.get(
-          "/api/school/settings/academic"
-        );
-        setSessions(res.data.sessions || []);
-      } catch (err) {
-        toast.error("Failed to load academic settings: " + err);
-      }
-    }
-    load();
-  }, []);
   return (
     <RequirePermission permission={'attendance.pending.view'}>
-      <div className="max-w-6xl mx-auto space-y-5">
+      <div className="space-y-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
             <ClipboardCheck size={20} />
@@ -147,18 +133,18 @@ export default function PendingAttendancePage() {
             }}
           >
             <option value="">Select session</option>
-            {sessions?.map(s => (
+            {sessionList?.map(s => (
               <option key={s.id}>{s.id}</option>
             ))}
           </select>
         </div>
         {session && (
-          <div className="flex border border-(--border) rounded-lg overflow-hidden">
+          <div className="flex w-fit flex-wrap border border-(--border) bg-(--bg-card) rounded-lg overflow-hidden">
             {TABS.map(t => (
               <button
                 key={t.key}
                 onClick={() => changeTab(t.key)}
-                className={`flex-1 px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium
+                className={`px-2 md:px-4 py-2 flex items-center justify-center gap-1 text-sm font-medium
                 ${activeTab === t.key
                     ? "bg-(--primary) text-white"
                     : "text-(--text-muted)"
@@ -183,8 +169,8 @@ export default function PendingAttendancePage() {
           {data.map(r => (
             <div
               key={r.id}
-              className="border border-(--border) rounded-xl p-4 space-y-4
-                      hover:bg-(--bg-soft) transition"
+              className="border border-(--border) bg-(--bg-card) rounded-xl py-4 px-5 space-y-4
+                      hover:bg-(--bg-card)/60 transition"
             >
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>

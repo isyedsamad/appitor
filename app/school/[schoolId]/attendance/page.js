@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -41,6 +41,43 @@ export default function MarkAttendancePage() {
   const [isMarked, setIsMarked] = useState(false);
   const [showReason, setShowReason] = useState(false);
   const [dragStatus, setDragStatus] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-50" />;
+    return sortConfig.direction === 'asc' ? <ArrowUp size={14} className="ml-1 text-(--primary)" /> : <ArrowDown size={14} className="ml-1 text-(--primary)" />;
+  };
+
+  const sortedList = useMemo(() => {
+    let sortableItems = [...list];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const key = sortConfig.key;
+        let aValue = key === 'appId' ? (mode === 'student' ? a.appId : a.employeeId) : a[key];
+        let bValue = key === 'appId' ? (mode === 'student' ? b.appId : b.employeeId) : b[key];
+
+        if (key === 'rollNo' && mode === 'student') {
+          aValue = aValue ? parseInt(aValue, 10) : 999999;
+          bValue = bValue ? parseInt(bValue, 10) : 999999;
+          return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [list, sortConfig, mode]);
+
   const selectedClass = classData?.find(c => c.id === className);
   const isPastDate = date < toInputDate(today);
   const canModifyPast = hasPermission(schoolUser, 'attendance.mark.manage', false);
@@ -374,11 +411,22 @@ export default function MarkAttendancePage() {
             <table className="w-full text-left border-collapse" onMouseLeave={() => setDragStatus(null)}>
               <thead>
                 <tr className="bg-(--bg) border-b border-(--border)">
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider w-16">
-                    {mode === "student" ? "Roll" : "Icon"}
+                  <th
+                    className={`px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider w-24 ${mode === 'student' ? 'cursor-pointer hover:text-(--text) transition-colors select-none' : ''}`}
+                    onClick={() => mode === 'student' && handleSort('rollNo')}
+                  >
+                    <div className="flex items-center">
+                      {mode === "student" ? "Roll" : "Icon"}
+                      {mode === "student" && getSortIcon('rollNo')}
+                    </div>
                   </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider">
-                    Details
+                  <th
+                    className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider cursor-pointer hover:text-(--text) transition-colors select-none"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">
+                      Details {getSortIcon('name')}
+                    </div>
                   </th>
                   <th className="px-5 py-3 font-semibold text-(--text-muted) text-xs uppercase tracking-wider text-right">
                     Status
@@ -399,7 +447,7 @@ export default function MarkAttendancePage() {
                     </td>
                   </tr>
                 ) : (
-                  list.map((item) => (
+                  sortedList.map((item) => (
                     <tr
                       key={item.uid}
                       className="group transition-colors hover:bg-(--bg-soft)/30"
