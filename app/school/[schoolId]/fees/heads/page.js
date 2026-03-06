@@ -332,10 +332,10 @@ export default function FeeHeadsPage() {
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, type: "fixed" })}
-                      className={`p-3 rounded-lg border text-sm flex items-center gap-2
+                      className={`p-3 rounded-lg border text-sm font-semibold flex items-center gap-2
                         ${form.type === "fixed"
-                          ? "border-(--primary) bg-(--primary-soft)"
-                          : "border-(--border)"
+                          ? "border-(--primary) bg-(--primary-soft) text-(--primary)"
+                          : "border-(--border) text-(--text-muted)"
                         }`}
                     >
                       <Layers size={16} />

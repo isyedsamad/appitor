@@ -11,6 +11,7 @@ import {
   School,
   Hash,
   CalendarRange,
+  Info,
 } from "lucide-react";
 import {
   collection,
@@ -152,25 +153,58 @@ export default function FeeTemplatesPage() {
             </button>
           )}
         </div>
+
+        {templates.length === 0 && (
+          <div className="bg-(--status-m-bg) border border-(--status-m-border) rounded-2xl p-5 md:p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="bg-(--status-m-text)/10 p-3 rounded-full text-(--status-m-text) shrink-0">
+                <Info size={24} />
+              </div>
+              <div>
+                <h3 className="text-(--status-m-text) font-semibold text-base mb-1">
+                  About Fee Templates
+                </h3>
+                <p className="text-(--status-m-text) text-sm leading-relaxed mb-3">
+                  Fee Templates define the default fee structures (combinations of Fee Heads) for different classes and sections.
+                </p>
+                <ul className="text-sm text-(--status-m-text) space-y-2 list-none p-0">
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                    <span><strong>Create Templates:</strong> Click "New Template" to group fixed Fee Heads together (e.g., Tuition, Transport) for a specific class/section.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                    <span><strong>Assign Fees:</strong> These templates are then used in the <strong>Fee Assignment</strong> page to quickly attach the entire fee structure to enrolled students.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                    <span><strong>Edit Anytime:</strong> Only admins with <code>fee.setup.manage</code> permission can create or change these templates.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map(t => (
             <div
               key={t.id}
               className="bg-(--bg-card) border border-(--border)
-                         rounded-xl p-4 space-y-2 hover:shadow-sm transition"
+                         rounded-xl p-4 space-y-1 hover:shadow-sm transition"
             >
               <div className="flex justify-between items-start">
                 <h3 className="font-medium">{t.name}</h3>
                 <span className="text-xs px-2 py-1 rounded-md
-                  bg-(--accent-soft) text-(--accent)">
+                  bg-(--accent-soft) font-semibold text-(--accent)">
                   Active
                 </span>
               </div>
-              <div className="text-sm text-(--text-muted) flex items-center gap-2">
+              <div className="text-sm text-(--text-muted) font-semibold flex items-center gap-2">
                 <School size={14} />
                 {getClassName(t.className)}{t.section && ` - ${getSectionName(t.className, t.section)}`}
               </div>
-              <div className="text-sm flex items-center gap-2">
+              <div className="text-sm text-(--text-muted) font-semibold flex items-center gap-2">
                 <CalendarRange size={14} />
                 {t.academicYear}
               </div>
@@ -206,7 +240,7 @@ export default function FeeTemplatesPage() {
                         setItems(t.items);
                         setOpen(true);
                       }}
-                      className="action-btn font-medium text-xs mt-2 text-(--status-l-text)"
+                      className="action-btn font-medium text-xs mt-2 text-(--status-l-text) bg-(--status-l-bg)"
                     >
                       Edit Fee Template
                     </button>
@@ -225,79 +259,91 @@ export default function FeeTemplatesPage() {
                 </h2>
                 <X onClick={resetPopup} className="cursor-pointer" />
               </div>
-              <div className="p-5 space-y-4 max-h-[70vh] overflow-auto">
-                <input
-                  className="input w-full"
-                  placeholder="Template Name i.e. Class 11 Science"
-                  value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
-                />
+              <div className="p-5 space-y-3 max-h-[70vh] overflow-auto">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Template Name</label>
+                  <input
+                    className="input w-full"
+                    placeholder="Template Name i.e. Class 11 Science"
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Class</label>
+                    <select
+                      className="input w-full"
+                      value={form.className}
+                      onChange={e => setForm({
+                        ...form,
+                        className: e.target.value,
+                        section: "",
+                      })}
+                    >
+                      <option value="">Select Class</option>
+                      {classData.map(c => (
+                        <option key={c.name} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Section (Optional)</label>
+                    <select
+                      className="input w-full"
+                      value={form.section}
+                      disabled={!form.className}
+                      onChange={e =>
+                        setForm({ ...form, section: e.target.value })
+                      }
+                    >
+                      <option value="">All Sections</option>
+                      {classData
+                        .find(c => c.id === form.className)
+                        ?.sections?.map(sec => (
+                          <option key={sec.id} value={sec.id}>
+                            {sec.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Add Fee Head</label>
                   <select
-                    className="input"
-                    value={form.className}
-                    onChange={e => setForm({
-                      ...form,
-                      className: e.target.value,
-                      section: "",
-                    })}
+                    className="input w-full"
+                    onChange={e => {
+                      const h = feeHeads.find(x => x.id === e.target.value);
+                      if (!h) return;
+                      setItems([...items, {
+                        headId: h.id,
+                        headName: h.name,
+                        amount: "",
+                        frequency: h.frequency,
+                      }]);
+                    }}
                   >
-                    <option value="">Select Class</option>
-                    {classData.map(c => (
-                      <option key={c.name} value={c.id}>
-                        {c.name}
+                    <option value="">+ Add Fee Head</option>
+                    {feeHeads.map(h => (
+                      <option key={h.id} value={h.id}>
+                        {h.name}
                       </option>
                     ))}
                   </select>
-                  <select
-                    className="input"
-                    value={form.section}
-                    disabled={!form.className}
-                    onChange={e =>
-                      setForm({ ...form, section: e.target.value })
-                    }
-                  >
-                    <option value="">All Sections</option>
-                    {classData
-                      .find(c => c.id === form.className)
-                      ?.sections?.map(sec => (
-                        <option key={sec.id} value={sec.id}>
-                          {sec.name}
-                        </option>
-                      ))}
-                  </select>
                 </div>
-                <select
-                  className="input"
-                  onChange={e => {
-                    const h = feeHeads.find(x => x.id === e.target.value);
-                    if (!h) return;
-                    setItems([...items, {
-                      headId: h.id,
-                      headName: h.name,
-                      amount: "",
-                      frequency: h.frequency,
-                    }]);
-                  }}
-                >
-                  <option value="">+ Add Fee Head</option>
-                  {feeHeads.map(h => (
-                    <option key={h.id} value={h.id}>
-                      {h.name}
-                    </option>
-                  ))}
-                </select>
                 {items.map((i, idx) => (
                   <div
                     key={idx}
                     className="flex items-center gap-3 px-2"
                   >
                     <Layers size={16} />
-                    <span className="flex-1">{i.headName}</span>
+                    <span className="flex-1 font-semibold">{i.headName}</span>
                     <span>₹</span>
                     <input
                       className="input w-24"
-                      placeholder="₹"
+                      placeholder="Amount"
                       value={i.amount}
                       onChange={e => {
                         const arr = [...items];
@@ -305,13 +351,15 @@ export default function FeeTemplatesPage() {
                         setItems(arr);
                       }}
                     />
-                    <Trash2
-                      size={16}
-                      className="cursor-pointer text-(--danger)"
+                    <div className="p-1 bg-(--status-a-bg) rounded-sm cursor-pointer"
                       onClick={() =>
                         setItems(items.filter((_, x) => x !== idx))
-                      }
-                    />
+                      }>
+                      <Trash2
+                        size={16}
+                        className="text-(--status-a-text)"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

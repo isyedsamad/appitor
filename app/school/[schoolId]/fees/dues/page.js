@@ -39,6 +39,7 @@ export default function FeeDuesPage() {
     class: "",
     section: "",
     period: "",
+    status: "all",
   });
 
   useEffect(() => {
@@ -153,9 +154,19 @@ export default function FeeDuesPage() {
     }
   };
 
+  const filteredDues = useMemo(() => {
+    return dues.filter(d => {
+      if (filters.status === "all") return true;
+      if (filters.status === "paid") return d.status === "paid";
+      if (filters.status === "pending") return d.status === "unassigned";
+      if (filters.status === "due") return ["overdue", "due", "partial"].includes(d.status);
+      return true;
+    });
+  }, [dues, filters.status]);
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const selectable = dues.filter(d => d.status !== "paid").map(d => d.studentId);
+      const selectable = filteredDues.filter(d => d.status !== "paid").map(d => d.studentId);
       setSelectedStudents(selectable);
     } else {
       setSelectedStudents([]);
@@ -207,12 +218,6 @@ export default function FeeDuesPage() {
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard label="Paid Amount" value={summary.paid} color="accent" />
-          <SummaryCard label="Pending Dues" value={summary.dueAmount} color="danger" />
-          <SummaryCard label="Dues Counter" value={summary.dueCount} color="warning" isCount />
-          <SummaryCard label="Pending Students" value={summary.count} color="primary" isCount />
-        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-2 items-end">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Session</label>
@@ -230,6 +235,17 @@ export default function FeeDuesPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Due Month</label>
+            <input
+              type="month"
+              className="input w-full"
+              value={filters.period}
+              onChange={e =>
+                setFilters({ ...filters, period: e.target.value })
+              }
+            />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Class</label>
@@ -269,17 +285,6 @@ export default function FeeDuesPage() {
                 ))}
             </select>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Due Month</label>
-            <input
-              type="month"
-              className="input w-full"
-              value={filters.period}
-              onChange={e =>
-                setFilters({ ...filters, period: e.target.value })
-              }
-            />
-          </div>
           <div>
             <button
               onClick={fetchDues}
@@ -289,6 +294,25 @@ export default function FeeDuesPage() {
               Load Dues
             </button>
           </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-(--text-muted) uppercase tracking-wider">Status</label>
+            <select
+              className="input w-full"
+              value={filters.status}
+              onChange={e => setFilters({ ...filters, status: e.target.value })}
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="due">Due / Partial</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard label="Paid Amount" value={summary.paid} color="accent" />
+          <SummaryCard label="Pending Dues" value={summary.dueAmount} color="danger" />
+          <SummaryCard label="Dues Counter" value={summary.dueCount} color="warning" isCount />
+          <SummaryCard label="Pending Students" value={summary.count} color="primary" isCount />
         </div>
 
         {selectedStudents.length > 0 && (
@@ -318,7 +342,7 @@ export default function FeeDuesPage() {
                       <input
                         type="checkbox"
                         className="rounded border-(--border) text-(--primary) focus:ring-(--primary) bg-(--bg) w-4 h-4 cursor-pointer"
-                        checked={selectedStudents.length > 0 && selectedStudents.length === dues.filter(d => d.status !== "paid").length}
+                        checked={selectedStudents.length > 0 && selectedStudents.length === filteredDues.filter(d => d.status !== "paid").length}
                         onChange={handleSelectAll}
                       />
                     </th>
@@ -331,7 +355,7 @@ export default function FeeDuesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-(--border)">
-                  {dues.map(d => (
+                  {filteredDues.map(d => (
                     <tr
                       key={d.studentId}
                       className="hover:bg-(--bg)/50 transition-colors"
@@ -347,14 +371,14 @@ export default function FeeDuesPage() {
                       </td>
                       <td className="px-5 py-3 uppercase font-medium">{d.appId}</td>
                       <td className="px-5 py-3">
-                        <div className="font-semibold">{d.studentName}</div>
+                        <div className="font-semibold capitalize">{d.studentName}</div>
                         <div className="text-xs font-semibold text-(--text-muted)">Roll No: {d.rollNo || 'N/A'}</div>
                       </td>
-                      <td className="px-5 py-3 text-(--text-muted)">
-                        <span className={d.paid > 0 ? "font-medium text-(--text)" : ""}>₹ {d.paid}</span>
+                      <td className="px-5 py-3 text-(--text-muted) font-medium">
+                        <span className={d.paid > 0 ? "font-medium text-(--text)" : ""}>₹ {d.status == 'unassigned' ? '--' : d.paid == 0 ? '--' : d.paid}</span>
                       </td>
-                      <td className="px-5 py-3 font-semibold">
-                        <span className={d.due > 0 ? "text-red-500" : ""}>₹ {d.due}</span>
+                      <td className="px-5 py-3 font-medium">
+                        <span className={d.due > 0 ? "text-red-500" : ""}>₹ {d.status == 'unassigned' ? '--' : d.due == 0 ? '--' : d.due}</span>
                       </td>
                       <td className="px-5 py-3">{statusBadge(d.status)}</td>
                       <td className="text-right px-5 py-3">

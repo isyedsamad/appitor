@@ -15,6 +15,7 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Info,
 } from "lucide-react";
 import {
   collection,
@@ -112,6 +113,8 @@ export default function StudentFeeAssignmentPage() {
       const studentsWithAssignment = studentSnapDoc.map(d => ({
         id: d.uid,
         ...d,
+        className: selectedClass,
+        section: selectedSection,
         assignment: assignmentMap[d.uid] || null,
       }));
       setStudents(studentsWithAssignment);
@@ -226,6 +229,39 @@ export default function StudentFeeAssignmentPage() {
             Load Data
           </button>
         </div>
+
+        {students.length === 0 && (
+          <div className="bg-(--status-m-bg) border border-(--status-m-border) rounded-2xl p-5 md:p-6 mb-6 mt-4">
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="bg-(--status-m-text)/10 p-3 rounded-full text-(--status-m-text) shrink-0">
+                <Info size={24} />
+              </div>
+              <div>
+                <h3 className="text-(--status-m-text) font-semibold text-base mb-1">
+                  How does Fee Assignment work?
+                </h3>
+                <p className="text-(--status-m-text) text-sm leading-relaxed mb-3">
+                  This page allows you to link predefined Fee Templates to the enrolled students of a specific class and section.
+                </p>
+                <ul className="text-sm text-(--status-m-text) space-y-2 list-none p-0">
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                    <span><strong>Load Students:</strong> Select a Class and Section above and click "Load Data" to fetch all active students along with their currently assigned templates.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                    <span><strong>Select Students:</strong> Use the checkboxes next to each student's name to select who you want to modify, or use the "Select All" checkbox at the top left.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                    <span><strong>Assign Templates:</strong> Once students are selected, click "Apply Template" to assign a new fee structure or click "Remove Assignment" to clear their existing ones.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {students.length > 0 && (
           <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
             <div className="overflow-x-auto">

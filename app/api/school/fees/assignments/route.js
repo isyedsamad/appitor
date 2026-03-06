@@ -7,12 +7,12 @@ export async function POST(req) {
   try {
     const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
-    const { branch, students, templateId, templateName } = body;
+    const { branch, students, templateId, templateName, session } = body;
     if (
       !branch ||
       !Array.isArray(students) ||
       students.length === 0 ||
-      !templateId || !templateName
+      !templateId || !templateName || !session
     ) {
       return NextResponse.json(
         { error: "Invalid assignment data" },
@@ -64,6 +64,7 @@ export async function POST(req) {
         section: student.section,
         templateId,
         templateName,
+        session,
         status: "active",
         assignedAt: FieldValue.serverTimestamp(),
         assignedBy: user.uid,

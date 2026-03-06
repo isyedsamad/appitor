@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, ArrowRight, ArrowLeft, CheckSquare, Square, Trash2, Plus, IndianRupee, User, Wallet, Percent, Layers, ShieldCheck } from "lucide-react";
+import { Search, ArrowRight, ArrowLeft, CheckSquare, Square, Trash2, Plus, IndianRupee, User, Wallet, Percent, Layers, ShieldCheck, Info, CheckCircle, Printer, X } from "lucide-react";
 import { collection, getDocs, getDoc, query, where, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import secureAxios from "@/lib/secureAxios";
@@ -11,6 +11,8 @@ import RequirePermission from "@/components/school/RequirePermission";
 import { canManage } from "@/lib/school/permissionUtils";
 import { toast } from "react-toastify";
 import { buildMonthsForSession } from "@/lib/school/fees/monthUtil";
+import { generateReceiptPDF } from "@/lib/exports/fees/receiptPdf";
+import { formatDateSlash } from "@/lib/dateUtils";
 
 export default function FeeCollectionPage() {
   const { schoolUser, loading, setLoading, sessionList, currentSession, classData } = useSchool();
@@ -36,6 +38,13 @@ export default function FeeCollectionPage() {
     discountValue: "",
     remark: "",
   });
+
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [savedReceipt, setSavedReceipt] = useState(null);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [pdfOptions, setPdfOptions] = useState({ size: 'a4', copies: 1 });
+  const [receiptDocToPrint, setReceiptDocToPrint] = useState(null);
+
   const getClassName = id => classData.find(c => c.id === id)?.name;
   const getSectionName = (cid, sid) =>
     classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
@@ -213,7 +222,7 @@ export default function FeeCollectionPage() {
     }
     setLoading(true);
     try {
-      await secureAxios.post("/api/school/fees/collect", {
+      const res = await secureAxios.post("/api/school/fees/collect", {
         branch,
         branchInfo,
         appId: student.appId,
@@ -223,7 +232,16 @@ export default function FeeCollectionPage() {
         flexibleItems,
         payment,
       });
-      searchStudent(appIdSearch);
+      setSavedReceipt({
+        receiptNo: res.data.receiptNo,
+        paidAmount: Number(payment.paidAmount),
+        studentId: student.id,
+        appId: student.appId,
+        studentName: student.name,
+        className: student.className,
+        section: student.section
+      });
+      setShowSuccessModal(true);
       toast.success('Fee Submitted!');
     } catch (err) {
       toast.error('Failed: ' + err.response.data.message);
@@ -231,6 +249,52 @@ export default function FeeCollectionPage() {
       setLoading(false);
     }
   };
+
+  const handleCloseSuccess = () => {
+    setShowSuccessModal(false);
+    setSavedReceipt(null);
+    searchStudent(appIdSearch);
+  };
+
+  const handlePrintRequest = async () => {
+    setLoading(true);
+    try {
+      const q = query(
+        collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "payments", "items"),
+        where("receiptNo", "==", savedReceipt.receiptNo)
+      );
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        setReceiptDocToPrint(snap.docs[0].data());
+        setShowDownloadModal(true);
+      } else {
+        toast.error("Receipt not found in database.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load receipt details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmDownload = () => {
+    if (!receiptDocToPrint || !savedReceipt) return;
+    generateReceiptPDF({
+      receipt: receiptDocToPrint,
+      student: {
+        ...savedReceipt,
+        name: student.name,
+        className: getClassName(student.className),
+        sectionName: getSectionName(student.className, student.section),
+      },
+      schoolUser,
+      branchInfo,
+      options: pdfOptions
+    });
+    setShowDownloadModal(false);
+  };
+
   const removeItem = (item) => {
     if (item.type === "month") {
       setSelectedMonths(prev =>
@@ -299,6 +363,37 @@ export default function FeeCollectionPage() {
             </select>
           </div>
         </div>
+        {!student && (
+          <div className="bg-(--status-m-bg) border border-(--status-m-border) rounded-2xl p-5 md:p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="bg-(--status-m-text)/10 p-3 rounded-full text-(--status-m-text) shrink-0">
+                <Info size={24} />
+              </div>
+              <div>
+                <h3 className="text-(--status-m-text) font-semibold text-base mb-1">
+                  How to Collect Fees?
+                </h3>
+                <p className="text-(--status-m-text) text-sm leading-relaxed mb-3">
+                  Follow these simple steps to collect fees easily:
+                </p>
+                <ul className="text-sm text-(--status-m-text) space-y-2 list-none p-0">
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                    <span>Search for the student using their unique <strong>App ID</strong> (e.g., A2500001) in the search bar above.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                    <span>Check the boxes for the <strong>Months</strong> or add any <strong>Flexible Fees</strong> you want to collect.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-(--status-m-text) text-(--status-m-bg) flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                    <span>Review the total, enter the <strong>Paid Amount</strong> (and discount if any), then click <strong>Save Payment</strong> to generate a receipt.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
         {student && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="space-y-4 lg:sticky lg:top-4 h-fit">
@@ -516,6 +611,126 @@ export default function FeeCollectionPage() {
           </div>
         )}
       </div>
+
+      {showSuccessModal && savedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) w-full max-w-md rounded-xl border border-(--border) shadow-xl shadow-(--status-p-bg)/20 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 flex flex-col items-center p-8 text-center relative">
+            <button onClick={handleCloseSuccess} className="absolute top-4 right-4 p-2 hover:bg-(--bg-soft) rounded-full text-(--text-muted) transition-colors">
+              <X size={20} />
+            </button>
+            <div className="w-15 h-15 bg-(--status-p-bg) rounded-full flex items-center justify-center mb-6 shadow-md shadow-(--status-p-bg)/40 mt-4">
+              <CheckCircle size={25} className="text-(--status-p-text)" />
+            </div>
+            <h3 className="text-lg font-semibold text-(--status-p-text)">Payment Successful!</h3>
+            <p className="text-(--text-muted) font-medium text-sm mb-4">Receipt generated successfully.</p>
+
+            <div className="w-full bg-(--bg-soft) rounded-xl p-4 mb-4 space-y-2 border border-(--border)">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-(--text-muted) font-medium">Receipt No.</span>
+                <span className="font-semibold text-(--text)">{savedReceipt.receiptNo}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-(--text-muted) font-medium">Amount Paid</span>
+                <span className="font-semibold text-(--status-p-text)">₹ {savedReceipt.paidAmount.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="w-full space-y-3">
+              <button
+                onClick={handlePrintRequest}
+                className="w-full py-3 rounded-lg border border-(--status-p-border) font-semibold text-(status-p-text) shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2 bg-(--status-p-bg) hover:bg-(--status-p-bg)/60"
+              >
+                <Printer size={15} /> Print Receipt
+              </button>
+              <button
+                onClick={handleCloseSuccess}
+                className="w-full text-sm py-2 font-semibold text-(--text-muted) bg-(--bg-card) border border-(--border) hover:bg-(--bg) transition-colors active:scale-95"
+              >
+                Close & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDownloadModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-(--bg-card) w-full max-w-md rounded-2xl border border-(--border) shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)">
+              <h3 className="font-bold flex items-center gap-2">
+                <Printer size={18} className="text-(--primary)" /> Print Receipt Options
+              </h3>
+              <button onClick={() => setShowDownloadModal(false)} className="p-1.5 hover:bg-(--border) rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-6">
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-(--text-muted) uppercase">Layout Size</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'a4', label: 'Full A4' },
+                    { id: '1/2', label: '1/2 A4' },
+                  ].map(sz => (
+                    <button
+                      key={sz.id}
+                      onClick={() => setPdfOptions({ ...pdfOptions, size: sz.id, copies: 1 })}
+                      className={`p-3 rounded-xl border text-sm font-semibold transition-all
+                                          ${pdfOptions.size === sz.id ? "border-(--primary) bg-(--primary-soft) text-(--primary)" : "border-(--border) hover:border-(--text-muted)"}`}
+                    >
+                      {sz.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[11px] font-bold text-(--text-muted) uppercase">Copies on Page</p>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4].map(num => {
+                    const disabled = (pdfOptions.size === 'a4' && num > 1) ||
+                      (pdfOptions.size === '1/2' && num > 2) ||
+                      (pdfOptions.size === '1/3' && num > 3);
+                    return (
+                      <button
+                        key={num}
+                        disabled={disabled}
+                        onClick={() => setPdfOptions({ ...pdfOptions, copies: num })}
+                        className={`w-10 h-10 rounded-lg border font-bold transition-all flex items-center justify-center
+                                          ${pdfOptions.copies === num ? "border-(--primary) bg-(--primary) text-white" : "border-(--border) text-(--text-muted)"}
+                                          ${disabled ? "opacity-0 pointer-events-none" : ""}`}
+                      >
+                        {num}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-(--bg-soft) p-3 rounded-xl border border-(--border) text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted)">Receipt:</span>
+                  <span className="font-semibold">{savedReceipt?.receiptNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted)">Paid:</span>
+                  <span className="font-bold text-(--primary)">₹{savedReceipt?.paidAmount?.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-(--bg-soft) border-t border-(--border)">
+              <button
+                onClick={confirmDownload}
+                className="btn-primary w-full py-3 font-semibold shadow-lg shadow-(--primary-soft)/20"
+              >
+                Generate PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </RequirePermission>
   );
 }

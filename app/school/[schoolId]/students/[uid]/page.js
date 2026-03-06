@@ -199,6 +199,7 @@ export default function StudentProfilePage() {
         className: getClassName(student.className),
         sectionName: getSectionName(student.className, student.section),
       },
+      schoolUser,
       branchInfo: branchInfo,
       options: {
         size: "1/2",

@@ -139,6 +139,7 @@ export default function FeeReceiptsPage() {
                 className,
                 sectionName
             },
+            schoolUser,
             branchInfo,
             options: pdfOptions
         });
@@ -268,7 +269,7 @@ export default function FeeReceiptsPage() {
                                             <td className="px-4 py-2 text-right">
                                                 <button
                                                     onClick={() => handleDownloadRequest(r)}
-                                                    className="btn-outline py-1.5 px-3 text-xs flex gap-2 ml-auto bg-(--status-p-bg) text-(--status-p-text) border-(--status-p-border)"
+                                                    className="btn-outline font-medium py-1.5 px-3 text-xs flex gap-2 ml-auto bg-(--status-p-bg) text-(--status-p-text) border-(--status-p-border)"
                                                 >
                                                     <Printer size={14} /> Print
                                                 </button>
