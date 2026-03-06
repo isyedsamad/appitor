@@ -196,7 +196,7 @@ export default function MarksEntryPage() {
     snaps.forEach((snap, index) => {
       if (snap.empty) return;
       const data = snap.docs[0].data();
-      const studentId = students[index].id;
+      const studentId = students[index].uid;
       (data.marks || []).forEach(m => {
         loadedMarks[`${studentId}_${m.setupId}`] = m.value;
       });
@@ -335,9 +335,13 @@ export default function MarksEntryPage() {
                       const key = `${stu.uid}_${s.id}`;
                       const val = marks[key];
                       if (s.markingType === "marks") {
-                        if (val !== undefined && val !== "" && !isNaN(val)) {
-                          totalMarks += Number(val);
-                          maxTotal += Number(s.maxMarks || 0);
+                        if (val !== undefined && val !== "") {
+                          if (val === "AB" || val === "ab") {
+                            maxTotal += Number(s.maxMarks || 0);
+                          } else if (!isNaN(val)) {
+                            totalMarks += Number(val);
+                            maxTotal += Number(s.maxMarks || 0);
+                          }
                         }
                       }
                       if (s.markingType === "grades") {
@@ -406,22 +410,25 @@ export default function MarksEntryPage() {
                                 </select>
                               ) : (
                                 <input
-                                  type="number"
-                                  max={s.maxMarks}
-                                  className="input text-center"
+                                  type="text"
+                                  className="input text-center uppercase"
                                   placeholder="-"
-                                  value={marks[key] || ''}
+                                  value={marks[key] ?? ''}
                                   onChange={e => {
-                                    let val = e.target.value;
-                                    if (val == "") {
-                                      updateMark(stu.uid, s.id, 0);
+                                    let val = e.target.value.toUpperCase();
+                                    if (val === "") {
+                                      updateMark(stu.uid, s.id, "");
                                       return;
                                     }
-                                    val = Number(val);
-                                    if (isNaN(val)) return;
-                                    if (val < 0) val = 0;
-                                    if (val > s.maxMarks) val = s.maxMarks;
-                                    updateMark(stu.uid, s.id, val);
+                                    if (val === "A" || val === "AB") {
+                                      updateMark(stu.uid, s.id, val);
+                                      return;
+                                    }
+                                    let numVal = Number(val);
+                                    if (isNaN(numVal)) return;
+                                    if (numVal < 0) numVal = 0;
+                                    if (numVal > s.maxMarks) numVal = s.maxMarks;
+                                    updateMark(stu.uid, s.id, numVal);
                                   }}
                                 />
                               )}
