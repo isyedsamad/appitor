@@ -163,9 +163,9 @@ export default function SchoolDashboard() {
   const quickActions = [
     { label: "Student Profile", icon: LayoutDashboard, path: "/students", color: "p" },
     { label: "Attendance", icon: CalendarCheck, path: "/attendance", color: "m" },
-    { label: "Homework", icon: BookOpen, path: "/academics/homework", color: "o" },
+    { label: "Homework", icon: BookOpen, path: "/learning/homework", color: "o" },
     { label: "Fee Dues", icon: Receipt, path: "/fees/dues", color: "l" },
-    { label: "Noticeboard", icon: Bell, path: "/communications/noticeboard", color: "a" },
+    { label: "Noticeboard", icon: Bell, path: "/communication/noticeboard", color: "a" },
   ];
 
   return (
