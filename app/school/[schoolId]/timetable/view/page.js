@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Eye,
   Download,
+  Zap,
 } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
@@ -312,7 +313,7 @@ export default function ViewTimetablePage() {
         {mode === "class" && (
           <div className="flex flex-col md:flex-row gap-3 md:justify-between md:items-end">
             <div className="grid md:grid-cols-4 items-end gap-3 flex-1">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-[10px] text-(--text-muted) font-semibold uppercase tracking-wider">Class</p>
                 <select
                   className="input h-10"
@@ -328,7 +329,7 @@ export default function ViewTimetablePage() {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-[10px] text-(--text-muted) font-semibold uppercase tracking-wider">Section</p>
                 <select
                   value={sectionId}
@@ -372,7 +373,7 @@ export default function ViewTimetablePage() {
         {mode === "teacher" && (
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
             <div className="grid md:grid-cols-4 items-end gap-3 flex-1">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-[10px] text-(--text-muted) font-semibold uppercase tracking-wider">Faculty Member</p>
                 <select
                   value={teacherId}
@@ -417,14 +418,14 @@ export default function ViewTimetablePage() {
         {mode === "period" && (
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
             <div className="grid md:grid-cols-4 items-end gap-3 flex-1">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-[10px] text-(--text-muted) font-semibold uppercase tracking-wider">Day</p>
                 <select className="input h-10 capitalize" value={day} onChange={e => setDay(e.target.value)}>
                   <option value="">Select Day</option>
                   {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-[10px] text-(--text-muted) font-semibold uppercase tracking-wider">Period Slot</p>
                 <select className="input h-10" value={period} onChange={e => setPeriod(e.target.value)}>
                   <option value="">Select Period</option>
@@ -516,7 +517,7 @@ export default function ViewTimetablePage() {
           {mode === "teacher" && Array.isArray(data) && (
             <div className="space-y-4">
               <div className="grid md:grid-cols-3 gap-3">
-                <div className="rounded-xl border border-(--border) bg-(--bg-card) p-3.5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
+                <div className="rounded-xl border border-(--border) bg-(--bg-card) py-3 px-5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-(--text-muted) opacity-70">Weekly Load</p>
                     <div className="p-1.5 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -532,7 +533,7 @@ export default function ViewTimetablePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-(--border) bg-(--bg-card) p-3.5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
+                <div className="rounded-xl border border-(--border) bg-(--bg-card) py-3 px-5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-(--text-muted) opacity-70">Active Days</p>
                     <div className="p-1.5 rounded-lg bg-(--primary-soft) text-(--primary)">
@@ -550,7 +551,7 @@ export default function ViewTimetablePage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-(--border) bg-(--bg-card) p-3.5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
+                <div className="rounded-xl border border-(--border) bg-(--bg-card) py-3 px-5 shadow-sm relative overflow-hidden group hover:border-(--primary) transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-(--text-muted) opacity-70">Subject Focus</p>
                     <div className="p-1.5 rounded-lg bg-(--primary-soft) text-(--primary)">
