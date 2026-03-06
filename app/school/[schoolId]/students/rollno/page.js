@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   GraduationCap,
-  Users
+  Users,
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -166,9 +166,9 @@ export default function AssignRollPage() {
     <RequirePermission permission="student.rollno.view">
       <div className="space-y-4 pb-20 text-sm">
         <div className="flex flex-col mb-5 md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-xl bg-(--primary-soft) text-(--primary)">
-              <Hash size={24} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Hash size={20} fill="currentColor" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">Assign Roll Numbers</h1>

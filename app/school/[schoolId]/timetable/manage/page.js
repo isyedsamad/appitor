@@ -478,15 +478,15 @@ export default function EditTimetablePage() {
     <RequirePermission permission="timetable.edit.view">
       <div className="space-y-5">
         <div className="flex flex-col gap-5 md:flex-row justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <CalendarClock size={20} />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">
                 Edit Timetable
               </h1>
-              <p className="text-sm text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Optimize class schedules with ease
               </p>
             </div>

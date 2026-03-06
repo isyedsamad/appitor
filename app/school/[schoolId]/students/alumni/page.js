@@ -13,7 +13,7 @@ import {
     Square,
     ArrowRight,
     ArrowUp,
-    ExternalLink
+    ExternalLink,
 } from "lucide-react";
 import {
     doc,
@@ -148,8 +148,8 @@ export default function AlumniPage() {
             <div className="space-y-5 pb-32 text-sm">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+                    <div className="flex items-start gap-3">
+                        <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
                             <GraduationCap size={20} />
                         </div>
                         <div>

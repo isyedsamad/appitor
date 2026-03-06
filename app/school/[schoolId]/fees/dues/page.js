@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Bell,
+  Zap,
 } from "lucide-react";
 import {
   collection,
@@ -195,13 +196,13 @@ export default function FeeDuesPage() {
   return (
     <RequirePermission permission="fee.operations.view">
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <Wallet size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Zap size={20} fill="currentColor" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Fee Dues</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Fee Dues</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Pending & paid dues · {branchInfo?.name}
             </p>
           </div>

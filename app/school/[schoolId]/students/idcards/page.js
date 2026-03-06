@@ -29,7 +29,7 @@ import {
     Sparkles,
     Check,
     Square,
-    ArrowRight
+    ArrowRight,
 } from "lucide-react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -160,13 +160,13 @@ export default function IDCardsPage() {
         <RequirePermission permission="student.idcard.view">
             <div className="space-y-6 pb-20 text-sm" style={containerStyle}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+                    <div className="flex items-start gap-3">
+                        <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
                             <IdCard size={20} />
                         </div>
                         <div>
                             <h1 className="text-lg font-semibold text-(--text)">ID Card Generator</h1>
-                            <p className="text-xs text-(--text-muted) font-medium">
+                            <p className="text-xs font-semibold text-(--text-muted)">
                                 Design and print student identity cards in bulk
                             </p>
                         </div>

@@ -12,7 +12,7 @@ import {
   Mail,
   Phone,
   CircleDollarSign,
-  Fingerprint
+  Fingerprint,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
@@ -81,15 +81,15 @@ export default function AdmitEmployeePage() {
     <RequirePermission permission="employee.admit.view">
       <div className="space-y-4 pb-20 text-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <UserPlus size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <UserPlus size={20} fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-(--text)">
                 Admit Employee
               </h1>
-              <p className="text-xs text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Register new staff member for {branchInfo?.name}
               </p>
             </div>

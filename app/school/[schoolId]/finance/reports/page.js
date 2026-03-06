@@ -170,13 +170,13 @@ export default function FinanceReportsPage() {
     <RequirePermission permission="fee.reports.view">
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 shadow-sm rounded-lg bg-(--primary-soft) text-(--primary)">
-              <BarChart3 size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 shadow-sm rounded-lg border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <TrendingUp size={20} fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Finance Analytics</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Finance Analytics</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Comprehensive financial performance & reports
               </p>
             </div>

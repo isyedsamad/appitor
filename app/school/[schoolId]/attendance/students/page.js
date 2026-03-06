@@ -225,13 +225,13 @@ export default function ViewStudentAttendancePage() {
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-(--primary-soft) text-(--primary) shadow-sm ring-1 ring-(--primary)/10">
-              <Users size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Users size={20} fill="currentColor" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">Student Attendance</h1>
-              <p className="text-sm font-medium text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Attendance: {branchInfo?.name || "Campus View"}
               </p>
             </div>
@@ -453,7 +453,7 @@ export default function ViewStudentAttendancePage() {
                           const sStats = calculateStudentAttendance(s.uid);
                           return (
                             <tr key={s.uid} className="hover:bg-(--bg-soft)/50 transition-colors">
-                              <td className="px-5 py-3 font-semibold text-(--primary) uppercase tracking-wider">{s.appId}</td>
+                              <td className="px-5 py-3 font-semibold text-(--primary)">{s.appId}</td>
                               <td className="px-5 py-3">
                                 <div className="font-semibold text-(--text) capitalize">{s.name}</div>
                                 <div className="text-xs font-semibold text-(--text-muted)">

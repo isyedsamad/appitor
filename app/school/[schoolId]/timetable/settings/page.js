@@ -8,6 +8,8 @@ import {
   Coffee,
   Save,
   Trash2,
+  Zap,
+  Settings
 } from "lucide-react";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
@@ -137,15 +139,15 @@ export default function TimetableSettingsPage() {
   return (
     <RequirePermission permission="timetable.settings.view">
       <div className="space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
-            <CalendarClock size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Settings size={20} />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-(--text)">
               Timetable Settings
             </h1>
-            <p className="text-sm text-(--text-muted)">
+            <p className="text-xs font-semibold text-(--text-muted)">
               {isNew
                 ? "Set up timetable rules for this branch"
                 : "Manage school-wide timetable timing and structure"}
@@ -218,7 +220,7 @@ export default function TimetableSettingsPage() {
               {editable && (
                 <button
                   onClick={addBreak}
-                  className="text-sm text-(--primary) btn-outline py-1"
+                  className="text-sm text-(--primary) bg-(--primary-soft) btn-outline border-(--primary) py-1"
                 >
                   + Add Break
                 </button>
@@ -270,7 +272,7 @@ export default function TimetableSettingsPage() {
                   {editable && (
                     <button
                       onClick={() => removeBreak(i)}
-                      className="text-sm text-(--danger) btn-outline py-2 text-left"
+                      className="text-sm text-(--status-a-text) bg-(--status-a-bg) btn-outline py-2 text-left"
                     >
                       <Trash2 size={16} />Remove
                     </button>

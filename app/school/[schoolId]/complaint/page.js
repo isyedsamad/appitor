@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, CheckCircle, ClipboardList, MessageSquare } from "lucide-react";
+import { Search, CheckCircle, ClipboardList, MessageSquare, AlertCircle } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -105,13 +105,13 @@ export default function SchoolComplaintPage() {
   return (
     <RequirePermission permission="complaint.view">
       <div className="space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <MessageSquare size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <AlertCircle size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Complaint Portal</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Complaint Portal</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Review and resolve student & employee complaints
             </p>
           </div>

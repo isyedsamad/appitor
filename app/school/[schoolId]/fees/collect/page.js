@@ -249,13 +249,13 @@ export default function FeeCollectionPage() {
   return (
     <RequirePermission permission="fee.operations.view">
       <div className="max-w-7xl mx-auto space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <IndianRupee size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Wallet size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Collect Fee</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Collect Fee</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Fee Collection Page
             </p>
           </div>

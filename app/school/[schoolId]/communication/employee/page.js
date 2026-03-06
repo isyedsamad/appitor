@@ -7,7 +7,8 @@ import {
   Send,
   X,
   Calendar,
-  Briefcase
+  Briefcase,
+  Zap
 } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
@@ -110,13 +111,13 @@ export default function EmployeeMessagingPage() {
   return (
     <RequirePermission permission="communication.employee.view">
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <Briefcase size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Zap size={20} fill="currentColor" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Employee Messaging</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Employee Messaging</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Direct communication with staff
             </p>
           </div>

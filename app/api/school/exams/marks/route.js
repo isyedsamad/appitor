@@ -8,7 +8,7 @@ export async function POST(req) {
     const user = await verifyUser(req, "exam.marks.manage");
     const isAllowed =
       user.permissions?.includes("*") ||
-      user.permissions?.includes("exam.manage");
+      user.permissions?.includes("exam.marks.manage");
     if (!isAllowed) {
       return NextResponse.json(
         { message: "You are not allowed to enter marks" },

@@ -10,7 +10,7 @@ import {
   Trash2,
   Calendar,
   Layers,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -118,18 +118,18 @@ export default function AcademicSessionSettingsPage() {
     <RequirePermission permission="system.academic.view">
       <div className="space-y-5">
         <div className="flex flex-col gap-5 md:flex-row justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <CalendarDays size={22} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Calendar size={20} fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-base font-semibold text-(--text) flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-(--text) flex items-center gap-2">
                 Academic Sessions
                 <span className="flex items-center gap-1 text-[10px] bg-orange-500/10 text-orange-600 px-2 py-0.5 rounded-full uppercase tracking-widest font-semibold border border-orange-500/10">
                   <Sparkles size={10} /> Scoped
                 </span>
               </h1>
-              <p className="text-[11px] font-semibold text-(--text-muted) uppercase tracking-wider">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Manage branch-level academic timelines
               </p>
             </div>

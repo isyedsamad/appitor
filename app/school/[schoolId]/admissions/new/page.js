@@ -12,7 +12,7 @@ import {
   Phone,
   ShieldCheck,
   CreditCard,
-  History
+  History,
 } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
 import { toast } from "react-toastify";
@@ -124,15 +124,15 @@ export default function NewAdmissionPage() {
     <RequirePermission permission="admission.new.view">
       <div className="space-y-5 pb-20 text-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-(--primary-soft) text-(--primary) flex items-center justify-center">
-              <UserPlus size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <UserPlus size={20} fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-(--text)">
                 New Admission
               </h1>
-              <p className="text-xs text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Register a new student for {branchInfo?.name}
               </p>
             </div>

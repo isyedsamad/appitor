@@ -13,7 +13,7 @@ import {
   Search,
   FileDown,
   CalendarDays,
-  Zap,
+  Eye,
   Download,
 } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
@@ -220,9 +220,9 @@ export default function ViewTimetablePage() {
     <RequirePermission permission="timetable.view.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden group">
-          <div className="flex items-center gap-3 relative z-10">
-            <div className={`p-3 rounded-lg transition-all duration-500 ${liveInfo.isActive ? "bg-green-500/10 text-green-600" : "bg-(--primary-soft) text-(--primary)"}`}>
-              {liveInfo.isActive ? <Clock size={20} /> : <Calendar size={20} />}
+          <div className="flex items-start gap-3 relative z-10">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Eye size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ export default function ViewTimetablePage() {
                   </span>
                 )}
               </div>
-              <p className="text-[11px] font-medium text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 {liveInfo.isActive
                   ? `Currently ${liveInfo.day} Period ${liveInfo.period}`
                   : liveInfo.msg || `${liveInfo.day || '---'} • ${liveInfo.msg || 'School Closed'}`}

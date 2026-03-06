@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { ClipboardCheck, Search, Save, Calendar, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ClipboardCheck, Search, Save, Calendar, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trophy } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { collection, doc, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
+import { hasPermission } from "@/lib/school/permissionUtils";
 
 const GRADES = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const GRADE_POINTS = {
@@ -236,13 +237,13 @@ export default function MarksEntryPage() {
   return (
     <RequirePermission permission="exam.marks.view">
       <div className="space-y-4 bg-(--bg) text-(--text)">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-            <ClipboardCheck size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Trophy size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Marks Entry</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Marks Entry</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Enter student marks or grades
             </p>
           </div>
@@ -331,7 +332,7 @@ export default function MarksEntryPage() {
                     let gradePointsSum = 0;
                     let gradeCount = 0;
                     setups.forEach(s => {
-                      const key = `${stu.id}_${s.id}`;
+                      const key = `${stu.uid}_${s.id}`;
                       const val = marks[key];
                       if (s.markingType === "marks") {
                         if (val !== undefined && val !== "" && !isNaN(val)) {
@@ -368,7 +369,7 @@ export default function MarksEntryPage() {
 
                     return (
                       <tr
-                        key={stu.id}
+                        key={stu.uid}
                         className={`border-b border-(--border)
                           ${rowIndex % 2 === 0 ? "bg-(--bg-card)" : "bg-(--bg)"}
                         `}
@@ -387,7 +388,7 @@ export default function MarksEntryPage() {
                           </div>
                         </td>
                         {setups.map(s => {
-                          const key = `${stu.id}_${s.id}`;
+                          const key = `${stu.uid}_${s.id}`;
                           return (
                             <td key={s.id} className="px-2 py-2 text-center">
                               {s.markingType === "grades" ? (
@@ -395,7 +396,7 @@ export default function MarksEntryPage() {
                                   className="input"
                                   value={marks[key] || ""}
                                   onChange={e =>
-                                    updateMark(stu.id, s.id, e.target.value)
+                                    updateMark(stu.uid, s.id, e.target.value)
                                   }
                                 >
                                   <option value="">–</option>
@@ -413,14 +414,14 @@ export default function MarksEntryPage() {
                                   onChange={e => {
                                     let val = e.target.value;
                                     if (val == "") {
-                                      updateMark(stu.id, s.id, 0);
+                                      updateMark(stu.uid, s.id, 0);
                                       return;
                                     }
                                     val = Number(val);
                                     if (isNaN(val)) return;
                                     if (val < 0) val = 0;
                                     if (val > s.maxMarks) val = s.maxMarks;
-                                    updateMark(stu.id, s.id, val);
+                                    updateMark(stu.uid, s.id, val);
                                   }}
                                 />
                               )}

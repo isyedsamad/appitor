@@ -230,27 +230,25 @@ export default function EmployeeProfilePage() {
   return (
     <div className="space-y-4 pb-20 text-sm">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <button
             onClick={() => router.back()}
-            className="p-3 rounded-xl hover:bg-(--bg-soft) transition-colors border border-(--border)"
+            className="p-3 rounded-lg hover:bg-(--bg-soft) transition-all border border-(--border) shadow-sm text-(--text-muted)"
           >
             <ChevronLeft size={20} />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-(--primary-soft) border border-(--primary) text-(--primary) flex items-center justify-center text-xl font-semibold uppercase">
-              {employee.name?.[0]}
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <UserCircle size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-(--text) capitalize flex items-center gap-2">
+              <h1 className="text-lg font-semibold capitalize text-(--text) leading-none flex items-center gap-2">
                 {employee.name}
-                {isActive && <BadgeCheck size={20} className="text-green-500" />}
+                {isActive && <BadgeCheck size={18} className="text-green-500" />}
               </h1>
-              <div className="flex items-center gap-3 text-xs text-(--text-muted)">
-                <span className="flex font-semibold items-center gap-1 bg-(--bg-soft) px-2 py-0.5 rounded-md border border-(--border)">
-                  {employee.employeeId}
-                </span>
-              </div>
+              <p className="text-xs font-semibold text-(--text-muted) mt-1.5 uppercase tracking-wider">
+                {employee.employeeId} • {employee.role}
+              </p>
             </div>
           </div>
         </div>

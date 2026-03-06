@@ -131,13 +131,13 @@ export default function FeeTemplatesPage() {
     <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <LayoutTemplate size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Fee Templates</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Fee Templates</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Define class-wise fee structures for {branchInfo?.name}
               </p>
             </div>

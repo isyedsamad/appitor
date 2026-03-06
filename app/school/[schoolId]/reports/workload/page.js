@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, FileText, LayoutDashboard, Users, Clock, AlertTriangle, Book, Search, CalendarDays } from "lucide-react";
+import { Download, FileText, LayoutDashboard, Users, Clock, AlertTriangle, Book, Search, CalendarDays, Zap, BarChart3 } from "lucide-react";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -208,13 +208,13 @@ export default function TeacherWorkloadReportPage() {
         <RequirePermission permission="report.workload.view">
             <div className="max-w-7xl mx-auto space-y-4 relative">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-                            <LayoutDashboard size={24} />
+                    <div className="flex items-start gap-3">
+                        <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+                            <BarChart3 size={20} />
                         </div>
                         <div>
                             <h1 className="text-lg font-semibold text-(--text)">Teacher Workload</h1>
-                            <p className="text-sm text-(--text-muted)">Monitor timetable distribution and capacity</p>
+                            <p className="text-xs font-semibold text-(--text-muted)">Monitor timetable distribution and capacity</p>
                         </div>
                     </div>
 

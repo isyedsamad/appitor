@@ -12,6 +12,7 @@ import {
   Ban,
   CheckCircle2,
   X,
+  IndianRupee,
 } from "lucide-react";
 import {
   collection,
@@ -131,13 +132,13 @@ export default function FeeHeadsPage() {
     <RequirePermission permission="fee.setup.view">
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <Layers size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <IndianRupee size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">Fee Heads</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Fee Heads</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Configure fee types for {branchInfo?.name}
               </p>
             </div>

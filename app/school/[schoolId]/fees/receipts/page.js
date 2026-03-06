@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, History, Calendar, User, ArrowDown, Download, Printer, FileText, ChevronRight, X, Hash, FileWarning, MessageCircleWarning } from "lucide-react";
+import { Search, History, Calendar, User, ArrowDown, Download, Printer, FileText, ChevronRight, X, Hash, FileWarning, MessageCircleWarning, Receipt } from "lucide-react";
 import { collection, query, where, orderBy, limit, startAfter, getDocs, doc, getDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -148,13 +148,13 @@ export default function FeeReceiptsPage() {
     return (
         <RequirePermission permission="fee.reports.view">
             <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-lg shadow-sm bg-(--primary-soft) text-(--primary)">
-                        <History size={20} />
+                <div className="flex items-start gap-3">
+                    <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+                        <Receipt size={20} />
                     </div>
                     <div>
-                        <h1 className="text-lg font-semibold">Fee Receipts</h1>
-                        <p className="text-sm text-(--text-muted)">
+                        <h1 className="text-lg font-semibold text-(--text)">Fee Receipts</h1>
+                        <p className="text-xs font-semibold text-(--text-muted)">
                             Search and reprint payment receipts
                         </p>
                     </div>

@@ -7,7 +7,7 @@ import {
   Search,
   Save,
   X,
-  CalendarClock
+  CalendarClock,
 } from "lucide-react";
 
 import RequirePermission from "@/components/school/RequirePermission";
@@ -205,13 +205,13 @@ export default function AssignmentPage() {
     <RequirePermission permission="learning.assignments.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <BookOpen size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Assignments</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Assignments</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Session-wise assignments & deadlines
               </p>
             </div>

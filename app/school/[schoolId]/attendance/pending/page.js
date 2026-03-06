@@ -109,12 +109,12 @@ export default function PendingAttendancePage() {
     <RequirePermission permission={'attendance.pending.view'}>
       <div className="space-y-4">
         <div className="flex items-start gap-3">
-          <div className="p-2 rounded bg-(--primary-soft) text-(--primary)">
-            <ClipboardCheck size={20} />
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <Clock size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Attendance Approval</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Attendance Approval</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Review & manage attendance changes
             </p>
           </div>

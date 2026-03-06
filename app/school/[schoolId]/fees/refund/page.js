@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Receipt, User, Calendar, Wallet, RotateCcw, X, ShieldCheck, Hash } from "lucide-react";
+import { Search, Receipt, User, Calendar, Wallet, RotateCcw, X, ShieldCheck, Hash, Zap, RefreshCcw } from "lucide-react";
 import { collection, getDoc, getDocs, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -162,13 +162,13 @@ export default function RefundPage() {
   return (
     <RequirePermission permission="fee.operations.view">
       <div className="max-w-7xl mx-auto space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-lg bg-(--primary-soft) text-(--primary) shadow-sm">
-            <RotateCcw size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <RefreshCcw size={20} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Fee Refund</h1>
-            <p className="text-sm text-(--text-muted)">
+            <h1 className="text-lg font-semibold text-(--text)">Fee Refund</h1>
+            <p className="text-xs font-semibold text-(--text-muted)">
               Search and refund collected fees
             </p>
           </div>

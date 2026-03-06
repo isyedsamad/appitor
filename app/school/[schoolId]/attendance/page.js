@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, ArrowUp, ArrowDown, ArrowUpDown, UserCog, Zap } from "lucide-react";
+import { Users, Calendar, CheckCircle, Save, User, BadgeCheck, TicketIcon, Cross, ShieldX, ShieldCheck, Search, ArrowUp, ArrowDown, ArrowUpDown, UserCog, ClipboardList, Zap } from "lucide-react";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -417,19 +417,23 @@ export default function MarkAttendancePage() {
             </div>
             <div>
               <div className="flex flex-wrap gap-2 text-xs">
-                {Object.entries(STATUS).map(([k, cls]) => (
-                  <span
-                    key={k}
-                    className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
-                  >
-                    {k == 'P' && 'Present'}
-                    {k == 'A' && 'Absent'}
-                    {k == 'L' && 'Leave'}
-                    {k == 'M' && 'Medical'}
-                    {k == 'H' && 'Half-Day'}
-                    {k == 'O' && 'Overtime'}
-                  </span>
-                ))}
+                {Object.entries(STATUS).map(([k, cls]) => {
+                  if (mode === 'employee' && k === 'M') return null;
+                  if (mode === 'student' && (k === 'H' || k === 'O')) return null;
+                  return (
+                    <span
+                      key={k}
+                      className={`px-3 py-1 rounded-md font-semibold border ${cls}`}
+                    >
+                      {k == 'P' && 'Present'}
+                      {k == 'A' && 'Absent'}
+                      {k == 'L' && 'Leave'}
+                      {k == 'M' && 'Medical'}
+                      {k == 'H' && 'Half-Day'}
+                      {k == 'O' && 'Overtime'}
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>

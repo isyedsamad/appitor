@@ -208,13 +208,13 @@ export default function EnquiryManagementPage() {
       <div className="space-y-6">
 
         <div className="flex flex-col gap-3 md:flex-row justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <Users size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <MessageSquare size={20} fill="currentColor" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Enquiry Management</h1>
-              <p className="text-sm text-(--text-muted)">Session-wise admission enquiries</p>
+              <h1 className="text-lg font-semibold text-(--text)">Enquiry Management</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">Session-wise admission enquiries</p>
             </div>
           </div>
           {editable && (

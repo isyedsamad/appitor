@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Check,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  TrendingUp,
 } from "lucide-react";
 import {
   collection,
@@ -198,9 +199,9 @@ export default function PromoteDemotePage() {
       <div className="space-y-5 pb-32 text-sm">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <ChartNoAxesCombined size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <TrendingUp size={20} fill="currentColor" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">Promotion Control</h1>

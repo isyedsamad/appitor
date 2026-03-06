@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Save, Trash2, Search, AlertTriangle, Info, Copy, Users, BookMarked, LayoutGrid } from "lucide-react";
+import { BookOpen, Plus, Save, Trash2, Search, AlertTriangle, Info, Copy, Users, BookMarked, LayoutGrid, Zap } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -156,15 +156,15 @@ export default function SubjectTeacherMappingPage() {
     <RequirePermission permission="timetable.mapping.view">
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
-              <BookOpen size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Zap size={20} fill="currentColor" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">
                 Subject–Teacher Mapping
               </h1>
-              <p className="text-sm text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Optimized bulk assignment
               </p>
             </div>

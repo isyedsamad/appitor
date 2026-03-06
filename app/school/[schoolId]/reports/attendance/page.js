@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Filter, Download, FileText, Users, LayoutList } from "lucide-react";
+import { BarChart3, Filter, Download, FileText, Users, LayoutList, Zap } from "lucide-react";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -67,12 +67,15 @@ export default function AttendanceReportsPage() {
             ];
 
             const [year, m] = filters.monthYear.split("-");
+            const sessionStr = Number(m) <= 3
+                ? `${Number(year) - 1}-${year.slice(-2)}`
+                : `${year}-${(Number(year) + 1).toString().slice(-2)}`;
             const dList = getDaysInMonth(filters.monthYear);
             setMonthDays(dList);
             let entities = [];
             if (reportType === "students") {
                 if (filters.section) {
-                    const rosterRef = doc(db, ...basePath, "meta", `${filters.className}_${filters.section}`);
+                    const rosterRef = doc(db, ...basePath, "meta", `${filters.className}_${filters.section}_${sessionStr}`);
                     const snap = await getDoc(rosterRef);
                     if (snap.exists()) {
                         const data = snap.data();
@@ -83,7 +86,7 @@ export default function AttendanceReportsPage() {
                     const snaps = await getDocs(metaColRef);
                     snaps.forEach((d) => {
                         const data = d.data();
-                        if (data.classId === filters.className && Array.isArray(data.students)) {
+                        if (d.id.endsWith(`_${sessionStr}`) && data.classId === filters.className && Array.isArray(data.students)) {
                             entities.push(...data.students.map((s) => ({ ...s, classId: data.classId, sectionId: data.sectionId })));
                         }
                     });
@@ -185,8 +188,12 @@ export default function AttendanceReportsPage() {
             base["P"] = r.stats.P;
             base["A"] = r.stats.A;
             base["L"] = r.stats.L;
-            base["M"] = r.stats.M;
-            base["H"] = r.stats.H;
+            if (reportType === 'students') {
+                base["M"] = r.stats.M;
+            } else {
+                base["H"] = r.stats.H;
+                base["O"] = r.stats.O;
+            }
             base["Total Marked"] = r.stats.totalMarked;
             base["%"] = r.stats.percent + "%";
 
@@ -251,11 +258,11 @@ export default function AttendanceReportsPage() {
 
         let tableColumn = [];
         if (reportType === 'students') tableColumn = ["ID", "Roll No", "Name", "Class", "Section", "P", "A", "L", "M", "Marked", "%"];
-        else tableColumn = ["ID", "Name", "Role", "P", "A", "L", "M", "H", "Marked", "%"];
+        else tableColumn = ["ID", "Name", "Role", "P", "A", "L", "H", "O", "Marked", "%"];
 
         const tableRows = data.map(row => {
             if (reportType === 'students') return [row["ID"], row["Roll No"].toString().padStart(2, '0'), row["Name"], row["Class"], row["Section"], row["P"], row["A"], row["L"], row["M"], row["Total Marked"], row["%"]];
-            return [row["ID"], row["Name"], row["Role"], row["P"], row["A"], row["L"], row["M"], row["H"], row["Total Marked"], row["%"]];
+            return [row["ID"], row["Name"], row["Role"], row["P"], row["A"], row["L"], row["H"], row["O"], row["Total Marked"], row["%"]];
         });
 
         autoTable(doc, {
@@ -312,13 +319,13 @@ export default function AttendanceReportsPage() {
             <div className="max-w-7xl mx-auto space-y-5">
                 {/* Header & Controls */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-                            <BarChart3 size={24} />
+                    <div className="flex items-start gap-3">
+                        <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+                            <BarChart3 size={20} />
                         </div>
                         <div>
                             <h1 className="text-lg font-semibold text-(--text)">Attendance Reports</h1>
-                            <p className="text-sm text-(--text-muted)">Monthly attendance summaries</p>
+                            <p className="text-xs font-semibold text-(--text-muted)">Monthly attendance summaries</p>
                         </div>
                     </div>
 
@@ -425,7 +432,7 @@ export default function AttendanceReportsPage() {
                 </div>
 
                 {/* Data Table */}
-                <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg) shadow-sm">
+                <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg-card) shadow-sm">
                     <div className="p-4 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)">
                         <h2 className="text-sm font-semibold flex items-center gap-2 text-(--text)">
                             Report Preview
@@ -455,7 +462,14 @@ export default function AttendanceReportsPage() {
                                     <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">P</th>
                                     <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">A</th>
                                     <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">L</th>
-                                    <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">M</th>
+                                    {reportType === 'students' ? (
+                                        <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">M</th>
+                                    ) : (
+                                        <>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">H</th>
+                                            <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">O</th>
+                                        </>
+                                    )}
                                     <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Marked</th>
                                     <th className="px-4 py-3 font-semibold whitespace-nowrap text-center">Total %</th>
                                 </tr>
@@ -498,7 +512,14 @@ export default function AttendanceReportsPage() {
                                             <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-p-bg)] text-[var(--status-p-text)] bg-opacity-20">{r.stats.P}</td>
                                             <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-a-bg)] text-[var(--status-a-text)] bg-opacity-20">{r.stats.A}</td>
                                             <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-l-bg)] text-[var(--status-l-text)] bg-opacity-20">{r.stats.L}</td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-m-bg)] text-[var(--status-m-text)] bg-opacity-20">{r.stats.M}</td>
+                                            {reportType === 'students' ? (
+                                                <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-m-bg)] text-[var(--status-m-text)] bg-opacity-20">{r.stats.M}</td>
+                                            ) : (
+                                                <>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-h-bg)] text-[var(--status-h-text)] bg-opacity-20">{r.stats.H}</td>
+                                                    <td className="px-4 py-3 whitespace-nowrap text-center font-medium bg-[var(--status-o-bg)] text-[var(--status-o-text)] bg-opacity-20">{r.stats.O}</td>
+                                                </>
+                                            )}
                                             <td className="px-4 py-3 whitespace-nowrap text-center text-(--text-muted)">{r.stats.totalMarked}</td>
                                             <td className="px-4 py-3 whitespace-nowrap text-center">
                                                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${getStatusColor(r.stats.percent)}`}>

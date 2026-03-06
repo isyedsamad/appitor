@@ -91,8 +91,8 @@ export default function ClassesPage() {
       <div className="space-y-5">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-start gap-3">
-            <div className="p-3 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <BookOpen size={20} />
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Layers size={20} />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">

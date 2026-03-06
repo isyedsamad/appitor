@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Users, CheckCircle, FileDown, LayoutGrid, List, Search, Download, Calendar, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Users, CheckCircle, FileDown, LayoutGrid, List, Search, Download, Calendar, CheckCircle2, AlertTriangle, UserCog } from "lucide-react";
 import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -176,13 +176,13 @@ export default function ViewEmployeeAttendancePage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-lg bg-(--primary-soft) text-(--primary) shadow-sm ring-1 ring-(--primary)/10">
-            <Users size={20} />
+        <div className="flex items-start gap-3">
+          <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+            <UserCog size={20} />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-(--text)">Employee Attendance</h1>
-            <p className="text-sm font-medium text-(--text-muted)">
+            <p className="text-xs font-semibold text-(--text-muted)">
               {branchInfo?.name || "Campus View"}
             </p>
           </div>

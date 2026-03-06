@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquare, Plus, Search, Save, X, Trash2, AlertCircle } from "lucide-react";
+import { Megaphone, Plus, Search, Save, X, Trash2, AlertCircle } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -48,10 +48,6 @@ export default function NoticeboardPage() {
     if (!ts) return false;
     const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
     return d.getTime() < Date.now();
-  }
-
-  function isVisibleToUser(notice) {
-    return schoolUser.permissions.includes('*') || notice.roles?.includes(schoolUser.roleName);
   }
 
   useEffect(() => {
@@ -137,7 +133,6 @@ export default function NoticeboardPage() {
   const notices =
     noticeDoc?.items?.filter(
       (n) =>
-        isVisibleToUser(n) &&
         (!n.expiresAt || !isExpired(n.expiresAt))
     ) || [];
 
@@ -145,13 +140,13 @@ export default function NoticeboardPage() {
     <RequirePermission permission="communication.noticeboard.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <MessageSquare size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Megaphone size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Noticeboard</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Noticeboard</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 School-wide announcements & updates
               </p>
             </div>

@@ -25,7 +25,8 @@ import {
   Bell,
   Download,
   ExternalLink,
-  X
+  X,
+  Zap
 } from "lucide-react";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -357,24 +358,22 @@ export default function StudentProfilePage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-xl border border-(--border) hover:bg-(--bg-soft) transition-all text-(--text-muted) hover:text-(--text)"
+              className="p-2 h-[46px] w-[46px] flex items-center justify-center rounded-lg border border-(--border) hover:bg-(--bg-soft) transition-all text-(--text-muted) hover:text-(--text)"
             >
               <ChevronLeft size={20} />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-(--primary-soft) border border-(--primary) text-(--primary) flex items-center justify-center text-xl font-semibold uppercase">
-                {student.name?.[0]}
+            <div className="flex items-start gap-3">
+              <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+                <Zap size={20} fill="currentColor" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold capitalize flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-(--text) capitalize flex items-center gap-2">
                   {student.name}
                   {isActive && <BadgeCheck size={20} className="text-green-500" />}
                 </h1>
-                <div className="flex items-center gap-3 text-xs text-(--text-muted)">
-                  <span className="flex font-semibold items-center gap-1 bg-(--bg-soft) px-2 py-0.5 rounded-md border border-(--border)">
-                    App ID: {student.appId}
-                  </span>
-                </div>
+                <p className="text-xs font-semibold text-(--text-muted)">
+                  App ID: {student.appId}
+                </p>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquare, Plus, Search, Save, X, Trash2, AlertCircle } from "lucide-react";
+import { MessageSquare, Plus, Search, Save, X, Trash2, AlertCircle, Zap, Megaphone } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -161,7 +161,6 @@ export default function ClassNoticePage() {
   const notices =
     noticeDoc?.items?.filter(
       (n) =>
-        isVisibleToUser(n) &&
         (!n.expiresAt || !isExpired(n.expiresAt))
     ) || [];
 
@@ -169,13 +168,13 @@ export default function ClassNoticePage() {
     <RequirePermission permission="communication.class.view">
       <div className="space-y-5">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <MessageSquare size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <Megaphone size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Class Notice</h1>
-              <p className="text-sm text-(--text-muted)">
+              <h1 className="text-lg font-semibold text-(--text)">Class Notice</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Class & section specific announcements
               </p>
             </div>
@@ -221,7 +220,7 @@ export default function ClassNoticePage() {
               }
             >
               <option value="">Select Class</option>
-              {classData.map((c) => (
+              {classData && classData.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -239,7 +238,7 @@ export default function ClassNoticePage() {
               }
             >
               <option value="">Select Section</option>
-              {(classData.find((c) => c.id === filters.classId)
+              {classData && (classData.find((c) => c.id === filters.classId)
                 ?.sections || []
               ).map((s) => (
                 <option key={s.id} value={s.id}>
@@ -272,8 +271,8 @@ export default function ClassNoticePage() {
                 <div className="flex justify-between px-5 py-3 bg-(--bg) border-b border-(--border)">
                   <div>
                     <p className="font-semibold">{n.title}</p>
-                    <p className="text-xs text-(--text-muted)">
-                      {getClassName(filters.classId)}{" "}
+                    <p className="text-xs font-semibold text-(--text-muted)">
+                      Class: {getClassName(filters.classId)}{" "}
                       {getSectionName(filters.classId, filters.sectionId)}
                     </p>
                   </div>

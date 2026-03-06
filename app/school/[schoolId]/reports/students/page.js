@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Filter, Download, FileText, Users } from "lucide-react";
+import { BarChart3, Filter, Download, FileText, Users, Zap, BarChart, BarChart2 } from "lucide-react";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
@@ -253,13 +253,13 @@ export default function StudentReportsPage() {
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-                            <BarChart3 size={24} />
+                    <div className="flex items-start gap-3">
+                        <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+                            <BarChart3 size={20} />
                         </div>
                         <div>
                             <h1 className="text-lg font-semibold text-(--text)">Student Reports</h1>
-                            <p className="text-sm text-(--text-muted)">Generate, view, and export student data</p>
+                            <p className="text-xs font-semibold text-(--text-muted)">Generate, view, and export student data</p>
                         </div>
                     </div>
 
@@ -285,7 +285,7 @@ export default function StudentReportsPage() {
                 {/* Filter Card */}
                 <div className="">
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                         <div>
                             <label className="text-xs font-semibold text-(--text-muted) uppercase mb-1 block">Session <span className="text-red-500">*</span></label>
                             <select
@@ -362,14 +362,14 @@ export default function StudentReportsPage() {
                                 disabled={loading}
                                 className="btn-primary w-full h-10 flex items-center justify-center gap-2"
                             >
-                                {loading ? "Generating..." : "Generate Report"}
+                                {loading ? "Generating..." : "Search"}
                             </button>
                         </div>
                     </div>
                 </div>
 
                 {/* Data Table */}
-                <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg) shadow-sm">
+                <div className="border border-(--border) rounded-xl overflow-hidden bg-(--bg-card) shadow-sm">
                     <div className="p-4 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)">
                         <h2 className="text-sm font-semibold flex items-center gap-2 text-(--text)">
                             Report Preview

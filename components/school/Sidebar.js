@@ -107,7 +107,7 @@ export default function Sidebar() {
                 </button>
               )}
               {!collapsed && isMainOpen && hasMainChildren && !isMainLocked && (
-                <div className="ml-3 pl-3 mt-1 space-y-1 border-l border-(--border)/70">
+                <div className="ml-3 pl-1 mt-1 space-y-1 border-l-2 border-(--border)/70">
                   {main.children.map(sub => {
                     const subKey = `${main.label}__${sub.label}`;
                     const isSubOpen = openSubMenu === subKey;
@@ -168,7 +168,7 @@ export default function Sidebar() {
                           </Link>
                         )}
                         {isSubOpen && !isGroupLocked && (
-                          <div className="ml-3 pl-3 mt-1 space-y-1 border-l border-(--border)/70">
+                          <div className="ml-3 pl-1 mt-1 space-y-1 border-l-2 border-(--border)/70">
                             {sub.children.map(page => {
                               const isPageLocked = page.permission && !hasPermission(schoolUser, page.permission, false, currentPlan);
 

@@ -12,7 +12,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
-import { Eye, Search, Users } from "lucide-react";
+import { Eye, Search, Users, UserCog } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -75,15 +75,15 @@ export default function EmployeeListPage() {
     <RequirePermission permission="employee.profile.view">
       <div className="space-y-4">
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
-              <Users size={20} />
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
+              <UserCog size={20} />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-(--text)">
                 Employees
               </h1>
-              <p className="text-sm text-(--text-muted)">
+              <p className="text-xs font-semibold text-(--text-muted)">
                 Manage employees of this branch
               </p>
             </div>
@@ -91,7 +91,7 @@ export default function EmployeeListPage() {
           <div className="flex items-center gap-3 w-full max-w-sm">
             <Search size={16} className="text-(--text-muted)" />
             <input
-              className="bg-transparent outline-none text-sm w-full"
+              className="input text-sm w-full"
               placeholder="Search by name, ID or mobile"
               value={search}
               onChange={e => setSearch(e.target.value)}

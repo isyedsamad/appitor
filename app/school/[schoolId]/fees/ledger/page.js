@@ -118,13 +118,13 @@ export default function FeeLedgerPage() {
     <RequirePermission permission="fee.reports.view">
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 shadow-sm rounded-lg bg-(--primary-soft) text-(--primary)">
+          <div className="flex items-start gap-3">
+            <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <BookOpen size={20} />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">Fee Ledger</h1>
-              <p className="text-sm text-(--text-muted)">{branchInfo?.name} · Transaction Insights</p>
+              <h1 className="text-lg font-semibold text-(--text)">Fee Ledger</h1>
+              <p className="text-xs font-semibold text-(--text-muted)">{branchInfo?.name} · Transaction Insights</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
