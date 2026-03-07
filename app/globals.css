@@ -17,6 +17,12 @@
   --primary-hover: #c2410c;
   --primary-soft: #fff1e8;
 
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #e45011 0%, #f97316 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+
   /* Accent / Status */
   --accent: #16a34a;
   /* success */
@@ -131,7 +137,6 @@
 html,
 body {
   height: 100%;
-  overflow: hidden;
 }
 
 .loading {

@@ -5,6 +5,9 @@ import Loading from "@/components/ui/Loading";
 import { fetchSchools, loginSchoolUser } from "@/lib/school/authSchool";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function SchoolLoginPage() {
   const router = useRouter();
@@ -13,12 +16,33 @@ export default function SchoolLoginPage() {
   const [schoolCode, setSchoolCode] = useState("")
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     fetchSchools().then(setSchools);
-  }, []);
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "schoolUsers", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            router.replace(`/school/${userData.schoolId}/dashboard`);
+          } else {
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error("Redirect check error:", err);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => unsub();
+  }, [router]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -27,9 +51,9 @@ export default function SchoolLoginPage() {
     const newMail = email.trim() + "@" + schoolCode.toLowerCase() + ".appitor";
     try {
       const data = await loginSchoolUser({ schoolId, email: newMail, password });
-      if(data.success) {
+      if (data.success) {
         router.replace(`/school/${data.schoolId}/dashboard`);
-      }else {
+      } else {
         setLoading(false);
       }
     } catch (err) {
@@ -46,17 +70,17 @@ export default function SchoolLoginPage() {
       {loading && <Loading />}
       <div className="min-h-[100dvh] flex items-center justify-center bg-(--bg) p-5">
         <div className="w-full max-w-md bg-(--bg-card) rounded-2xl shadow-xl border border-(--border) p-6 sm:p-8">
-          
+
           <div className="mb-5 text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-(--border)">
-                <Shield className="h-6 w-6 text-(--primary)" />
+              <Shield className="h-6 w-6 text-(--primary)" />
             </div>
 
             <h1 className="text-2xl font-semibold">School Login</h1>
             <p className="mt-1 text-sm text-muted">
-                Secure access for schools & staff
+              Secure access for schools & staff
             </p>
-            </div>
+          </div>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="text-sm text-(--text-muted)">School</label>
