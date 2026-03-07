@@ -380,16 +380,19 @@ export default function StudentProfilePage() {
           </div>
         </div>
         <div className="flex items-center gap-1 bg-(--bg-card) p-1 rounded-xl border border-(--border) w-fit">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-all text-xs ${activeTab === t.id ? "bg-(--primary) text-white shadow-sm" : "text-(--text-muted) hover:bg-(--bg-soft) hover:text-(--text)"
-                }`}
-            >
-              <t.icon size={14} /> {t.label}
-            </button>
-          ))}
+          {tabs.map((t) => {
+            if (t.id === "fees" && !editable) return null;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-lg font-semibold transition-all text-xs ${activeTab === t.id ? "bg-(--primary) text-white shadow-sm" : "text-(--text-muted) hover:bg-(--bg-soft) hover:text-(--text)"
+                  }`}
+              >
+                <t.icon size={14} /> {t.label}
+              </button>
+            )
+          })}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

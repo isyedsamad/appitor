@@ -156,18 +156,25 @@ export default function TeacherWorkloadReportPage() {
         const doc = new jsPDF('p', 'pt', 'a4');
         const data = getFormattedExportData();
 
-        const primaryColor = [148, 146, 146];
-        const textColor = [0, 0, 0];
+        const primaryColor = [15, 23, 42];
+        const textColor = [15, 23, 42];
 
         doc.setFillColor(...primaryColor);
         doc.rect(0, 0, doc.internal.pageSize.width, 80, 'F');
         doc.setTextColor(255, 255, 255);
+
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text(branchInfo?.name || "School Database", 40, 40);
-        doc.setFontSize(12);
+        doc.text(schoolUser?.schoolName?.toUpperCase() || "APPITOR SCHOOL", 40, 38);
+
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text("Teacher Workload & Capacity Report", 40, 60);
+        doc.setTextColor(203, 213, 225);
+        doc.text(branchInfo?.name || "Main Campus", 40, 52);
+
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.text("ACADEMIC CATEGORY REPORT | Teacher Workload", 40, 64);
 
         doc.setTextColor(...textColor);
         doc.setFontSize(10);
@@ -190,7 +197,7 @@ export default function TeacherWorkloadReportPage() {
             head: [tableColumn],
             body: tableRows,
             startY: 160,
-            styles: { fontSize: 9, font: "helvetica", cellPadding: 6, textColor: [60, 60, 60], lineColor: [220, 220, 220], lineWidth: 0.5 },
+            styles: { fontSize: 9, font: "helvetica", cellPadding: 6, textColor: [15, 23, 42], lineColor: [226, 232, 240], lineWidth: 0.5 },
             headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'left' },
             alternateRowStyles: { fillColor: [248, 250, 252] },
             didDrawPage: function (data) {

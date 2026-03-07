@@ -129,7 +129,7 @@ export default function FeeLedgerPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => generateLedgerPDF({ branchInfo, schoolInfo, transactions: filteredRows, filters: { startDate, endDate }, summary })}
+              onClick={() => generateLedgerPDF({ schoolName: schoolUser?.schoolName, branchInfo, schoolInfo, transactions: filteredRows, filters: { startDate, endDate }, summary })}
               disabled={!filteredRows.length}
               className="btn-primary flex gap-2"
             >

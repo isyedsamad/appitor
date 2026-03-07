@@ -351,6 +351,7 @@ export default function ViewTimetablePage() {
                 onClick={() =>
                   exportClassTimetablePdf({
                     schoolName: schoolUser.schoolName,
+                    branchName: branchInfo?.name,
                     className: getClassName(classId),
                     sectionName: getSection(classId, sectionId),
                     timetable: data,
@@ -395,6 +396,7 @@ export default function ViewTimetablePage() {
                 onClick={() =>
                   exportTeacherTimetablePdf({
                     schoolName: schoolUser.schoolName,
+                    branchName: branchInfo?.name,
                     teacherName: getTeacherName(teacherId),
                     employeeId: employeeData.find(t => t.uid === teacherId)?.employeeId,
                     slots: data,
@@ -444,6 +446,7 @@ export default function ViewTimetablePage() {
                   const freeTeachers = employeeData.filter(t => !busyTeacherIds.includes(t.uid));
                   exportPeriodTimetablePdf({
                     schoolName: schoolUser.schoolName,
+                    branchName: branchInfo?.name,
                     day,
                     period,
                     busyTeachers: busyEntries,

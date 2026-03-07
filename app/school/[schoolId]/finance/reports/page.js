@@ -236,7 +236,7 @@ export default function FinanceReportsPage() {
           <div className="flex items-center justify-end gap-1">
             <div className="flex items-center gap-1 bg-(--bg-card) rounded-lg border border-(--border) w-fit">
               <button
-                onClick={() => generateFinanceReportPDF({ branchInfo, summary, trend, mode, label: mode === 'month' ? month : sessionId })}
+                onClick={() => generateFinanceReportPDF({ schoolName: schoolUser?.schoolName, branchInfo, summary, trend, mode, label: mode === 'month' ? month : sessionId })}
                 className="p-2 text-(--text-muted) hover:text-(--primary) hover:bg-(--primary-soft) rounded-md transition-all"
                 title="Export PDF"
                 disabled={!summary}

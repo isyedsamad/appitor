@@ -242,9 +242,9 @@ export default function ViewEmployeeAttendancePage() {
             <AttendanceExportButtons
               onExportPDF={() => {
                 if (mode === 'month') {
-                  exportEmployeeMonthlyPDF({ branchInfo, month: inputValue, employees, daysInMonth, monthRecords });
+                  exportEmployeeMonthlyPDF({ schoolName: schoolUser?.schoolName, branchInfo, month: inputValue, employees, daysInMonth, monthRecords });
                 } else {
-                  exportEmployeeDailyPDF({ branchInfo, date: value, employees, dayRecords, stats });
+                  exportEmployeeDailyPDF({ schoolName: schoolUser?.schoolName, branchInfo, date: value, employees, dayRecords, stats });
                 }
               }}
               onExportExcel={() => {

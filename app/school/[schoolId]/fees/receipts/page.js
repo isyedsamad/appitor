@@ -32,7 +32,7 @@ export default function FeeReceiptsPage() {
     const [hasMore, setHasMore] = useState(false);
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [selectedReceipt, setSelectedReceipt] = useState(null);
-    const [pdfOptions, setPdfOptions] = useState({ size: 'a4', copies: 1 });
+    const [pdfOptions, setPdfOptions] = useState({ size: '1/2', copies: 2 });
 
     useEffect(() => {
         if (!queryText && searchType === 'date') {

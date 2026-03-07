@@ -59,7 +59,7 @@ export default function ExamReportsPage() {
 
     const [showDownloadModal, setShowDownloadModal] = useState(false);
     const [selectedReport, setSelectedReport] = useState(null); // null means Print All
-    const [pdfOptions, setPdfOptions] = useState({ size: 'a4', copies: 1 });
+    const [pdfOptions, setPdfOptions] = useState({ size: '1/2', copies: 2, showOfficeCopy: true });
 
     const handleSort = (key) => {
         let direction = 'asc';
@@ -111,7 +111,6 @@ export default function ExamReportsPage() {
         }
         setLoading(true);
         try {
-            // 1. Fetch Exam Setups for the selected criteria
             const setupQ = query(
                 collection(
                     db,
@@ -132,7 +131,6 @@ export default function ExamReportsPage() {
             const setupData = setupSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             setSetups(setupData);
 
-            // 2. Fetch Students
             const rosterRef = doc(
                 db,
                 "schools",
@@ -157,10 +155,7 @@ export default function ExamReportsPage() {
             }
             setStudents(stuData);
 
-            // 3. Fetch Marks
             const existingMarks = await loadExistingMarks(stuData, termId);
-
-            // Calculate Reports
             const reportData = calculateReports(stuData, setupData, existingMarks);
             setReports(reportData);
             setSearched(true);
@@ -200,17 +195,6 @@ export default function ExamReportsPage() {
             loadedMarks[stuData[index].uid] = data.marks || [];
         });
         return loadedMarks;
-    }
-
-    function getGradeFromPercentage(percentage) {
-        if (percentage >= 90) return "A";
-        if (percentage >= 80) return "B";
-        if (percentage >= 70) return "C";
-        if (percentage >= 60) return "D";
-        if (percentage >= 50) return "E";
-        if (percentage >= 40) return "F";
-        if (percentage >= 33) return "G";
-        return "H";
     }
 
     function calculateReports(stuData, setupData, marksData) {
@@ -295,15 +279,16 @@ export default function ExamReportsPage() {
             };
         });
 
-        // Calculate Ranks safely
-        rawReports.sort((a, b) => b.percentage - a.percentage);
+        // 1. Sort descending by percentage
+        rawReports.sort((a, b) => (b.percentage || 0) - (a.percentage || 0));
 
-        let currentRank = 1;
-        let rankReports = rawReports.map((r, i) => {
+        // 2. Assign Dense Ranks (1, 2, 2, 3)
+        let rank = 1;
+        const rankReports = rawReports.map((r, i) => {
             if (i > 0 && r.percentage < rawReports[i - 1].percentage) {
-                currentRank = i + 1;
+                rank++;
             }
-            return { ...r, rank: currentRank };
+            return { ...r, rank };
         });
 
         return rankReports;
@@ -485,8 +470,6 @@ export default function ExamReportsPage() {
 
                 {searched && reports.length > 0 && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-
-                        {/* Analytics Dashboards */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="bg-(--bg-card) p-5 border border-(--border) rounded-2xl shadow-sm">
                                 <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
@@ -542,7 +525,6 @@ export default function ExamReportsPage() {
                             </div>
                         </div>
 
-                        {/* Table */}
                         <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
                             <div className="flex flex-col sm:flex-row justify-between items-center p-4 border-b border-(--border) bg-(--bg-soft)">
                                 <h3 className="font-bold flex items-center gap-2">
@@ -588,10 +570,10 @@ export default function ExamReportsPage() {
                                             <tr key={r.uid} className="hover:bg-(--bg-soft)/50 transition-colors">
                                                 <td className="px-5 py-4">
                                                     <span className={`flex items-center justify-center w-8 h-8 rounded-full font-bold
-                                  ${r.rank === 1 ? 'bg-yellow-100 text-yellow-700' :
+                                   ${r.rank === 1 ? 'bg-yellow-100 text-yellow-700' :
                                                             r.rank === 2 ? 'bg-gray-200 text-gray-700' :
                                                                 r.rank === 3 ? 'bg-orange-100 text-orange-700' : 'bg-(--bg) text-(--text-muted)'}
-                                `}>
+                                 `}>
                                                         #{r.rank}
                                                     </span>
                                                 </td>
@@ -639,7 +621,6 @@ export default function ExamReportsPage() {
                         <p className="text-sm">No marks have been entered for this class term yet.</p>
                     </div>
                 )}
-
             </div>
 
             {showDownloadModal && (
@@ -697,17 +678,26 @@ export default function ExamReportsPage() {
                                 </div>
                             </div>
 
+                            {pdfOptions.size === '1/2' && pdfOptions.copies === 2 && (
+                                <div className="p-4 rounded-xl border border-(--border) bg-(--bg-soft)/50 flex items-center justify-between">
+                                    <div>
+                                        <p className="font-semibold text-sm">Include Office Copy</p>
+                                        <p className="text-[11px] text-(--text-muted) font-semibold uppercase tracking-wider">Prints 1 Student + 1 Office Copy</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setPdfOptions({ ...pdfOptions, showOfficeCopy: !pdfOptions.showOfficeCopy })}
+                                        className={`w-12 h-6 rounded-full transition-all relative ${pdfOptions.showOfficeCopy ? 'bg-(--primary)' : 'bg-(--border)'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${pdfOptions.showOfficeCopy ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="bg-(--bg-soft) p-4 rounded-xl border border-(--border) text-sm space-y-2">
                                 <div className="flex justify-between">
-                                    <span className="text-(--text-muted)">Selected For Print:</span>
-                                    <span className="font-semibold text-(--primary)">{selectedReport ? '1 Student' : `${sortedReports.length} Students`}</span>
+                                    <span className="text-(--text-muted)">Selected:</span>
+                                    <span className="font-semibold text-(--primary)">{selectedReport ? '1 Student' : `${reports.length} Students`}</span>
                                 </div>
-                                {selectedReport && (
-                                    <div className="flex justify-between border-t border-(--border) pt-2">
-                                        <span className="text-(--text-muted)">Name:</span>
-                                        <span className="font-semibold">{selectedReport.name}</span>
-                                    </div>
-                                )}
                             </div>
                         </div>
 

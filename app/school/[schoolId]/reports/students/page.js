@@ -156,21 +156,26 @@ export default function StudentReportsPage() {
         const data = getFormattedExportData();
 
         // Colors
-        const primaryColor = [41, 128, 185]; // Professional Blue
-        const textColor = [51, 51, 51];
+        const primaryColor = [15, 23, 42];
+        const textColor = [15, 23, 42];
 
         // Professional Header
         doc.setFillColor(...primaryColor);
         doc.rect(0, 0, doc.internal.pageSize.width, 80, 'F');
-
         doc.setTextColor(255, 255, 255);
+
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text(branchInfo?.name || "School Database", 40, 40);
+        doc.text(schoolUser?.schoolName?.toUpperCase() || "APPITOR SCHOOL", 40, 38);
 
-        doc.setFontSize(12);
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text("Student Roster Report", 40, 60);
+        doc.setTextColor(203, 213, 225);
+        doc.text(branchInfo?.name || "Main Campus", 40, 52);
+
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.text("STUDENT CATEGORY REPORT | Roster", 40, 64);
 
         // Date & Filters Section
         doc.setTextColor(...textColor);
@@ -185,6 +190,7 @@ export default function StudentReportsPage() {
         doc.setFont("helvetica", "bold");
         doc.text("Report Criteria:", 40, 110);
         doc.setFont("helvetica", "normal");
+        doc.setTextColor(15, 23, 42);
         doc.text(filterText, 40, 125);
 
         // Line Separator
@@ -212,8 +218,8 @@ export default function StudentReportsPage() {
                 fontSize: 9,
                 font: "helvetica",
                 cellPadding: 6,
-                textColor: [60, 60, 60],
-                lineColor: [220, 220, 220],
+                textColor: [15, 23, 42],
+                lineColor: [226, 232, 240],
                 lineWidth: 0.5,
             },
             headStyles: {

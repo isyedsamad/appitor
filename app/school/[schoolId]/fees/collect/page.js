@@ -42,7 +42,7 @@ export default function FeeCollectionPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedReceipt, setSavedReceipt] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [pdfOptions, setPdfOptions] = useState({ size: 'a4', copies: 1 });
+  const [pdfOptions, setPdfOptions] = useState({ size: '1/2', copies: 2 });
   const [receiptDocToPrint, setReceiptDocToPrint] = useState(null);
 
   const getClassName = id => classData.find(c => c.id === id)?.name;

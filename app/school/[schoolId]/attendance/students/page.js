@@ -329,9 +329,9 @@ export default function ViewStudentAttendancePage() {
               <AttendanceExportButtons
                 onExportPDF={() => {
                   if (mode === 'month') {
-                    exportStudentMonthlyPDF({ branchInfo, className: getClassName(className), section: getSectionName(className, section), month, students, days, monthRecords });
+                    exportStudentMonthlyPDF({ schoolName: schoolUser?.schoolName, branchInfo, className: getClassName(className), section: getSectionName(className, section), month, students, days, monthRecords });
                   } else {
-                    exportStudentDailyPDF({ branchInfo, className: getClassName(className), section: getSectionName(className, section), date, students, dateRecords, stats });
+                    exportStudentDailyPDF({ schoolName: schoolUser?.schoolName, branchInfo, className: getClassName(className), section: getSectionName(className, section), date, students, dateRecords, stats });
                   }
                 }}
                 onExportExcel={() => {

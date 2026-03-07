@@ -135,7 +135,7 @@ export default function DayBookPage() {
             )}
             <div className="flex items-center justify-end gap-1 bg-(--bg-card) rounded-lg border border-(--border)">
               <button
-                onClick={() => generateDayBookPDF({ branchInfo, dayData: dayBook, selectedDate })}
+                onClick={() => generateDayBookPDF({ schoolName: schoolUser?.schoolName, branchInfo, dayData: dayBook, selectedDate })}
                 className="p-2 text-(--text-muted) hover:text-(--primary) hover:bg-(--primary-soft) rounded-md transition-all tooltip"
                 title="Export PDF"
                 disabled={!dayBook}
