@@ -46,6 +46,7 @@ export default function FinanceReportsPage() {
   const [month, setMonth] = useState(formatMonth());
   const [sessionId, setSessionId] = useState("");
   const [summary, setSummary] = useState(null);
+  const [filter, setFilter] = useState("all");
   const [trend, setTrend] = useState([]);
   const [pieData, setPieData] = useState([]);
 
@@ -77,6 +78,7 @@ export default function FinanceReportsPage() {
           label: month,
           collections: data.collections || { total: 0 },
           refunds: data.refunds || { total: 0 },
+          expenses: data.expenses || { total: 0, payroll: 0 },
           net: data.net || 0,
         },
       ]);
@@ -114,6 +116,7 @@ export default function FinanceReportsPage() {
             label: m.label,
             collections: d.collections || { total: 0 },
             refunds: d.refunds || { total: 0 },
+            expenses: d.expenses || { total: 0, payroll: 0 },
             net: d.net || 0,
           };
         }
@@ -125,9 +128,11 @@ export default function FinanceReportsPage() {
         (a, b) => ({
           collections: (a.collections || 0) + (b.collections?.total || 0),
           refunds: (a.refunds || 0) + (b.refunds?.total || 0),
+          expenses: (a.expenses || 0) + (b.expenses?.total || 0),
+          payroll: (a.payroll || 0) + (b.expenses?.payroll || 0),
           net: (a.net || 0) + (b.net || 0),
         }),
-        { collections: 0, refunds: 0, net: 0 }
+        { collections: 0, refunds: 0, expenses: 0, payroll: 0, net: 0 }
       );
       setSummary(totals);
       setTrend(rows);
@@ -139,13 +144,44 @@ export default function FinanceReportsPage() {
     }
   };
 
-  const refundRatio = useMemo(() => {
-    if (!summary) return 0;
-    const collections = mode === "month" ? summary.collections.total : summary.collections;
-    const refunds = mode === "month" ? summary.refunds.total : summary.refunds;
-    if (!collections) return 0;
-    return ((refunds / collections) * 100).toFixed(2);
-  }, [summary, mode]);
+  const metrics = useMemo(() => {
+    if (!summary) return { collections: 0, refunds: 0, expenses: 0, net: 0, ratio: 0 };
+
+    let collections = mode === "month" ? (summary.collections?.total || 0) : (summary.collections || 0);
+    let refunds = mode === "month" ? (summary.refunds?.total || 0) : (summary.refunds || 0);
+    let expenses = mode === "month" ? (summary.expenses?.total || 0) : (summary.expenses || 0);
+
+    if (filter === "fee") {
+      expenses = 0;
+    } else if (filter === "payroll") {
+      collections = 0;
+      refunds = 0;
+    }
+
+    const net = collections - refunds - expenses;
+    const ratio = collections > 0 ? ((refunds / collections) * 100).toFixed(2) : 0;
+
+    return { collections, refunds, expenses, net, ratio };
+  }, [summary, mode, filter]);
+
+  const filteredTrend = useMemo(() => {
+    return trend.map(t => {
+      let c = t.collections?.total || 0;
+      let r = t.refunds?.total || 0;
+      let e = t.expenses?.total || 0;
+
+      if (filter === "fee") e = 0;
+      if (filter === "payroll") { c = 0; r = 0; }
+
+      return {
+        ...t,
+        displayCollections: c,
+        displayRefunds: r,
+        displayExpenses: e,
+        displayNet: c - r - e
+      };
+    });
+  }, [trend, filter]);
 
   useEffect(() => {
     if (trend.length > 0) {
@@ -160,8 +196,8 @@ export default function FinanceReportsPage() {
     }
   }, [trend]);
 
-  const bestMonth = trend.reduce((a, b) => ((b.net || 0) > (a.net || 0) ? b : a), trend[0] || {});
-  const worstMonth = trend.reduce((a, b) => ((b.net || 0) < (a.net || 0) ? b : a), trend[0] || {});
+  const bestMonth = filteredTrend.reduce((a, b) => ((b.displayNet || 0) > (a.displayNet || 0) ? b : a), filteredTrend[0] || {});
+  const worstMonth = filteredTrend.reduce((a, b) => ((b.displayNet || 0) < (a.displayNet || 0) ? b : a), filteredTrend[0] || {});
 
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const editable = canManage(schoolUser, "fee.reports.manage", currentPlan);
@@ -182,6 +218,20 @@ export default function FinanceReportsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex bg-(--bg-card) p-1 rounded-lg border border-(--border)">
+              {["all", "fee", "payroll"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 text-[10px] uppercase font-bold rounded-md transition-all ${filter === f
+                    ? "bg-(--primary) text-white shadow-sm"
+                    : "text-(--text-muted) hover:text-(--text)"
+                    }`}
+                >
+                  {f === "all" ? "All" : f === "fee" ? "Fees" : "Payroll"}
+                </button>
+              ))}
+            </div>
             <div className="flex bg-(--bg-card) p-1 rounded-lg border border-(--border)">
               {["month", "session"].map((t) => (
                 <button
@@ -259,29 +309,35 @@ export default function FinanceReportsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <SummaryCard
               label="Total Collections"
-              value={mode === "month" ? summary.collections.total : summary.collections}
+              value={metrics.collections}
               color="accent"
               icon={<TrendingUp size={20} />}
             />
             <SummaryCard
               label="Total Refunds"
-              value={mode === "month" ? summary.refunds.total : summary.refunds}
+              value={metrics.refunds}
               color="danger"
               icon={<TrendingDown size={20} />}
             />
             <SummaryCard
               label="Net Revenue"
-              value={summary.net}
+              value={metrics.net}
               color="primary"
               icon={<IndianRupee size={20} />}
             />
             <SummaryCard
+              label="Expenses"
+              value={metrics.expenses}
+              color="warning"
+              icon={<TrendingDown size={20} className="rotate-180" />}
+            />
+            {/* <SummaryCard
               label="Refund Ratio"
-              value={refundRatio}
+              value={metrics.ratio}
               color="warning"
               isPercent
               icon={<Percent size={20} />}
-            />
+            /> */}
           </div>
         )}
 
@@ -294,7 +350,7 @@ export default function FinanceReportsPage() {
                 </h3>
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trend}>
+                    <AreaChart data={filteredTrend}>
                       <defs>
                         <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -307,8 +363,9 @@ export default function FinanceReportsPage() {
                       <Tooltip
                         contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)', borderRadius: '12px', fontSize: '12px' }}
                       />
-                      <Area type="monotone" dataKey="net" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorNet)" />
-                      <Area type="monotone" dataKey="collections.total" stroke="#10b981" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                      <Area type="monotone" dataKey="displayNet" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorNet)" />
+                      <Area type="monotone" dataKey="displayCollections" stroke="#10b981" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
+                      <Area type="monotone" dataKey="displayExpenses" stroke="#ef4444" strokeWidth={2} fill="transparent" strokeDasharray="5 5" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -349,10 +406,10 @@ export default function FinanceReportsPage() {
                 <div className="space-y-4">
                   <InsightItem label="Performance Peak" value={bestMonth.label} description="Highest net revenue period" />
                   <InsightItem label="Lowest Point" value={worstMonth.label} description="Minimum collection recorded" />
-                  <div className={`p-4 rounded-xl border ${Number(refundRatio) > 10 ? 'bg-red-50 border-red-100 text-red-900' : 'bg-green-50 border-green-100 text-green-900'}`}>
+                  <div className={`p-4 rounded-xl border ${Number(metrics.ratio) > 10 ? 'bg-(--status-a-bg) border-(--status-a-border) text-(--status-a-text)' : 'bg-(--status-p-bg) border-(--status-p-border) text-(--status-p-text)'}`}>
                     <div className="text-xs font-bold uppercase mb-1">Health Status</div>
                     <div className="text-sm font-medium">
-                      {Number(refundRatio) > 10
+                      {Number(metrics.ratio) > 10
                         ? "High refund ratio detected. Review refund policies."
                         : "Financial status is healthy. Collections are stable."}
                     </div>

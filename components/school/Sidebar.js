@@ -27,9 +27,9 @@ export default function Sidebar() {
       <div className="flex items-center justify-between px-5 h-14 border-b border-(--border) bg-(--bg-card)">
         {!collapsed && (
           <div>
-            <p className="text-sm font-semibold">{schoolUser.name}</p>
-            <p className="text-xs text-(--text-muted)">
-              @{schoolUser.username}
+            <p className="text-sm font-semibold capitalize">{schoolUser.name}</p>
+            <p className="text-xs font-medium text-(--text-muted)">
+              {schoolUser.username || schoolUser.employeeId || schoolUser.appId || '-'}
             </p>
           </div>
         )}

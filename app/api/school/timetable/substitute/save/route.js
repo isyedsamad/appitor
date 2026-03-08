@@ -66,19 +66,73 @@ export async function POST(req) {
             .collection("substitutions")
             .doc(docId);
 
-        await baseRef.set({
-            date,
-            day,
-            classId,
-            sectionId,
-            substitutions,
-            meta: {
-                updatedAt: FieldValue.serverTimestamp(),
-                updatedBy: user.uid,
-            },
-        }, { merge: true });
+        const teacherCollectionRef = adminDb
+            .collection("schools")
+            .doc(user.schoolId)
+            .collection("branches")
+            .doc(branch)
+            .collection("timetable")
+            .doc("items")
+            .collection("substitutions_teacher");
 
-        // Notification Logic
+        await adminDb.runTransaction(async (tx) => {
+            const classSnap = await tx.get(baseRef);
+            const oldSubstitutions = classSnap.exists ? classSnap.data().substitutions || [] : [];
+            
+            const teacherIds = Array.from(new Set([
+                ...oldSubstitutions.map(s => s.substituteTeacherId),
+                ...substitutions.map(s => s.substituteTeacherId)
+            ]));
+
+            const teacherSnaps = {};
+            for (const tId of teacherIds) {
+                const tRef = teacherCollectionRef.doc(`${tId}_${date}`);
+                teacherSnaps[tId] = await tx.get(tRef);
+            }
+
+            for (const tId of teacherIds) {
+                const tDocId = `${tId}_${date}`;
+                const tRef = teacherCollectionRef.doc(tDocId);
+                const tSnap = teacherSnaps[tId];
+                
+                let tSubs = tSnap.exists ? tSnap.data().substitutions || [] : [];
+                tSubs = tSubs.filter(s => !(s.classId === classId && s.sectionId === sectionId));
+
+                const newForTeacher = substitutions
+                    .filter(s => s.substituteTeacherId === tId)
+                    .map(s => ({
+                        ...s,
+                        classId,
+                        sectionId,
+                    }));
+
+                tSubs = [...tSubs, ...newForTeacher];
+
+                if (tSubs.length > 0) {
+                    tx.set(tRef, {
+                        uid: tId,
+                        date,
+                        substitutions: tSubs,
+                        updatedAt: FieldValue.serverTimestamp(),
+                    }, { merge: true });
+                } else if (tSnap.exists) {
+                    tx.delete(tRef);
+                }
+            }
+
+            tx.set(baseRef, {
+                date,
+                day,
+                classId,
+                sectionId,
+                substitutions,
+                meta: {
+                    updatedAt: FieldValue.serverTimestamp(),
+                    updatedBy: user.uid,
+                },
+            }, { merge: true });
+        });
+
         if (shouldNotify && sessionId && schoolName) {
             const noticeId = nanoid(12);
             const now = Timestamp.now();

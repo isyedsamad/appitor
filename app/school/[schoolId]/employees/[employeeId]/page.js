@@ -44,7 +44,7 @@ import {
   YAxis,
   Legend,
 } from "recharts";
-import { formatMonth, formatMonthMMYYYYToYYYYMM } from "@/lib/dateUtils";
+import { formatMonth, formatMonthMMYYYYToYYYYMM, formatMonthYear } from "@/lib/dateUtils";
 
 export default function EmployeeProfilePage() {
   const { theme } = useTheme();
@@ -64,6 +64,8 @@ export default function EmployeeProfilePage() {
   const [attendanceStats, setAttendanceStats] = useState(null);
   const [monthlyLogs, setMonthlyLogs] = useState(null);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [payrollData, setPayrollData] = useState([]);
+  const [loadingPayroll, setLoadingPayroll] = useState(false);
   useEffect(() => {
     if (schoolUser && employeeId && branch) {
       fetchEmployee();
@@ -148,6 +150,31 @@ export default function EmployeeProfilePage() {
       setLoadingAttendance(false);
     }
   }
+
+  useEffect(() => {
+    if (activeTab === "payroll") {
+      fetchPayroll();
+    }
+  }, [activeTab, selectedSession, employeeId, branch]);
+
+  async function fetchPayroll() {
+    if (!employeeId || !branch) return;
+    setLoadingPayroll(true);
+    try {
+      const payrollRef = doc(db, "schools", schoolUser.schoolId, "branches", branch, "employees", employeeId, "payroll", selectedSession);
+      const snap = await getDoc(payrollRef);
+      if (snap.exists()) {
+        setPayrollData(snap.data().payslips || []);
+      } else {
+        setPayrollData([]);
+      }
+    } catch (err) {
+      console.error("Payroll fetch error:", err);
+      toast.error("Failed to load payroll data");
+    } finally {
+      setLoadingPayroll(false);
+    }
+  }
   const update = (k, v) =>
     setForm(prev => ({ ...prev, [k]: v }));
   const isActive = employee?.status === "active" || employee?.status === "pending";
@@ -223,6 +250,7 @@ export default function EmployeeProfilePage() {
   const tabs = [
     { id: "overview", label: "Overview", icon: UserCircle },
     { id: "attendance", label: "Attendance", icon: Calendar },
+    { id: "payroll", label: "Payroll", icon: CreditCard },
   ];
 
   if (!employee) return null;
@@ -493,6 +521,90 @@ export default function EmployeeProfilePage() {
                   )}
                 </section>
               )}
+            </div>
+          )}
+
+          {activeTab === "payroll" && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-(--bg-card) p-4 rounded-xl border border-(--border) shadow-sm space-y-4">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <IndianRupee size={16} className="text-(--primary)" /> Payroll History
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="input py-1 text-sm rounded-lg"
+                      value={selectedSession}
+                      onChange={(e) => setSelectedSession(e.target.value)}
+                    >
+                      {sessionList?.map((s) => (
+                        <option key={s.id} value={s.id}>{s.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {loadingPayroll ? (
+                  <div className="py-12 text-center text-(--text-muted)">Loading payroll...</div>
+                ) : payrollData.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-(--border) text-[10px] font-semibold uppercase tracking-wider text-(--text-muted)">
+                          <th className="py-3 px-4">Period</th>
+                          <th className="py-3 px-4">Earnings</th>
+                          <th className="py-3 px-4">Deductions</th>
+                          <th className="py-3 px-4">Net Payable</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-(--border)">
+                        {payrollData.map((item, idx) => {
+                          const totalEarnings = item.fixedSalary + (item.earnings?.reduce((s, e) => s + e.amount, 0) || 0) + (item.adjustments > 0 ? item.adjustments : 0);
+                          const totalDeductions = (item.deductions?.reduce((s, d) => s + d.amount, 0) || 0) + (item.lopAmount || 0) + (item.adjustments < 0 ? Math.abs(item.adjustments) : 0);
+                          return (
+                            <tr key={idx} className="hover:bg-(--bg-soft) transition-colors group">
+                              <td className="py-4 px-4 font-semibold text-(--text)">{formatMonthYear(item.monthYear)}</td>
+                              <td className="py-4 px-4 text-green-500 font-medium">₹{totalEarnings.toLocaleString()}</td>
+                              <td className="py-4 px-4 text-red-500 font-medium">₹{totalDeductions.toLocaleString()}</td>
+                              <td className="py-4 px-4">
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-(--primary)">₹{item.netPayable.toLocaleString()}</span>
+                                  {item.paidAmount > 0 && (
+                                    <span className="text-[10px] font-bold text-emerald-500">Paid: ₹{item.paidAmount.toLocaleString()}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${item.status === 'paid' ? 'bg-green-500/10 text-green-600' : item.status === 'partial' ? 'bg-blue-500/10 text-blue-600' : 'bg-orange-500/10 text-orange-600'}`}>
+                                  {item.status || 'unpaid'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 text-right">
+                                <button
+                                  className="p-2 rounded-lg hover:bg-(--primary-soft) text-(--text-muted) hover:text-(--primary) transition-all"
+                                  title="View Details"
+                                  onClick={() => {
+                                    toast.info("Detailed view coming soon! PDF generation remains central.");
+                                  }}
+                                >
+                                  <FileText size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="py-12 text-center text-(--text-muted) border-2 border-dashed border-(--border) rounded-xl">
+                    <CreditCard size={32} className="mx-auto mb-2 opacity-20" />
+                    <p className="text-xs">No payroll records found for this session</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

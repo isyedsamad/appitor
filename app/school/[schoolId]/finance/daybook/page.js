@@ -90,6 +90,7 @@ export default function DayBookPage() {
     ? [
       { name: "Collection", amount: dayBook.collections?.total || 0 },
       { name: "Refund", amount: dayBook.refunds?.total || 0 },
+      { name: "Expense", amount: dayBook.expenses?.total || 0 },
     ]
     : [];
 
@@ -181,18 +182,24 @@ export default function DayBookPage() {
                 icon={<ArrowDownLeft size={20} />}
               />
               <SummaryCard
+                label="Total Expense"
+                value={dayBook.expenses?.total || 0}
+                color="warning"
+                icon={<ArrowDownLeft size={20} className="rotate-180" />}
+              />
+              <SummaryCard
                 label="Net Balance"
                 value={dayBook.net || 0}
                 color="primary"
                 icon={<IndianRupee size={20} />}
               />
-              <SummaryCard
+              {/* <SummaryCard
                 label="Transactions"
                 value={dayBook.transactions || 0}
                 color="warning"
                 isCount
                 icon={<ArrowUpRight size={20} />}
-              />
+              /> */}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -212,7 +219,7 @@ export default function DayBookPage() {
                       />
                       <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
                         {comparisonData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={index === 0 ? "var(--status-p-text)" : "var(--status-a-text)"} />
+                          <Cell key={`cell-${index}`} fill={index === 0 ? "var(--status-p-text)" : index === 1 ? "var(--status-a-text)" : "var(--status-o-text)"} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -260,16 +267,12 @@ export default function DayBookPage() {
                 themeColor="text-green-600"
               />
               <BreakdownCard
-                title="Detailed Refund Breakdown"
+                title="Detailed Expense Breakdown"
                 rows={[
-                  { label: "Cash", value: dayBook.refunds?.cash || 0 },
-                  { label: "UPI / QR", value: dayBook.refunds?.upi || 0 },
-                  { label: "Card", value: dayBook.refunds?.card || 0 },
-                  { label: "Net Banking", value: dayBook.refunds?.netbanking || 0 },
-                  { label: "Wallet (PayTM, PhonePe)", value: dayBook.refunds?.wallet || 0 },
-                  { label: "Cheque", value: dayBook.refunds?.cheque || 0 },
+                  { label: "Payroll", value: dayBook.expenses?.payroll || 0 },
+                  { label: "Others", value: (dayBook.expenses?.total || 0) - (dayBook.expenses?.payroll || 0) },
                 ]}
-                themeColor="text-red-600"
+                themeColor="text-amber-600"
               />
             </div>
 
