@@ -23,9 +23,7 @@ export async function POST(req) {
       );
     }
 
-    const isAdmin =
-      user.permissions?.includes("*") ||
-      user.permissions?.includes("learning.homework.manage");
+    const isAdmin = user.role?.toLowerCase() === 'admin';
 
     let classId, sectionId, teacherId;
 
