@@ -35,7 +35,7 @@ const MODES = [
 
 export default function ViewTimetablePage() {
   const { schoolUser, classData, employeeData, subjectData, setLoading } = useSchool();
-  const { branch } = useBranch();
+  const { branch, branchInfo } = useBranch();
   const [mode, setMode] = useState("class");
   const [timetableSettings, setTimetableSettings] = useState(null);
   const [classId, setClassId] = useState("");
