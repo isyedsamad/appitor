@@ -26,7 +26,7 @@ export default function AssignmentPage() {
   const { schoolUser, classData, subjectData, employeeData, sessionList, currentSession, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-  const isAdmin = hasPermission(schoolUser, "learning.assignments.manage", false, currentPlan);
+  const isAdmin = schoolUser.role?.toLowerCase() === 'admin' || schoolUser.role?.toLowerCase() === 'management';
   const [filters, setFilters] = useState({
     sessionId: currentSession?.id || "",
     classId: "",
@@ -293,14 +293,14 @@ export default function AssignmentPage() {
               return (
                 <div
                   key={a.assignmentId}
-                  className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-sm"
+                  className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-lg shadow-sm"
                 >
-                  <div className="flex justify-between items-start px-5 py-4 bg-(--bg)">
+                  <div className="flex justify-between items-start px-5 py-4 bg-(--bg) border-b border-(--border)">
                     <div>
                       <h3 className="font-semibold text-(--text) leading-tight">
                         {a.title}
                       </h3>
-                      <p className="text-xs text-(--text-muted)">
+                      <p className="text-xs font-medium text-(--text-muted)">
                         {getSubjectName(a.subjectId)}
                       </p>
                     </div>

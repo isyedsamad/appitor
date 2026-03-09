@@ -270,7 +270,7 @@ export default function SchoolDashboard() {
         {/* ROW 5+: Visuals */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* Velocity Chart */}
-          <div className="lg:col-span-12 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm h-[300px] flex flex-col">
+          <div className="lg:col-span-12 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm h-[300px] flex flex-col">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xs font-semibold flex items-center gap-2">
                 <TrendingUp size={16} className="text-(--primary)" /> Attendance Velocity
@@ -302,7 +302,7 @@ export default function SchoolDashboard() {
               )}
             </div>
           </div>
-          <div className="lg:col-span-12 xl:col-span-6 grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-3">
             <div className="lg:col-span-6 xl:col-span-6 bg-(--bg-card) border border-(--border) p-5 rounded-xl shadow-sm overflow-hidden flex flex-col h-[300px]">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-xs font-semibold flex items-center gap-2">

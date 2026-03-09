@@ -31,7 +31,7 @@ export default function HomeworkPage() {
 
   const { branch, branchInfo } = useBranch();
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-  const isAdmin = hasPermission(schoolUser, "learning.homework.manage", false, currentPlan);
+  const isAdmin = schoolUser.role?.toLowerCase() === 'admin' || schoolUser.role?.toLowerCase() === 'management';
   const [filters, setFilters] = useState({
     classId: "",
     sectionId: "",
@@ -315,7 +315,7 @@ export default function HomeworkPage() {
         "learning",
         "items",
         "homework",
-        `${filters.classId}_${filters.sectionId}_${schoolUser.currentSession}_${formatInputDate(filters.date)}`
+        `${filters.classId}_${filters.sectionId}_${formatInputDate(filters.date)}`
       );
       const snap = await getDoc(ref);
       setHomeworkDoc(snap.exists() ? snap.data() : null);
@@ -346,7 +346,7 @@ export default function HomeworkPage() {
             <Plus size={16} /> Add Homework
           </button>
         </div>
-        <div className="flex flex-col lg:flex-row gap-3 lg:items-end">
+        <div className="flex flex-col lg:flex-row gap-2 lg:items-end">
           <div className="flex flex-col">
             <p className="font-medium text-sm text-(--text-muted)">Date</p>
             <input
@@ -415,9 +415,9 @@ export default function HomeworkPage() {
             {homeworkDoc.items?.map((i, idx) => (
               <div
                 key={idx}
-                className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-md"
+                className="group bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden transition hover:shadow-lg shadow-sm"
               >
-                <div className="flex items-center justify-between px-5 py-3 bg-(--bg)">
+                <div className="flex items-center justify-between px-5 py-3 bg-(--bg) border-b border-(--border)">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-(--primary-soft) text-(--primary) font-semibold">
                       P{i.period}

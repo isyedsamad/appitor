@@ -25,7 +25,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.assignments.manage");
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
     let classId, sectionId;
     // , teacherId;
     if (!isAdmin) {
@@ -146,7 +146,7 @@ export async function DELETE(req) {
         { status: 400 }
       );
     }
-    const isAdmin = user.permissions?.includes('*') || user.permissions?.includes("learning.assignments.manage");
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
     const docId = `${classId}_${sectionId}_${sessionId}`;
     const assignmentRef = adminDb
       .collection("schools")

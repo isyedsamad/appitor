@@ -6,9 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "exam.setup.manage");
-    const isAdmin =
-      user.permissions?.includes("*") ||
-      user.permissions?.includes("exam.setup.manage");
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
     if (!isAdmin) {
       return NextResponse.json(
         { message: "You are not allowed to declare results" },
@@ -16,7 +14,7 @@ export async function POST(req) {
       );
     }
     const body = await req.json();
-    const { branch, termId } = body;
+    const { branch, termId, isUndeclare } = body;
     if (!branch || !termId) {
       return NextResponse.json(
         { message: "branch and termId are required" },
@@ -37,15 +35,24 @@ export async function POST(req) {
       if (!termSnap.exists) {
         throw new Error("Exam term not found");
       }
-      const termData = termSnap.data();
-      if (termData.resultDeclared === true) {
-        throw new Error("Result already declared");
+
+      if (isUndeclare) {
+        tx.update(termRef, {
+          resultDeclared: false,
+          resultUndeclaredAt: FieldValue.serverTimestamp(),
+          resultUndeclaredBy: user.uid
+        });
+      } else {
+        const termData = termSnap.data();
+        if (termData.resultDeclared === true) {
+          throw new Error("Result already declared");
+        }
+        tx.update(termRef, {
+          resultDeclared: true,
+          resultDeclaredAt: FieldValue.serverTimestamp(),
+          resultDeclaredBy: user.uid
+        });
       }
-      tx.update(termRef, {
-        resultDeclared: true,
-        resultDeclaredAt: FieldValue.serverTimestamp(),
-        resultDeclaredBy: user.uid
-      });
     });
     return NextResponse.json(
       { message: "Result declared successfully" },

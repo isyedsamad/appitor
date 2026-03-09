@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Plus, Trash2, CheckCircle2, Search, X, Save, CalendarRange } from "lucide-react";
+import { BookOpen, Plus, Trash2, CheckCircle2, Search, X, Save, CalendarRange, Wallet, Filter, AlertTriangle, RefreshCcw } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -117,6 +117,23 @@ export default function ExamTermsPage() {
     }
   }
 
+  async function undeclareResult(id) {
+    if (!confirm("Undeclare result for this exam term? Students will no longer see their results.")) return;
+
+    setLoading(true);
+    try {
+      await secureAxios.post("/api/school/exams/declare", {
+        branch,
+        termId: id,
+        isUndeclare: true
+      });
+      toast.success("Result undeclared");
+      fetchTerms();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const total = terms.length;
   const declared = terms.filter(t => t.resultDeclared).length;
   const pending = total - declared;
@@ -168,11 +185,12 @@ export default function ExamTermsPage() {
             Search
           </button>
         </div>
+        
         {searched && (
-          <div className="grid sm:grid-cols-3 gap-3">
-            <Stat label="Total Terms" value={total == 0 ? total : total.toString().padStart(2, '0')} />
-            <Stat label="Declared" value={declared == 0 ? declared : declared.toString().padStart(2, '0')} accent="success" />
-            <Stat label="Pending" value={pending == 0 ? pending : pending.toString().padStart(2, '0')} accent="warning" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SummaryCard label="Total Terms" value={total} color="primary" isCount />
+            <SummaryCard label="Declared" value={declared} color="accent" isCount />
+            <SummaryCard label="Pending" value={pending} color="warning" isCount />
           </div>
         )}
 
@@ -189,7 +207,7 @@ export default function ExamTermsPage() {
                   <div
                     key={t.id}
                     className={`bg-(--bg-card) border border-(--border) rounded-xl py-4 px-5 space-y-3 transition
-                      ${isDeclared ? "opacity-90" : "hover:shadow-sm"}
+                      ${isDeclared ? "ring-1 ring-green-500/20" : "hover:shadow-sm"}
                     `}
                   >
                     <div className="flex justify-between items-start">
@@ -204,8 +222,8 @@ export default function ExamTermsPage() {
                       <span
                         className={`text-xs px-2 py-1 rounded font-medium
                           ${isDeclared
-                            ? "bg-(--status-p-bg) text-(--status-p-text)"
-                            : "bg-(--status-l-bg) text-(--status-l-text)"
+                            ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                            : "bg-(--status-l-bg) text-(--status-l-text) border border-(--status-l-border)"
                           }
                         `}
                       >
@@ -220,13 +238,23 @@ export default function ExamTermsPage() {
                     </div>
                     <div className="flex justify-between items-center font-medium pt-3 border-t border-(--border)">
                       {isDeclared ? (
-                        <span className="text-sm btn-outline cursor-not-allowed text-(--text-muted) italic">
-                          Result is locked
-                        </span>
+                        canManage ? (
+                          <button
+                            onClick={() => undeclareResult(t.id)}
+                            className="text-sm text-orange-500 btn-outline flex items-center gap-1 border-orange-500/20 hover:bg-orange-500/5"
+                          >
+                            <RefreshCcw size={15} />
+                            Undeclare Result
+                          </button>
+                        ) : (
+                          <span className="text-sm btn-outline cursor-not-allowed text-(--text-muted) italic">
+                            Result Locked
+                          </span>
+                        )
                       ) : canManage ? (
                         <button
                           onClick={() => declareResult(t.id)}
-                          className="text-sm text-green-500 btn-outline flex items-center gap-1"
+                          className="text-sm text-green-500 btn-outline flex items-center gap-1 border-green-500/20 hover:bg-green-500/5"
                         >
                           <CheckCircle2 size={15} />
                           Declare Result
@@ -234,20 +262,21 @@ export default function ExamTermsPage() {
                       ) : (
                         <span className="text-xs text-(--text-muted)">—</span>
                       )}
-                      {isDeclared ? (
-                        <span className="text-sm btn-outline cursor-not-allowed text-(--text-muted) font-medium italic">
-                          Deletion disabled
-                        </span>
-                      ) : canManage ? (
+                      
+                      {canManage && (
                         <button
                           onClick={() => deleteTerm(t.id)}
-                          className="text-sm text-(--danger) btn-outline font-medium flex items-center gap-1"
+                          disabled={isDeclared}
+                          className={`text-sm btn-outline font-medium flex items-center gap-1 transition
+                            ${isDeclared 
+                              ? "opacity-40 cursor-not-allowed border-transparent text-(--text-muted)" 
+                              : "text-(--danger) border-(--danger)/10 hover:bg-(--danger)/5"
+                            }
+                          `}
                         >
                           <Trash2 size={15} />
                           Delete
                         </button>
-                      ) : (
-                        <span className="text-xs text-(--text-muted)">—</span>
                       )}
                     </div>
                   </div>
@@ -297,15 +326,62 @@ export default function ExamTermsPage() {
   );
 }
 
-function Stat({ label, value, accent }) {
+function SummaryCard({ label, value, color, isCount }) {
+  const getThemeVars = () => {
+    switch (color) {
+      case "danger":
+        return {
+          bg: "bg-(--status-o-bg)",
+          text: "text-(--status-o-text)",
+          border: "border-(--status-o-border)",
+          gradient: "from-(--status-o-bg)/50 to-transparent",
+          icon: <AlertTriangle size={20} />
+        };
+      case "accent":
+        return {
+          bg: "bg-(--status-p-bg)",
+          text: "text-(--status-p-text)",
+          border: "border-(--status-p-border)",
+          gradient: "from-(--status-p-bg)/50 to-transparent",
+          icon: <CheckCircle2 size={20} />
+        };
+      case "warning":
+        return {
+          bg: "bg-(--status-a-bg)",
+          text: "text-(--status-a-text)",
+          border: "border-(--status-a-border)",
+          gradient: "from-(--status-a-bg)/50 to-transparent",
+          icon: <Filter size={20} />
+        };
+      default:
+        return {
+          bg: "bg-(--status-l-bg)",
+          text: "text-(--status-l-text)",
+          border: "border-(--status-l-border)",
+          gradient: "from-(--status-l-bg)/50 to-transparent",
+          icon: <BookOpen size={20} />
+        };
+    }
+  };
+
+  const theme = getThemeVars();
+
   return (
-    <div className="bg-(--bg-card) border border-(--border) rounded-xl p-4">
-      <p className="text-sm text-(--text-muted)">{label}</p>
-      <p className={`text-2xl font-semibold ${accent === "success" ? "text-green-600" :
-        accent === "warning" ? "text-(--warning)" : ""
-        }`}>
-        {value}
-      </p>
+    <div className={`relative overflow-hidden rounded-lg border ${theme.border} bg-gradient-to-br ${theme.gradient} bg-(--bg-card) px-5 py-4 shadow-sm transition-all hover:shadow-md`}>
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="text-sm font-medium text-(--text-muted)">{label}</p>
+          <div>
+            <h3 className={`text-2xl font-bold tracking-tight ${theme.text}`}>
+              {!isCount && "₹"} {value == 0 ? 0 : value.toString().padStart(2, "0")}
+            </h3>
+          </div>
+        </div>
+        <div className={`p-2 rounded-xl ${theme.bg} ${theme.text} ${theme.border} border`}>
+          {theme.icon}
+        </div>
+      </div>
+      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${theme.gradient} opacity-20 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none`} />
     </div>
   );
 }

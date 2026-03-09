@@ -23,7 +23,7 @@ export async function POST(req) {
       );
     }
 
-    const isAdmin = user.role?.toLowerCase() === 'admin';
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
 
     let classId, sectionId, teacherId;
 

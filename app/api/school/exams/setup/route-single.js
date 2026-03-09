@@ -6,9 +6,7 @@ import { FieldValue } from "firebase-admin/firestore";
 export async function POST(req) {
   try {
     const user = await verifyUser(req, "exam.setup.manage");
-    const isAdmin =
-      user.permissions?.includes("*") ||
-      user.permissions?.includes("exam.create");
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
     if (!isAdmin) {
       return NextResponse.json(
         { message: "You are not allowed to create exam setup" },
@@ -91,9 +89,7 @@ export async function POST(req) {
 export async function PUT(req) {
   try {
     const user = await verifyUser(req, "exam.setup.manage");
-    const isAdmin =
-      user.permissions?.includes("*") ||
-      user.permissions?.includes("exam.create");
+    const isAdmin = user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'management';
     if (!isAdmin) {
       return NextResponse.json(
         { message: "You are not allowed to update exam setup" },
