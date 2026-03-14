@@ -10,7 +10,7 @@ import RequirePermission from "@/components/school/RequirePermission";
 import { toast } from "react-toastify";
 import { exportLedgerToExcel } from "@/lib/exports/fees/exportLedgerExcel";
 import { generateLedgerPDF } from "@/lib/exports/fees/exportLedgerPdf";
-import { formatDateSlash } from "@/lib/dateUtils";
+import { formatDateSlash, formatMonthYear } from "@/lib/dateUtils";
 
 const PAGE_SIZE = 50;
 
@@ -253,8 +253,8 @@ export default function FeeLedgerPage() {
                 ) : (
                   filteredRows.map(r => (
                     <tr key={r.id} className="hover:bg-(--bg-soft)/50 transition-colors">
-                      <td className="px-5 py-4 font-semibold">{r.receiptNo}</td>
-                      <td className="px-5 py-4 uppercase font-medium">{r.appId}</td>
+                      <td className="px-5 py-4 font-semibold">{r.receiptNo || formatMonthYear(r.createdMonth) || '--'}</td>
+                      <td className="px-5 py-4 uppercase font-medium">{r.appId || '--'}</td>
                       <td className="px-5 py-4 text-(--text-muted)">{formatDateSlash(r.createdAt?.toDate())}</td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
@@ -262,12 +262,12 @@ export default function FeeLedgerPage() {
                           <span className="capitalize">{r.paymentMode || "N/A"}</span>
                         </div>
                       </td>
-                      <td className={`px-5 py-4 text-right font-bold ${r.type === "refund" ? "text-(--status-a-text)" : "text-(--status-p-text)"}`}>
+                      <td className={`px-5 py-4 text-right font-bold ${r.type === "refund" ? "text-(--status-a-text)" : r.type == "payroll" ? "text-(--status-l-text)" : "text-(--status-p-text)"}`}>
                         ₹ {Math.abs(r.amount).toLocaleString()}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end">
-                          <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${r.type === "refund" ? "bg-(--status-a-bg) text-(--status-a-text) border-(--status-a-border)" : "bg-(--status-p-bg) text-(--status-p-text) border-(--status-p-border)"}`}>
+                          <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${r.type === "refund" ? "bg-(--status-a-bg) text-(--status-a-text) border-(--status-a-border)" : r.type == "payroll" ? "bg-(--status-o-bg) text-(--status-o-text) border-(--status-o-border)" : "bg-(--status-p-bg) text-(--status-p-text) border-(--status-p-border)"}`}>
                             {r.type}
                           </span>
                         </div>
@@ -305,8 +305,8 @@ export default function FeeLedgerPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Receipt No</p>
-                  <p className="font-semibold">{selectedTransaction.receiptNo}</p>
+                  <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">{selectedTransaction.type == "payroll" ? "Payrun Month" : "Receipt No"}</p>
+                  <p className="font-semibold">{selectedTransaction.receiptNo || formatMonthYear(selectedTransaction.createdMonth)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-(--text-muted) uppercase tracking-wider">Date & Time</p>

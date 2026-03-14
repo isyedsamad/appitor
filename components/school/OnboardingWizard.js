@@ -59,9 +59,9 @@ export default function OnboardingWizard({ schoolId, sessions = [], classes = []
     if (completedCount === steps.length) return null;
 
     return (
-        <div className="bg-(--bg-card) border border-(--border) shadow-sm rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="bg-(--bg-card) border border-(--border) shadow-sm rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                     <div className="flex items-start gap-4">
                         <div className="p-3 rounded-xl bg-(--primary-soft) text-(--primary)">
                             <Sparkles size={24} />
@@ -83,12 +83,12 @@ export default function OnboardingWizard({ schoolId, sessions = [], classes = []
                     </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-4 gap-4">
                     {steps.map((step, idx) => (
                         <Link
                             key={step.id}
                             href={step.path}
-                            className={`group p-5 rounded-2xl border transition-all duration-300 ${step.isComplete
+                            className={`group px-5 py-4 rounded-xl border transition-all duration-300 ${step.isComplete
                                 ? 'bg-(--bg-soft)/50 border-(--border) opacity-80'
                                 : 'bg-(--bg-card) border-(--border) hover:border-(--primary)/30 hover:shadow-xl hover:shadow-(--primary)/5'
                                 }`}
@@ -115,12 +115,12 @@ export default function OnboardingWizard({ schoolId, sessions = [], classes = []
                             </p>
 
                             {!step.isComplete && (
-                                <div className="mt-3 flex items-center text-[10px] font-bold text-(--primary) uppercase tracking-widest gap-1 group-hover:gap-2 transition-all">
+                                <div className="mt-3 flex items-center text-[10px] font-semibold text-(--primary) uppercase tracking-widest gap-1 group-hover:gap-2 transition-all">
                                     Setup Now <ChevronRight size={12} />
                                 </div>
                             )}
                             {step.isComplete && (
-                                <div className="mt-3 flex items-center text-[10px] font-bold text-green-500 uppercase tracking-widest gap-1">
+                                <div className="mt-3 flex items-center text-[10px] font-semibold text-green-500 uppercase tracking-widest gap-1">
                                     Completed
                                 </div>
                             )}
