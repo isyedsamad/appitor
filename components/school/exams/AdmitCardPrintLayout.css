@@ -1,0 +1,87 @@
+/* AdmitCardPrintLayout.css */
+
+:root {
+    --card-width: 3.5in;
+    --card-height: 2in;
+    --grid-cols: 2;
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    #admit-card-print-container,
+    #admit-card-print-container * {
+        visibility: visible;
+    }
+
+    #admit-card-print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        background: white !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+
+    .admit-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--grid-cols), 1fr);
+        gap: 5mm;
+        padding: 2mm;
+        justify-items: center;
+    }
+
+    .admit-card-wrapper {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Screen Preview Styles */
+.admit-grid-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+    gap: 1.5rem;
+    justify-items: center;
+}
+
+.admit-card-base {
+    width: var(--card-width);
+    height: var(--card-height);
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.admit-card-base p {
+    margin: 0;
+    line-height: 1.2;
+}
+
+.admit-photo-placeholder {
+    border: 1px dashed #d1d5db;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+}
