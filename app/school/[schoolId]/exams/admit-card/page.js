@@ -396,11 +396,11 @@ function SelectionStep({
             </div>
 
             {selectedIds.size > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-40 animate-in slide-in-from-bottom-8 duration-300">
-                    <div className="bg-(--bg) border border-(--border) rounded-2xl p-4 shadow-2xl flex items-center justify-between ring-4 ring-black/5 dark:ring-white/5">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-(--primary) text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
-                                <span className="font-semibold text-lg">{selectedIds.size}</span>
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl z-40 animate-in slide-in-from-bottom-8 duration-300">
+                    <div className="bg-(--bg) border border-(--border) rounded-xl py-4 px-5 shadow-2xl flex items-center justify-between ring-4 ring-black/5 dark:ring-white/5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-(--primary) text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
+                                <span className="font-semibold text-lg">{selectedIds.size.toString().padStart(2, '0')}</span>
                             </div>
                             <div>
                                 <p className="text-sm font-semibold text-(--text)">Students Selected</p>
