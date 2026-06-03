@@ -5,13 +5,14 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "timetable.edit.manage");
-    const { branch, classId, sectionId, days } = await req.json();
+    const body = await req.json();
+    const { branch, classId, sectionId, days } = body;
 
     if (!branch || !classId || !sectionId || !days) {
       return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
     }
 
+    const user = await verifyUser(req, "timetable.edit.manage", false, branch);
     const classSectionId = `${classId}_${sectionId}`;
     const baseRef = adminDb
       .collection("schools")
@@ -22,7 +23,6 @@ export async function POST(req) {
       .doc("items");
 
     const conflicts = [];
-
     for (const day of Object.keys(days)) {
       for (const slot of days[day] || []) {
         for (const e of slot.entries || []) {
@@ -36,10 +36,27 @@ export async function POST(req) {
       }
     }
 
+    const periodKeys = new Set();
+    for (const c of conflicts) {
+      periodKeys.add(`${c.day}_${c.period}`);
+    }
+    for (const day of Object.keys(days)) {
+      for (const slot of days[day] || []) {
+        periodKeys.add(`${day}_${slot.period}`);
+      }
+    }
+
     await adminDb.runTransaction(async tx => {
       const teacherDocs = new Map();
       const classDocs = new Map();
       const periodDocs = new Map();
+
+      for (const pKey of periodKeys) {
+        periodDocs.set(
+          pKey,
+          await tx.get(baseRef.collection("periodIndex").doc(pKey))
+        );
+      }
 
       for (const c of conflicts) {
         if (!teacherDocs.has(c.teacherId)) {
@@ -48,13 +65,18 @@ export async function POST(req) {
             await tx.get(baseRef.collection("teachers").doc(c.teacherId))
           );
         }
+      }
 
-        const pKey = `${c.day}_${c.period}`;
-        if (!periodDocs.has(pKey)) {
-          periodDocs.set(
-            pKey,
-            await tx.get(baseRef.collection("periodIndex").doc(pKey))
-          );
+      for (const day of Object.keys(days)) {
+        for (const slot of days[day] || []) {
+          for (const e of slot.entries || []) {
+            if (!teacherDocs.has(e.teacherId)) {
+              teacherDocs.set(
+                e.teacherId,
+                await tx.get(baseRef.collection("teachers").doc(e.teacherId))
+              );
+            }
+          }
         }
       }
 
@@ -69,6 +91,13 @@ export async function POST(req) {
             );
           }
         }
+      }
+
+      if (!classDocs.has(classSectionId)) {
+        classDocs.set(
+          classSectionId,
+          await tx.get(baseRef.collection("classes").doc(classSectionId))
+        );
       }
 
       const teacherSlotMap = new Map();
@@ -89,9 +118,8 @@ export async function POST(req) {
 
       for (const c of conflicts) {
         const tSlots = teacherSlotMap.get(c.teacherId) || [];
-
         const removing = tSlots.filter(
-          s => s.day === c.day && s.period === c.period
+          s => s.day === c.day && s.period === c.period && !(s.classId === classId && s.sectionId === sectionId)
         );
 
         teacherSlotMap.set(
@@ -101,10 +129,10 @@ export async function POST(req) {
 
         for (const s of removing) {
           const key = `${s.classId}_${s.sectionId}`;
-          const days = classDayMap.get(key);
-          if (!days) continue;
+          const otherClassDays = classDayMap.get(key);
+          if (!otherClassDays) continue;
 
-          days[s.day] = (days[s.day] || []).map(p =>
+          otherClassDays[s.day] = (otherClassDays[s.day] || []).map(p =>
             p.period === s.period
               ? { ...p, entries: p.entries.filter(e => e.teacherId !== c.teacherId) }
               : p
@@ -118,80 +146,90 @@ export async function POST(req) {
         );
       }
 
+      for (const day of Object.keys(days)) {
+        for (const slot of days[day] || []) {
+          const period = slot.period;
+          const entries = slot.entries || [];
+          const pKey = `${day}_${period}`;
+
+          let currentPeriodEntries = (periodEntryMap.get(pKey) || []).filter(
+            e => !(e.classId === classId && e.sectionId === sectionId)
+          );
+
+          const newEntriesForIndex = entries.map(e => ({
+            teacherId: e.teacherId,
+            subjectId: e.subjectId,
+            classId,
+            sectionId,
+          }));
+
+          currentPeriodEntries = [...currentPeriodEntries, ...newEntriesForIndex];
+          periodEntryMap.set(pKey, currentPeriodEntries);
+
+          for (const e of entries) {
+            const tSlots = teacherSlotMap.get(e.teacherId) || [];
+            const filteredSlots = tSlots.filter(
+              s => !(s.day === day && s.period === period)
+            );
+            filteredSlots.push({
+              classId,
+              sectionId,
+              subjectId: e.subjectId,
+              day,
+              period,
+            });
+            teacherSlotMap.set(e.teacherId, filteredSlots);
+          }
+        }
+      }
+
+      classDayMap.set(classSectionId, days);
+
+      for (const [cid, daysObj] of classDayMap.entries()) {
+        const docRef = baseRef.collection("classes").doc(cid);
+        if (cid === classSectionId) {
+          tx.set(
+            docRef,
+            {
+              classId,
+              sectionId,
+              days: daysObj,
+              meta: {
+                updatedAt: FieldValue.serverTimestamp(),
+                updatedBy: user.uid,
+              },
+            },
+            { merge: true }
+          );
+        } else {
+          tx.set(
+            docRef,
+            { days: daysObj },
+            { merge: true }
+          );
+        }
+      }
+
       for (const [tid, slots] of teacherSlotMap.entries()) {
         tx.set(
           baseRef.collection("teachers").doc(tid),
-          { slots },
-          { merge: true }
-        );
-      }
-
-      for (const [cid, daysObj] of classDayMap.entries()) {
-        tx.set(
-          baseRef.collection("classes").doc(cid),
-          { days: daysObj },
+          { teacherId: tid, slots },
           { merge: true }
         );
       }
 
       for (const [pid, entries] of periodEntryMap.entries()) {
+        const [day, period] = pid.split("_");
         tx.set(
           baseRef.collection("periodIndex").doc(pid),
-          { entries },
+          {
+            day,
+            period: Number(period),
+            entries,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
           { merge: true }
         );
-      }
-
-      tx.set(
-        baseRef.collection("classes").doc(classSectionId),
-        {
-          classId,
-          sectionId,
-          days,
-          meta: {
-            updatedAt: FieldValue.serverTimestamp(),
-            updatedBy: user.uid,
-          },
-        },
-        { merge: true }
-      );
-      for (const day of Object.keys(days)) {
-        for (const slot of days[day] || []) {
-          const period = slot.period;
-          const entries = slot.entries || [];
-          if (!entries.length) continue;
-          tx.set(
-            baseRef.collection("periodIndex").doc(`${day}_${period}`),
-            {
-              day,
-              period,
-              entries: entries.map(e => ({
-                teacherId: e.teacherId,
-                subjectId: e.subjectId,
-                classId,
-                sectionId,
-              })),
-              updatedAt: FieldValue.serverTimestamp(),
-            },
-            { merge: true }
-          );
-          for (const e of entries) {
-            tx.set(
-              baseRef.collection("teachers").doc(e.teacherId),
-              {
-                teacherId: e.teacherId,
-                slots: FieldValue.arrayUnion({
-                  classId,
-                  sectionId,
-                  subjectId: e.subjectId,
-                  day,
-                  period,
-                }),
-              },
-              { merge: true }
-            );
-          }
-        }
       }
     });
 

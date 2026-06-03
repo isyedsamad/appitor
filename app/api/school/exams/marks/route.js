@@ -5,7 +5,16 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "exam.marks.manage");
+    const body = await req.json();
+    const { branch, session, termId, classId, sectionId, marks } = body;
+    if (!branch || !session || !termId || !classId || !sectionId || !marks || typeof marks !== "object") {
+      return NextResponse.json(
+        { message: "Invalid request data" },
+        { status: 400 }
+      );
+    }
+
+    const user = await verifyUser(req, "exam.marks.manage", false, branch);
     const isAllowed =
       user.permissions?.includes("*") ||
       user.permissions?.includes("exam.marks.manage");
@@ -13,14 +22,6 @@ export async function POST(req) {
       return NextResponse.json(
         { message: "You are not allowed to enter marks" },
         { status: 403 }
-      );
-    }
-    const body = await req.json();
-    const { branch, session, termId, classId, sectionId, marks } = body;
-    if (!branch || !session || !termId || !classId || !sectionId || !marks || typeof marks !== "object") {
-      return NextResponse.json(
-        { message: "Invalid request data" },
-        { status: 400 }
       );
     }
 
@@ -46,13 +47,23 @@ export async function POST(req) {
       .doc("items")
       .collection("student_marks");
 
-    for (const studentId of Object.keys(studentMap)) {
+    const studentIds = Object.keys(studentMap);
+    const docRefs = studentIds.map(studentId => baseRef.doc(`${studentId}_${termId}`));
+    const snaps = docRefs.length > 0 ? await adminDb.getAll(...docRefs) : [];
+    const snapsMap = new Map();
+    snaps.forEach(snap => {
+      if (snap.exists) {
+        snapsMap.set(snap.id, snap.data());
+      }
+    });
+
+    for (const studentId of studentIds) {
       const docId = `${studentId}_${termId}`;
       const ref = baseRef.doc(docId);
-      const snap = await ref.get();
+      const existingData = snapsMap.get(docId);
       let updatedMarks = studentMap[studentId];
-      if (snap.exists) {
-        const existing = snap.data().marks || [];
+      if (existingData) {
+        const existing = existingData.marks || [];
         const map = {};
         existing.forEach(m => (map[m.setupId] = m));
         updatedMarks.forEach(m => (map[m.setupId] = m));

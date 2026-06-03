@@ -6,12 +6,14 @@ import { formatDate, formatMonth } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.operations.manage");
-    const { branch, paymentId, receiptNo, appId, studentId, sessionId, refundItems, totalRefund, remark, payType } = await req.json();
+    const body = await req.json();
+    const { branch, paymentId, receiptNo, appId, studentId, sessionId, refundItems, totalRefund, remark, payType } = body;
 
     if (!branch || !paymentId || !studentId || !sessionId || !refundItems || totalRefund <= 0 || !payType) {
       return NextResponse.json({ message: "Invalid refund payload" }, { status: 400 });
     }
+
+    const user = await verifyUser(req, "fee.operations.manage", false, branch);
 
     const nowTs = Timestamp.now();
     const nowServer = FieldValue.serverTimestamp();
@@ -54,6 +56,12 @@ export async function POST(req) {
       const paymentData = paymentSnap.data();
       const paymentItems = paymentData.items || [];
       const summary = summarySnap.data();
+
+      const cashPaid = Number(paymentData.paidAmount || 0);
+      const alreadyRefunded = Number(paymentData.refundedAmount || 0);
+      if (Number(totalRefund) > (cashPaid - alreadyRefunded)) {
+        throw new Error(`OVER_REFUND: Cannot refund more cash than originally paid (Remaining: ₹${cashPaid - alreadyRefunded})`);
+      }
 
       // Identify which dues docs we need to read
       const neededDuesInfo = [];
@@ -112,12 +120,15 @@ export async function POST(req) {
 
           if (duesSnap.exists) {
             const dues = duesSnap.data();
+            const newPaid = Math.max((dues.paid || 0) - refundAmount, 0);
+            const newDue = (dues.due || 0) + refundAmount;
+            const newStatus = newPaid === 0 ? "due" : newPaid === dues.total ? "paid" : "partial";
             tx.set(
               duesInfo.duesRef,
               {
-                paid: Math.max((dues.paid || 0) - refundAmount, 0),
-                due: (dues.due || 0) + refundAmount,
-                status: "due",
+                paid: newPaid,
+                due: newDue,
+                status: newStatus,
                 updatedAt: nowServer,
               },
               { merge: true }
@@ -125,8 +136,10 @@ export async function POST(req) {
           }
 
           if (summary.months?.[itemKey]) {
-            summary.months[itemKey].paid = Math.max(summary.months[itemKey].paid - refundAmount, 0);
-            summary.months[itemKey].status = "due";
+            const newPaid = Math.max(summary.months[itemKey].paid - refundAmount, 0);
+            const newStatus = newPaid === 0 ? "due" : newPaid === summary.months[itemKey].total ? "paid" : "partial";
+            summary.months[itemKey].paid = newPaid;
+            summary.months[itemKey].status = newStatus;
             summary.months[itemKey].lastRefundAt = nowTs;
           }
         } else if (pItem.type === "flexible") {

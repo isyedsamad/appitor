@@ -5,7 +5,6 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.setup.manage");
     const body = await req.json();
     const { branch, students, templateId, templateName, session } = body;
     if (
@@ -19,6 +18,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+    const user = await verifyUser(req, "fee.setup.manage", false, branch);
     const assignmentsRef = adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -28,17 +28,26 @@ export async function POST(req) {
       .doc("assignments")
       .collection("items");
     const studentIds = students.map(s => s.id);
-    const existingSnap = await assignmentsRef
-      .where("studentId", "in", studentIds.slice(0, 10))
-      .where("status", "==", "active")
-      .get();
     const existingMap = {};
-    existingSnap.docs.forEach(doc => {
-      const data = doc.data();
-      existingMap[data.studentId] = {
-        id: doc.id,
-        ...data,
-      };
+    const chunks = [];
+    for (let i = 0; i < studentIds.length; i += 30) {
+      chunks.push(studentIds.slice(i, i + 30));
+    }
+    const queryPromises = chunks.map(chunk =>
+      assignmentsRef
+        .where("studentId", "in", chunk)
+        .where("status", "==", "active")
+        .get()
+    );
+    const snapshots = await Promise.all(queryPromises);
+    snapshots.forEach(snap => {
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        existingMap[data.studentId] = {
+          id: doc.id,
+          ...data,
+        };
+      });
     });
     const batch = adminDb.batch();
     let createdCount = 0;

@@ -6,7 +6,7 @@ import { formatDate, formatMonth } from "@/lib/dateUtils";
 
 export async function POST(req) {
   try {
-    const user = await verifyUser(req, "fee.operations.manage");
+    const body = await req.json();
     const {
       branch,
       branchInfo,
@@ -16,12 +16,13 @@ export async function POST(req) {
       months,
       flexibleItems,
       payment,
-    } = await req.json();
+    } = body;
 
     if (!branch || !studentId || !appId || !sessionId || !payment?.paidAmount || !branchInfo) {
       return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
     }
 
+    const user = await verifyUser(req, "fee.operations.manage", false, branch);
     const nowTs = Timestamp.now();
     const nowServer = FieldValue.serverTimestamp();
     let paidAmount = Number(payment.paidAmount);
@@ -104,24 +105,31 @@ export async function POST(req) {
 
       const snapshots = await Promise.all(refs.map(ref => tx.get(ref)));
       snapshots.forEach((snap, index) => {
+        const ref = refs[index];
         if (!snap.exists) {
-          tx.set(refs[index], {
+          tx.set(ref, {
             ...emptyBook,
+            collections: {
+              ...emptyBook.collections,
+              total: Number(payment.paidAmount),
+              [payment.payType]: Number(payment.paidAmount),
+            },
+            net: Number(payment.paidAmount),
+            transactions: 1,
+            transactionsCollection: 1,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          tx.update(ref, {
+            "collections.total": FieldValue.increment(Number(payment.paidAmount)),
+            [`collections.${payment.payType}`]: FieldValue.increment(Number(payment.paidAmount)),
+            net: FieldValue.increment(Number(payment.paidAmount)),
+            transactions: FieldValue.increment(1),
+            transactionsCollection: FieldValue.increment(1),
             updatedAt: FieldValue.serverTimestamp(),
           });
         }
       });
-
-      for (const ref of refs) {
-        tx.update(ref, {
-          "collections.total": FieldValue.increment(Number(payment.paidAmount)),
-          [`collections.${payment.payType}`]: FieldValue.increment(Number(payment.paidAmount)),
-          net: FieldValue.increment(Number(payment.paidAmount)),
-          transactions: FieldValue.increment(1),
-          transactionsCollection: FieldValue.increment(1),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      }
 
       tx.set(
         counterRef,

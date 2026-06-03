@@ -467,7 +467,15 @@ export default function EditTimetablePage() {
       });
       toast.success("Timetable saved successfully");
     } catch (err) {
-      toast.error((err.response?.data?.message + ' ' + (err.response?.data?.teacherId && teachers.filter(t => t.uid == err.response?.data?.teacherId).map(t => t.name))) || "Save failed");
+      const errMsg = err.response?.data?.message;
+      const conflictTeacher = err.response?.data?.teacherId
+        ? teachers.find(t => t.uid === err.response.data.teacherId)?.name
+        : null;
+      toast.error(
+        conflictTeacher
+          ? `${errMsg} (Conflict: ${conflictTeacher})`
+          : (errMsg || "Save failed")
+      );
     } finally {
       setLoading(false);
     }

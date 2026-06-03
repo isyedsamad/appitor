@@ -7,7 +7,6 @@ import { incrementEmployeeCount } from "@/lib/school/analyticsUtils";
 export async function POST(req) {
   let createdUid = null;
   try {
-    const user = await verifyUser(req, "employee.admit.manage");
     const body = await req.json();
     const { name, mobile, email, gender, roleId, role, salary, branchIds, branchNames } = body;
     if (!name || !mobile || !roleId || !branchIds?.length) {
@@ -18,41 +17,43 @@ export async function POST(req) {
     }
 
     const primaryBranch = branchIds[0];
+    const user = await verifyUser(req, "employee.admit.manage", false, primaryBranch);
+
     const branchRef = adminDb.collection("branches").doc(primaryBranch);
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
 
-    // Pattern: name[first4] + @ + last4[mobile]
     const cleanName = name.replace(/\s+/g, '').toLowerCase().slice(0, 4);
     const last4Mobile = mobile.slice(-4);
     const generatedPassword = `${cleanName}@${last4Mobile}`;
 
-    let employeeId = "";
+    const branchSnap = await branchRef.get();
+    const schoolSnap = await schoolRef.get();
+
+    if (!branchSnap.exists || !schoolSnap.exists) {
+      return NextResponse.json(
+        { message: "Branch or School not found" },
+        { status: 404 }
+      );
+    }
+
+    const branchData = branchSnap.data();
+    const schoolData = schoolSnap.data();
+    const nextCounter = (branchData.employeeCounter || 0) + 1;
+
+    const employeeId = `${schoolData.code}-${branchData.appitorCode}E${1000 + nextCounter}`;
+    const authEmail = `${employeeId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
+
+    const authUser = await adminAuth.createUser({
+      email: authEmail,
+      password: generatedPassword,
+      displayName: name,
+      disabled: false,
+    });
+
+    const uid = authUser.uid;
+    createdUid = uid;
 
     await adminDb.runTransaction(async (tx) => {
-      const branchSnap = await tx.get(branchRef);
-      const schoolSnap = await tx.get(schoolRef);
-
-      if (!branchSnap.exists || !schoolSnap.exists) {
-        throw new Error("Branch or School not found");
-      }
-
-      const branchData = branchSnap.data();
-      const schoolData = schoolSnap.data();
-      const nextCounter = (branchData.employeeCounter || 0) + 1;
-
-      employeeId = `${schoolData.code}-${branchData.appitorCode}E${1000 + nextCounter}`;
-
-      const authEmail = `${employeeId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
-      const authUser = await adminAuth.createUser({
-        email: authEmail,
-        password: generatedPassword,
-        displayName: name,
-        disabled: false,
-      });
-
-      const uid = authUser.uid;
-      createdUid = uid;
-
       const schoolUserRef = adminDb.collection("schoolUsers").doc(uid);
       const employeeRef = adminDb
         .collection("schools")

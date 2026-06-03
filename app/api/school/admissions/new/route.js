@@ -7,8 +7,8 @@ import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 export async function POST(req) {
   let createdUid = null;
   try {
-    const user = await verifyUser(req, "admission.new.manage");
-    const { name, gender, mobile, dob, className, section, branch, branchNames, currentSession, autoRoll, templateId, templateName, admissionId } = await req.json();
+    const body = await req.json();
+    const { name, gender, mobile, dob, className, section, branch, branchNames, currentSession, autoRoll, templateId, templateName, admissionId } = body;
 
     if (!name || !dob || !className || !section || !branch || !currentSession || !admissionId) {
       return NextResponse.json(
@@ -16,6 +16,8 @@ export async function POST(req) {
         { status: 400 }
       );
     }
+
+    const user = await verifyUser(req, "admission.new.manage", false, branch);
 
     const branchRef = adminDb.collection("branches").doc(branch);
     const schoolRef = adminDb.collection("schools").doc(user.schoolId);
@@ -27,30 +29,36 @@ export async function POST(req) {
       .collection("meta")
       .doc(`${className}_${section}_${currentSession}`);
 
-    let appId = "";
-    let nextRoll = null;
-    let generatedPassword = "";
+    const branchSnap = await branchRef.get();
+    const schoolSnap = await schoolRef.get();
+
+    if (!branchSnap.exists || !schoolSnap.exists) {
+      return NextResponse.json(
+        { message: "Branch or School not found" },
+        { status: 404 }
+      );
+    }
+
+    const branchData = branchSnap.data();
+    const schoolData = schoolSnap.data();
+    const appId = `${branchData.appitorCode.toUpperCase()}${admissionId.toUpperCase()}`;
+    const dobSplit = dob.split("-");
+    const generatedPassword = `${dobSplit[0]}${dobSplit[1]}${dobSplit[2]}`;
+    const email = `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
+
+    const authUser = await adminAuth.createUser({
+      email,
+      password: generatedPassword,
+      displayName: name,
+      disabled: false,
+    });
+
+    createdUid = authUser.uid;
 
     await adminDb.runTransaction(async (tx) => {
-      // 1. ALL READS FIRST
-      const branchSnap = await tx.get(branchRef);
-      const schoolSnap = await tx.get(schoolRef);
       const rosterSnap = await tx.get(rosterRef);
 
-      if (!branchSnap.exists || !schoolSnap.exists) {
-        throw new Error("Branch or School not found");
-      }
-
-      const branchData = branchSnap.data();
-      const schoolData = schoolSnap.data();
-
-      // Pattern: [AppitorCode][AdmissionId]
-      appId = `${branchData.appitorCode.toUpperCase()}${admissionId.toUpperCase()}`;
-
-      // Password: DDMMYYYY from DD-MM-YYYY
-      const dobSplit = dob.split("-");
-      generatedPassword = `${dobSplit[0]}${dobSplit[1]}${dobSplit[2]}`;
-
+      let nextRoll = null;
       if (autoRoll) {
         if (rosterSnap.exists) {
           const rosterData = rosterSnap.data();
@@ -62,19 +70,8 @@ export async function POST(req) {
         }
       }
 
-      // 2. EXTERNAL SERVICES (Auth)
-      const uid = (await adminAuth.createUser({
-        email: `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`,
-        password: generatedPassword,
-        displayName: name,
-        disabled: false,
-      })).uid;
-
-      createdUid = uid;
-
-      // 3. ALL WRITES AFTER ALL READS
       const studentData = {
-        uid,
+        uid: createdUid,
         admissionId,
         appId,
         name,
@@ -83,7 +80,7 @@ export async function POST(req) {
         dob,
         className,
         section,
-        email: `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`,
+        email,
         schoolId: user.schoolId,
         schoolCode: schoolData.code,
         branchId: branch,
@@ -108,14 +105,14 @@ export async function POST(req) {
         ],
       };
 
-      const schoolUserRef = adminDb.collection("schoolUsers").doc(uid);
+      const schoolUserRef = adminDb.collection("schoolUsers").doc(createdUid);
       const studentRef = adminDb
         .collection("schools")
         .doc(user.schoolId)
         .collection("branches")
         .doc(branch)
         .collection("students")
-        .doc(uid);
+        .doc(createdUid);
 
       tx.set(schoolUserRef, {
         ...studentData,
@@ -125,7 +122,7 @@ export async function POST(req) {
       tx.set(studentRef, studentData);
 
       const studentEntry = {
-        uid,
+        uid: createdUid,
         name,
         appId,
         rollNo: nextRoll,
@@ -153,7 +150,6 @@ export async function POST(req) {
         });
       }
 
-      // Fee Assignment
       if (templateId && templateName) {
         const assignmentRef = adminDb
           .collection("schools")
@@ -166,7 +162,7 @@ export async function POST(req) {
           .doc();
 
         tx.set(assignmentRef, {
-          studentId: uid,
+          studentId: createdUid,
           studentName: name,
           className,
           section,
