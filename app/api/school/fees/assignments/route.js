@@ -69,8 +69,8 @@ export async function POST(req) {
       batch.set(newRef, {
         studentId: student.id,
         studentName: student.name,
-        className: student.className,
-        section: student.section,
+        className: student.className || student.classId || "",
+        section: student.section || student.sectionId || "",
         templateId,
         templateName,
         session,

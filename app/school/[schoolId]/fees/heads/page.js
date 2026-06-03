@@ -1,137 +1,183 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
-  Layers,
   Plus,
+  Sparkles,
+  Check,
+  Ban,
   Tag,
   Calendar,
   ShieldCheck,
-  MoreVertical,
-  Pencil,
-  Ban,
-  CheckCircle2,
+  Zap,
+  ArrowUp,
+  ArrowDown,
   X,
-  IndianRupee,
+  IndianRupee
 } from "lucide-react";
 import {
   collection,
-  addDoc,
   getDocs,
-  orderBy,
   query,
-  serverTimestamp,
-  updateDoc,
-  doc,
+  orderBy
 } from "firebase/firestore";
-
 import { db } from "@/lib/firebase";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import secureAxios from "@/lib/secureAxios";
 import { toast } from "react-toastify";
-import { canManage } from "@/lib/school/permissionUtils";
 
 export default function FeeHeadsPage() {
   const { schoolUser, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
-  const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
-  const editable = canManage(schoolUser, "fee.setup.manage", currentPlan);
   const [heads, setHeads] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(null);
-  const [form, setForm] = useState({
-    name: "",
-    category: "academic",
-    frequency: "monthly",
-    refundable: false,
-    type: 'fixed'
-  });
+  const [showRecommended, setShowRecommended] = useState(true);
+  
+  const [newHeadName, setNewHeadName] = useState("");
+  const [newHeadCategory, setNewHeadCategory] = useState("academic");
+  const [newHeadFrequency, setNewHeadFrequency] = useState("monthly");
+  const [newHeadType, setNewHeadType] = useState("fixed");
+
+  const recommendedHeads = [
+    { name: "Tuition Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false },
+    { name: "Exam Fee", category: "academic", frequency: "yearly", type: "fixed", refundable: false },
+    { name: "Admission Fee", category: "academic", frequency: "one-time", type: "fixed", refundable: false },
+    { name: "Transport Fee", category: "transport", frequency: "monthly", type: "fixed", refundable: false },
+    { name: "Computer Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false }
+  ];
+
   const fetchHeads = async () => {
     if (!schoolUser || !branch) return;
-    setLoading(true);
-    const ref = collection(
-      db,
-      "schools",
-      schoolUser.schoolId,
-      "branches",
-      branch,
-      "fees",
-      "heads",
-      "items"
-    );
+    const ref = collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "heads", "items");
     const snap = await getDocs(query(ref, orderBy("createdAt", "desc")));
-    setHeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    setLoading(false);
+    const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const orderKey = `fee_heads_order_${schoolUser.uid}_${branch}`;
+    const savedOrder = localStorage.getItem(orderKey);
+    if (savedOrder) {
+      const orderedIds = JSON.parse(savedOrder);
+      fetched.sort((a, b) => {
+        const indexA = orderedIds.indexOf(a.id);
+        const indexB = orderedIds.indexOf(b.id);
+        if (indexA === -1 && indexB === -1) return 0;
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+    }
+    setHeads(fetched);
   };
+
   useEffect(() => {
-    if (branch && schoolUser) fetchHeads();
+    if (branch && schoolUser) {
+      setLoading(true);
+      fetchHeads().finally(() => setLoading(false));
+      const hidden = localStorage.getItem(`hide_recommended_heads_${schoolUser.uid}`);
+      if (hidden === "true") {
+        setShowRecommended(false);
+      }
+    }
   }, [branch, schoolUser]);
-  const saveHead = async () => {
-    if (!form.name.trim()) return;
+
+  const addCustomHead = async () => {
+    if (!newHeadName.trim()) {
+      toast.error("Please enter a fee head name");
+      return;
+    }
+    const nameLower = newHeadName.trim().toLowerCase();
+    if (heads.some(h => h.name.toLowerCase() === nameLower && h.status === "active")) {
+      toast.error("A fee head with this name already exists");
+      return;
+    }
     try {
       setLoading(true);
-      if (editing) {
-        await secureAxios.patch("/api/school/fees/heads", {
-          branch,
-          headId: editing.id,
-          updates: {
-            name: form.name.trim(),
-            category: form.category,
-            frequency: form.frequency,
-            refundable: form.refundable,
-            type: form.type
-          },
-        });
-        toast.success('Fee Head Updated!');
-      } else {
-        await secureAxios.post("/api/school/fees/heads", {
-          branch,
-          name: form.name.trim(),
-          category: form.category,
-          frequency: form.frequency,
-          refundable: form.refundable,
-          type: form.type
-        });
-        toast.success('Fee Head Added to System!');
-      }
-      resetModal();
-      fetchHeads();
+      await secureAxios.post("/api/school/fees/heads", {
+        branch,
+        name: newHeadName.trim(),
+        category: newHeadCategory,
+        frequency: newHeadFrequency,
+        refundable: false,
+        type: newHeadType
+      });
+      toast.success("Fee head added successfully");
+      setNewHeadName("");
+      await fetchHeads();
     } catch (err) {
-      toast.error('Failed: ' + err.response.data.message);
-      console.error("Save Fee Head error:", err);
+      toast.error("Failed to add fee head");
     } finally {
       setLoading(false);
     }
   };
-  const updateStatus = async (headId, status) => {
+
+  const addRecommended = async (rec) => {
+    if (heads.some(h => h.name.toLowerCase() === rec.name.toLowerCase() && h.status === "active")) {
+      toast.info(`${rec.name} is already added and active`);
+      return;
+    }
+    try {
+      setLoading(true);
+      await secureAxios.post("/api/school/fees/heads", {
+        branch,
+        name: rec.name,
+        category: rec.category,
+        frequency: rec.frequency,
+        refundable: rec.refundable,
+        type: rec.type
+      });
+      toast.success(`${rec.name} added to system`);
+      await fetchHeads();
+    } catch (err) {
+      toast.error(`Failed to add ${rec.name}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleHeadStatus = async (headId, currentStatus) => {
+    const nextStatus = currentStatus === "active" ? "inactive" : "active";
     try {
       setLoading(true);
       await secureAxios.patch("/api/school/fees/heads", {
         branch,
         headId,
-        updates: { status },
+        updates: { status: nextStatus }
       });
-      fetchHeads();
-      toast.success('Fee Head Updated!');
+      toast.success("Fee head updated");
+      await fetchHeads();
     } catch (err) {
-      toast.error('Failed: ' + err.response.data.message);
-      console.error("Update Fee Head status error:", err);
+      toast.error("Failed to update status");
     } finally {
       setLoading(false);
     }
   };
-  const resetModal = () => {
-    setForm({ name: "", category: "academic", frequency: "monthly", refundable: false, type: 'fixed' });
-    setEditing(null);
-    setOpen(false);
+
+  const moveHead = (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= heads.length) return;
+    const updated = [...heads];
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    setHeads(updated);
+    
+    if (schoolUser && branch) {
+      const orderKey = `fee_heads_order_${schoolUser.uid}_${branch}`;
+      const orderedIds = updated.map(h => h.id);
+      localStorage.setItem(orderKey, JSON.stringify(orderedIds));
+    }
   };
+
+  const dismissRecommended = () => {
+    setShowRecommended(false);
+    if (schoolUser) {
+      localStorage.setItem(`hide_recommended_heads_${schoolUser.uid}`, "true");
+    }
+  };
+
   return (
     <RequirePermission permission="fee.setup.view">
-      <div className="space-y-5">
-        <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
             <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <IndianRupee size={20} />
@@ -139,187 +185,166 @@ export default function FeeHeadsPage() {
             <div>
               <h1 className="text-lg font-semibold text-(--text)">Fee Heads</h1>
               <p className="text-xs font-semibold text-(--text-muted)">
-                Configure fee types for {branchInfo?.name}
+                Configure fee heads for {branchInfo?.name}
               </p>
             </div>
           </div>
+        </div>
 
-          {editable && (
-            <button
-              onClick={() => setOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg
-                         bg-(--primary) text-white shadow-sm hover:opacity-90"
-            >
-              <Plus size={16} />
-              Add Fee Head
-            </button>
-          )}
-        </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-(--bg) text-(--text-muted)">
-                <tr>
-                  <th className="px-4 py-3 text-left">Fee Head</th>
-                  <th className="px-4 py-3 text-left">Category</th>
-                  <th className="px-4 py-3 text-left">Frequency</th>
-                  <th className="px-4 py-3 text-left">Type</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="text-right px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {heads.map(h => (
-                  <tr
-                    key={h.id}
-                    className={`border-t border-(--border)
-                      ${h.status === "inactive" ? "opacity-60" : "hover:bg-(--bg)"}
-                    `}
-                  >
-                    <td className="px-4 py-3 text-left">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{h.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-left capitalize">
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck size={14} />
-                        {h.category}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-left capitalize">
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} />
-                        {h.frequency}
-                      </div>
-                    </td>
-                    <td className="capitalize px-4 py-3 text-left font-medium">
-                      {h.type === "flexible" ? (
-                        <span className="text-xs px-2 py-1 rounded-md bg-(--warning-soft) text-(--warning)">
-                          Flexible
-                        </span>
-                      ) : (
-                        <span className="text-xs px-2 py-1 rounded-md bg-(--accent-soft) text-(--accent)">
-                          Fixed
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-left">
-                      {h.status === "active" ? (
-                        <span
-                          className="px-2.5 py-1 rounded-md text-xs font-medium"
-                          style={{
-                            color: "var(--accent)",
-                            background: "var(--accent-soft)",
-                          }}
-                        >
-                          Active
-                        </span>
-                      ) : (
-                        <span
-                          className="px-2.5 py-1 rounded-md text-xs font-medium"
-                          style={{
-                            color: "var(--danger)",
-                            background: "var(--danger-soft)",
-                          }}
-                        >
-                          Disabled
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {editable && (
-                        <div className="flex gap-2 justify-end">
-                          <button className="action-btn hover:text-yellow-500" onClick={() => {
-                            setEditing(h);
-                            setForm({
-                              name: h.name,
-                              category: h.category,
-                              frequency: h.frequency,
-                              refundable: h.refundable,
-                              type: h.type
-                            });
-                            setOpen(true);
-                            setMenuOpen(null);
-                          }}
-                          ><Pencil size={15} /></button>
-                          {h.status === "active" ? (
-                            <button
-                              onClick={() => updateStatus(h.id, "inactive")}
-                              className="action-btn text-xs font-medium hover:text-red-500"
-                            >
-                              <Ban size={15} />
-                              Disable
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => updateStatus(h.id, "active")}
-                              className="action-btn text-xs font-medium hover:text-green-500"
-                            >
-                              <CheckCircle2 size={14} />
-                              Enable
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {heads.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="p-10 text-center text-(--text-muted)">
-                      No fee heads created yet
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {open && (
-          <div className="fixed inset-0 bg-black/40 px-5 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="w-full max-w-md bg-(--bg-card) border border-(--border) rounded-xl shadow-xl">
-              <div className="flex items-center justify-between bg-(--bg) rounded-t-xl p-5 border-b border-(--border)">
-                <h2 className="font-semibold">
-                  {editing ? "Edit Fee Head" : "Add Fee Head"}
-                </h2>
-                <button onClick={resetModal}>
-                  <X size={18} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {showRecommended && (
+              <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4 relative">
+                <button
+                  onClick={dismissRecommended}
+                  className="absolute top-4 right-4 p-1 hover:bg-(--bg) rounded-full text-(--text-muted) transition"
+                >
+                  <X size={16} />
                 </button>
+                <div className="flex items-center gap-2 text-sm font-bold text-(--text) uppercase tracking-wider">
+                  <Sparkles size={16} className="text-(--primary)" /> Recommended Standard Heads
+                </div>
+                <p className="text-xs text-(--text-muted) font-medium">
+                  Fast track setup by adding typical fees below in one click:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {recommendedHeads.map(rec => {
+                    const isAdded = heads.some(h => h.name.toLowerCase() === rec.name.toLowerCase() && h.status === "active");
+                    return (
+                      <div key={rec.name} className="flex justify-between items-center p-3 rounded-lg border border-(--border) bg-(--bg)/50 hover:bg-(--bg) transition">
+                        <div>
+                          <p className="text-sm font-semibold text-(--text)">{rec.name}</p>
+                          <p className="text-[10px] text-(--text-muted) capitalize font-semibold">{rec.frequency} · {rec.category}</p>
+                        </div>
+                        <button
+                          onClick={() => addRecommended(rec)}
+                          disabled={isAdded}
+                          className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isAdded
+                            ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                            : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                            }`}
+                        >
+                          {isAdded ? (
+                            <span className="flex items-center gap-1"><Check size={12} /> Added</span>
+                          ) : (
+                            "+ Add"
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="p-5 space-y-4">
+            )}
+
+            <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden shadow-sm">
+              <div className="p-4 bg-(--bg) border-b border-(--border) flex justify-between items-center">
+                <span className="text-sm font-bold text-(--text-muted) uppercase tracking-wider">Active Fee Heads ({heads.filter(h => h.status === "active" && h.type === "fixed").length})</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-(--bg) text-(--text-muted) border-b border-(--border)">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Name</th>
+                      <th className="px-4 py-3 text-left">Category</th>
+                      <th className="px-4 py-3 text-left">Frequency</th>
+                      <th className="px-4 py-3 text-left">Type</th>
+                      <th className="px-4 py-3 text-center w-24">Order</th>
+                      <th className="px-4 py-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border)">
+                    {heads.map((h, idx) => (
+                      <tr key={h.id} className={`hover:bg-(--bg)/40 transition ${h.status !== "active" ? "opacity-50" : ""}`}>
+                        <td className="px-4 py-3 font-semibold text-(--text)">{h.name}</td>
+                        <td className="px-4 py-3 capitalize text-(--text-muted) font-semibold">{h.category}</td>
+                        <td className="px-4 py-3 capitalize text-(--text-muted) font-semibold">{h.frequency}</td>
+                        <td className="px-4 py-3">
+                          {h.type === "fixed" ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-(--status-m-bg) text-(--status-m-text)">Fixed</span>
+                          ) : (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-(--status-l-bg) text-(--status-l-text)">Flexible</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              disabled={idx === 0}
+                              onClick={() => moveHead(idx, -1)}
+                              className="p-1 border border-(--border) rounded hover:bg-(--primary-soft) disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              disabled={idx === heads.length - 1}
+                              onClick={() => moveHead(idx, 1)}
+                              className="p-1 border border-(--border) rounded hover:bg-(--primary-soft) disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => toggleHeadStatus(h.id, h.status)}
+                            className={`p-1 px-2.5 rounded text-xs font-bold ${h.status === "active"
+                              ? "bg-(--danger-soft) text-(--danger) hover:opacity-85"
+                              : "bg-(--status-p-bg) text-(--status-p-text) hover:opacity-85"
+                              }`}
+                          >
+                            {h.status === "active" ? "Disable" : "Enable"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {heads.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="p-8 text-center text-(--text-muted) font-semibold">
+                          No fee heads configured yet. Add recommended heads above or write custom ones to start.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4 h-fit">
+            <div className="flex items-center gap-2 text-sm font-bold text-(--text) uppercase tracking-wider">
+              <Plus size={16} className="text-(--primary)" /> Create Custom Head
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Fee Head Name</label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  placeholder="e.g. Lab Fee"
+                  value={newHeadName}
+                  onChange={e => setNewHeadName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Category</label>
+                <select
+                  className="input w-full"
+                  value={newHeadCategory}
+                  onChange={e => setNewHeadCategory(e.target.value)}
+                >
+                  <option value="academic">Academic</option>
+                  <option value="transport">Transport</option>
+                  <option value="hostel">Hostel</option>
+                  <option value="misc">Miscellaneous</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-(--text-muted)">Fee Head Name</label>
-                  <input
-                    className="input w-full"
-                    placeholder="e.g. Tuition Fee"
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-(--text-muted)">Category</label>
+                  <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Frequency</label>
                   <select
                     className="input w-full"
-                    value={form.category}
-                    onChange={e =>
-                      setForm({ ...form, category: e.target.value })
-                    }
-                  >
-                    <option value="academic">Academic</option>
-                    <option value="transport">Transport</option>
-                    <option value="hostel">Hostel</option>
-                    <option value="misc">Miscellaneous</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-(--text-muted)">Frequency</label>
-                  <select
-                    className="input w-full"
-                    value={form.frequency}
-                    onChange={e =>
-                      setForm({ ...form, frequency: e.target.value })
-                    }
+                    value={newHeadFrequency}
+                    onChange={e => setNewHeadFrequency(e.target.value)}
                   >
                     <option value="monthly">Monthly</option>
                     <option value="one-time">One Time</option>
@@ -327,53 +352,26 @@ export default function FeeHeadsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-(--text-muted)">Fee Type</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, type: "fixed" })}
-                      className={`p-3 rounded-lg border text-sm font-semibold flex items-center gap-2
-                        ${form.type === "fixed"
-                          ? "border-(--primary) bg-(--primary-soft) text-(--primary)"
-                          : "border-(--border) text-(--text-muted)"
-                        }`}
-                    >
-                      <Layers size={16} />
-                      Fixed
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, type: "flexible" })}
-                      className={`p-3 rounded-lg border text-sm flex items-center gap-2
-                        ${form.type === "flexible"
-                          ? "border-(--primary) bg-(--primary-soft)"
-                          : "border-(--border)"
-                        }`}
-                    >
-                      <Plus size={16} />
-                      Flexible
-                    </button>
-                  </div>
-                  {form.type === "flexible" && (
-                    <p className="text-xs text-(--text-muted) mt-2">
-                      Flexible fees don’t generate dues. Amount is entered during fee collection.
-                    </p>
-                  )}
+                  <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Type</label>
+                  <select
+                    className="input w-full"
+                    value={newHeadType}
+                    onChange={e => setNewHeadType(e.target.value)}
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
                 </div>
               </div>
-              <div className="p-4 border-t border-(--border) flex justify-end gap-5">
-                <button onClick={resetModal} className="btn-secondary">
-                  Cancel
-                </button>
-                <button onClick={saveHead} className="btn-primary">
-                  {editing ? "Update" : "Save"}
-                </button>
-              </div>
+              <button
+                onClick={addCustomHead}
+                className="btn-primary w-full mt-2 font-bold justify-center"
+              >
+                Add Fee Head
+              </button>
             </div>
           </div>
-        )}
-
+        </div>
       </div>
     </RequirePermission>
   );

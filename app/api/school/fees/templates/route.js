@@ -21,7 +21,7 @@ export async function POST(req) {
       amount: Number(i.amount),
       frequency: i.frequency || "one-time",
     }));
-    await adminDb
+    const docRef = await adminDb
       .collection("schools")
       .doc(user.schoolId)
       .collection("branches")
@@ -39,7 +39,7 @@ export async function POST(req) {
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, id: docRef.id });
   } catch (err) {
     console.error("Fee Template POST error:", err);
     return NextResponse.json(
