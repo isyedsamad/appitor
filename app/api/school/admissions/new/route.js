@@ -8,7 +8,7 @@ export async function POST(req) {
   let createdUid = null;
   try {
     const body = await req.json();
-    const { name, gender, mobile, dob, className, section, branch, branchNames, currentSession, autoRoll, templateId, templateName, admissionId } = body;
+    const { name, gender, mobile, dob, className, section, branch, branchNames, currentSession, autoRoll, templateId, templateName, admissionId, transport, transportFee } = body;
 
     if (!name || !dob || !className || !section || !branch || !currentSession || !admissionId) {
       return NextResponse.json(
@@ -55,8 +55,36 @@ export async function POST(req) {
 
     createdUid = authUser.uid;
 
+    const headsSnap = await adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(branch)
+      .collection("fees")
+      .doc("heads")
+      .collection("items")
+      .where("category", "==", "transport")
+      .where("status", "==", "active")
+      .get();
+
+    const transportHead = headsSnap.docs[0];
+    const transportHeadId = transportHead ? transportHead.id : null;
+
     await adminDb.runTransaction(async (tx) => {
-      const rosterSnap = await tx.get(rosterRef);
+      const metaRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection("fees")
+        .doc("metadata")
+        .collection("selectiveAssignments")
+        .doc(currentSession);
+
+      const [rosterSnap, metaSnap] = await Promise.all([
+        tx.get(rosterRef),
+        tx.get(metaRef),
+      ]);
 
       let nextRoll = null;
       if (autoRoll) {
@@ -95,6 +123,8 @@ export async function POST(req) {
         updatedAt: FieldValue.serverTimestamp(),
         createdBy: user.uid,
         currentSession,
+        transport: transport || "no",
+        transportFee: Number(transportFee) || 0,
         academicHistory: [
           {
             session: currentSession,
@@ -174,6 +204,28 @@ export async function POST(req) {
           assignedBy: user.uid,
         });
       }
+
+      let selections = {};
+      if (metaSnap.exists) {
+        selections = metaSnap.data().selections || {};
+      }
+      if (transportHeadId) {
+        if (!selections[className]) {
+          selections[className] = {};
+        }
+        if (!selections[className][transportHeadId]) {
+          selections[className][transportHeadId] = [];
+        }
+        if (transport === "yes") {
+          if (!selections[className][transportHeadId].includes(createdUid)) {
+            selections[className][transportHeadId].push(createdUid);
+          }
+        } else {
+          selections[className][transportHeadId] = selections[className][transportHeadId].filter(id => id !== createdUid);
+        }
+      }
+
+      tx.set(metaRef, { selections, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
       await incrementStudentCount(tx, adminDb, user.schoolId, branch, 1, gender);
     });

@@ -14,6 +14,7 @@ import {
   collection,
   getDocs,
   getDoc,
+  setDoc,
   doc,
   query,
   orderBy
@@ -123,6 +124,24 @@ export default function FeeTemplatesPage() {
       loadData();
     }
   }, [branch, schoolUser]);
+
+  useEffect(() => {
+    if (branch && schoolUser && currentSession) {
+      const loadMetadata = async () => {
+        try {
+          const metaSnap = await getDoc(
+            doc(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "metadata", "selectiveAssignments", currentSession)
+          );
+          if (metaSnap.exists()) {
+            setSelectiveAssignments(metaSnap.data().selections || {});
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      loadMetadata();
+    }
+  }, [branch, schoolUser, currentSession]);
 
   useEffect(() => {
     if (branch && schoolUser && classData && classData.length > 0 && currentSession) {
@@ -365,6 +384,15 @@ export default function FeeTemplatesPage() {
           }
         }
       }
+
+      await setDoc(
+        doc(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "metadata", "selectiveAssignments", currentSession),
+        {
+          selections: selectiveAssignments,
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
 
       setSuccessStats({ templatesSaved: savedCount, studentsAssigned: assignedCount });
       setShowSuccessModal(true);

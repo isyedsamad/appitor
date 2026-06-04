@@ -44,6 +44,8 @@ export default function NewAdmissionPage() {
     gender: "",
     className: "",
     section: "",
+    transport: "no",
+    transportFee: 0,
   });
 
   const selectedClass = classData?.find(c => c.id === form.className);
@@ -87,6 +89,8 @@ export default function NewAdmissionPage() {
         gender: "",
         className: "",
         section: "",
+        transport: "no",
+        transportFee: 0,
       });
       setSelectedTemplateId("");
       setSelectedTemplateName("");
@@ -104,6 +108,7 @@ export default function NewAdmissionPage() {
     if (!form.className || !schoolUser) {
       setTemplates([]);
       setSelectedTemplateId("");
+      setSelectedTemplateName("");
       return;
     }
 
@@ -115,10 +120,45 @@ export default function NewAdmissionPage() {
           where("status", "==", "active")
         )
       );
-      setTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setTemplates(list);
+
+      let tFee = 0;
+      const transportTpl = list.find(t =>
+        t.items?.some(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport")
+      );
+      if (transportTpl) {
+        const tItem = transportTpl.items.find(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport");
+        if (tItem) {
+          tFee = Number(tItem.amount || 0);
+        }
+      }
+
+      if (list.length > 0) {
+        let selected = null;
+        if (form.transport === "yes") {
+          selected = list.find(t =>
+            t.name?.toLowerCase().includes("transport") ||
+            t.items?.some(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport")
+          );
+        }
+        if (!selected) {
+          selected = list.find(t => t.name?.toLowerCase().includes("default")) || list[0];
+        }
+        setSelectedTemplateId(selected.id);
+        setSelectedTemplateName(selected.name);
+      } else {
+        setSelectedTemplateId("");
+        setSelectedTemplateName("");
+      }
+
+      setForm(prev => ({
+        ...prev,
+        transportFee: form.transport === "yes" ? tFee : 0
+      }));
     };
     fetchTemplates();
-  }, [form.className, schoolUser, branch]);
+  }, [form.className, form.transport, schoolUser, branch]);
 
   return (
     <RequirePermission permission="admission.new.view">
@@ -247,26 +287,30 @@ export default function NewAdmissionPage() {
                 <CreditCard size={14} className="text-(--primary)" /> Fees & System
               </h2>
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
-                    Fee Template (Optional)
+                <div className="pt-2">
+                  <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2 mb-2">
+                    Transport Facility
                   </label>
-                  <select
-                    className="input text-sm"
-                    value={selectedTemplateId}
-                    onChange={e => {
-                      setSelectedTemplateName(e.target.options[e.target.selectedIndex].text);
-                      setSelectedTemplateId(e.target.value);
-                    }}
-                  >
-                    <option value="">Assign Later</option>
-                    {templates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-(--text-muted)">
-                    Fees can also be assigned later from the Fees section.
-                  </p>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        checked={form.transport === "yes"}
+                        onChange={() => update("transport", "yes")}
+                        className="w-4 h-4 accent-(--primary) cursor-pointer"
+                      />
+                      <span className="text-xs font-semibold group-hover:text-(--text) transition-colors">Yes</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="radio"
+                        checked={form.transport === "no"}
+                        onChange={() => update("transport", "no")}
+                        className="w-4 h-4 accent-(--primary) cursor-pointer"
+                      />
+                      <span className="text-xs font-semibold group-hover:text-(--text) transition-colors">No</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="pt-2">
