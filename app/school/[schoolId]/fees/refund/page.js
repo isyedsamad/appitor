@@ -22,6 +22,7 @@ export default function RefundPage() {
   const [refundMap, setRefundMap] = useState({});
   const [refundRemark, setRefundRemark] = useState('');
   const [payType, setPayType] = useState('cash');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   useEffect(() => {
     if (searchType === "receipt") {
       if (branchInfo?.branchCode && currentSession) {
@@ -109,32 +110,37 @@ export default function RefundPage() {
     (s, v) => s + Number(v || 0),
     0
   );
-  const submitRefund = async () => {
+  const triggerRefund = () => {
+    if (!openPayment) {
+      toast.error("No payment selected for refund");
+      return;
+    }
+    if (!refundMap || Object.keys(refundMap).length === 0) {
+      toast.error("Please enter refund amount");
+      return;
+    }
+    if (totalRefund <= 0) {
+      toast.error("Refund amount must be greater than 0");
+      return;
+    }
+    const invalidEntry = Object.entries(refundMap).find(
+      ([_, amt]) => Number(amt) < 0
+    );
+    if (invalidEntry) {
+      toast.error("Invalid refund amount detected");
+      return;
+    }
+    if (!refundRemark?.trim()) {
+      toast.error("Refund remark is required");
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeRefund = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
     try {
-      if (!openPayment) {
-        toast.error("No payment selected for refund");
-        return;
-      }
-      if (!refundMap || Object.keys(refundMap).length === 0) {
-        toast.error("Please enter refund amount");
-        return;
-      }
-      if (totalRefund <= 0) {
-        toast.error("Refund amount must be greater than 0");
-        return;
-      }
-      const invalidEntry = Object.entries(refundMap).find(
-        ([_, amt]) => Number(amt) < 0
-      );
-      if (invalidEntry) {
-        toast.error("Invalid refund amount detected");
-        return;
-      }
-      if (!refundRemark?.trim()) {
-        toast.error("Refund remark is required");
-        return;
-      }
-      setLoading(true);
       await secureAxios.post("/api/school/fees/refund", {
         branch,
         paymentId: openPayment.id,
@@ -494,7 +500,7 @@ export default function RefundPage() {
               <div className="flex flex-col md:flex-row justify-end gap-3 px-4 md:px-6 py-4 border-t border-(--border)">
                 <button onClick={() => setOpenPayment(null)}
                   className="btn-outline w-full md:w-auto">Cancel</button>
-                <button disabled={totalRefund <= 0} onClick={submitRefund}
+                <button disabled={totalRefund <= 0} onClick={triggerRefund}
                   className="btn-primary font-semibold w-full md:w-auto flex gap-2 items-center">
                   <ShieldCheck size={18} /> Confirm Refund
                 </button>
@@ -502,6 +508,70 @@ export default function RefundPage() {
             </div>
           </div>
         )}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="py-4 px-6 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)/50">
+              <h3 className="font-bold text-base text-(--text)">Confirm Fee Refund</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="p-2 hover:bg-(--bg-soft) rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+              <div className="border border-(--border) bg-(--bg-soft)/40 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Receipt Number</span>
+                  <span className="font-bold text-(--text)">{openPayment.receiptNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student ID / App ID</span>
+                  <span className="font-semibold text-(--text)">{openPayment.appId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Refund Mode</span>
+                  <span className="font-semibold text-(--text) capitalize">{payType}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">Refund Breakdown</p>
+                <div className="border border-(--border) rounded-xl divide-y divide-(--border) bg-(--bg-soft)/20">
+                  {Object.entries(refundMap).filter(([_, amt]) => Number(amt) > 0).map(([periodOrId, amt]) => {
+                    const item = openPayment.items.find(i => (i.type === "month" ? i.period === periodOrId : i.id?.toString() === periodOrId));
+                    return (
+                      <div key={periodOrId} className="flex justify-between p-3">
+                        <span className="font-medium text-(--text)">
+                          {item?.type === "month" ? `Fee Period: ${item.period}` : `Flexible: ${item?.label || item?.name}`}
+                        </span>
+                        <span className="font-bold text-red-500">₹ {amt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="border border-(--border) rounded-xl p-4 bg-(--bg) space-y-2">
+                <div className="flex justify-between font-bold text-md text-red-500">
+                  <span>Total Refund Amount</span>
+                  <span>₹ {totalRefund}</span>
+                </div>
+                {refundRemark?.trim() && (
+                  <div className="flex justify-between font-semibold text-xs text-(--text-muted) border-t border-(--border) pt-2">
+                    <span>Remark/Reason</span>
+                    <span>{refundRemark}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-(--border) bg-(--bg-soft)/30 flex justify-end gap-3">
+              <button onClick={() => setShowConfirmModal(false)} className="btn-outline px-4 py-2 font-semibold">
+                Cancel
+              </button>
+              <button onClick={executeRefund} className="btn-primary px-5 py-2 font-bold shadow-md bg-red-600 border-red-600 hover:bg-red-700">
+                Confirm & Refund
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </RequirePermission >
   );

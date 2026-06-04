@@ -72,6 +72,7 @@ export default function FeeCollectionPage() {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [pdfOptions, setPdfOptions] = useState({ size: "1/2", copies: 2 });
   const [receiptDocToPrint, setReceiptDocToPrint] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const getClassName = id => classData.find(c => c.id === id)?.name;
   const getSectionName = (cid, sid) =>
@@ -307,7 +308,7 @@ export default function FeeCollectionPage() {
     setFlexForm({ headId: "", amount: "" });
   };
 
-  const savePayment = async () => {
+  const triggerSavePayment = () => {
     if (!student || payable <= 0 || !payment.paidAmount) return;
     const netPayable = payable - discountAmount;
     if (Number(payment.paidAmount) > netPayable) {
@@ -319,6 +320,11 @@ export default function FeeCollectionPage() {
       toast.error(`Paid amount + discount must cover flexible fees (₹${totalFlexible})`);
       return;
     }
+    setShowConfirmModal(true);
+  };
+
+  const savePayment = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
     try {
       const res = await secureAxios.post("/api/school/fees/collect", {
@@ -841,7 +847,7 @@ export default function FeeCollectionPage() {
                   <div className="flex justify-between">
                     <button onClick={() => setStep(2)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
                     {editable && (
-                      <button onClick={savePayment} className="btn-primary font-semibold flex gap-2"><ShieldCheck size={17} /> Save Payment</button>
+                      <button onClick={triggerSavePayment} className="btn-primary font-semibold flex gap-2"><ShieldCheck size={17} /> Save Payment</button>
                     )}
                   </div>
                 </>
@@ -851,6 +857,95 @@ export default function FeeCollectionPage() {
         )}
       </div>
 
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="py-3 px-6 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)/50">
+              <h3 className="font-semibold text-base text-(--text)">Confirm Fee Collection</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="p-2 hover:bg-(--bg-soft) rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+              <div className="border border-(--border) bg-(--bg-soft)/40 rounded-xl px-4 py-3 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student Name</span>
+                  <span className="font-semibold text-(--text)">{student.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student ID / App ID</span>
+                  <span className="font-semibold text-(--text)">{student.appId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Class & Section</span>
+                  <span className="font-semibold text-(--text)">
+                    {getClassName(student.className)} - {getSectionName(student.className, student.section)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--primary)">Particulars Summary</p>
+                <div className="border border-(--border) rounded-xl divide-y divide-(--border) bg-(--bg-soft)/20">
+                  {step2Items.filter(i => i.type === "month").map((m, idx) => (
+                    <div key={idx} className="flex justify-between py-2 px-4">
+                      <span className="font-medium text-(--text)">Fee Period: {m.label || m.period}</span>
+                      <span className="font-bold text-(--primary)">₹ {m.amount}</span>
+                    </div>
+                  ))}
+                  {flexibleItems.map((f, idx) => (
+                    <div key={idx} className="flex justify-between py-2 px-4">
+                      <span className="font-medium text-(--text)">Flexible: {f.label}</span>
+                      <span className="font-bold text-(--primary)">₹ {f.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="border border-(--border) rounded-xl px-4 py-2 bg-(--bg) space-y-2.5">
+                <div className="flex justify-between font-medium">
+                  <span className="text-(--text-muted)">Total Due</span>
+                  <span className="text-(--text)">₹ {payable}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between font-medium text-red-500">
+                    <span>Discount</span>
+                    <span>(-) ₹ {discountAmount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-(--primary)">
+                  <span>Net Payable</span>
+                  <span className="font-semibold">₹ {payable - discountAmount}</span>
+                </div>
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-green-600">
+                  <span>Collecting Amount</span>
+                  <span className="font-semibold">₹ {payment.paidAmount}</span>
+                </div>
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-red-600">
+                  <span>Fee Due</span>
+                  <span className="font-semibold">₹ {finalDue}</span>
+                </div>
+                <div className="flex justify-between font-medium text-xs border-t border-(--border) pt-2 text-(--text-muted)">
+                  <span>Payment Mode</span>
+                  <span className="capitalize">{payment.payType}</span>
+                </div>
+                {payment.remark?.trim() && (
+                  <div className="flex justify-between font-medium text-xs text-(--text-muted)">
+                    <span>Remark</span>
+                    <span>{payment.remark}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-(--border) bg-(--bg-soft)/30 flex justify-end gap-3">
+              <button onClick={() => setShowConfirmModal(false)} className="btn-outline px-4 py-2 text-sm font-semibold">
+                Cancel
+              </button>
+              <button onClick={savePayment} className="btn-primary px-5 py-2 text-sm font-semibold shadow-md">
+                Confirm & Collect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showSuccessModal && savedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-(--bg-card) w-full max-w-md rounded-xl border border-(--border) shadow-xl shadow-(--status-p-bg)/20 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 flex flex-col items-center p-8 text-center relative">
@@ -877,7 +972,7 @@ export default function FeeCollectionPage() {
             <div className="w-full space-y-3">
               <button
                 onClick={handlePrintRequest}
-                className="w-full py-3 rounded-lg border border-(--status-p-border) font-semibold text-(status-p-text) shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2 bg-(--status-p-bg) hover:bg-(--status-p-bg)/60"
+                className="w-full py-3 rounded-lg border border-(--status-p-border) font-semibold text-(status-p-text) shadow-none transition-transform active:scale-95 flex items-center justify-center gap-2 bg-(--status-p-bg) hover:bg-(--status-p-bg)/60"
               >
                 <Printer size={15} /> Print Receipt
               </button>
