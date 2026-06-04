@@ -1,22 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, Download, FileSpreadsheet, CheckCircle, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, Download, FileSpreadsheet, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import secureAxios from "@/lib/secureAxios";
-import { useTheme } from "next-themes";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { canManage } from "@/lib/school/permissionUtils";
 
 function excelDateToYMD(value) {
   if (!value) return "";
   if (typeof value === "string") {
-    // Check if it's already YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-    // Check if it's DD/MM/YYYY
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
       const [d, m, y] = value.split("/");
       return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
@@ -24,7 +23,6 @@ function excelDateToYMD(value) {
     return value;
   };
   if (typeof value === "number") {
-    // Excel date serial format (days since Dec 30, 1899)
     try {
       const date = new Date(Math.round((value - 25569) * 86400 * 1000));
       if (isNaN(date.getTime())) return "";
@@ -42,15 +40,78 @@ function excelDateToYMD(value) {
 export default function ImportExportAdmissions() {
   const { schoolUser, sessionList, currentSession, classData, setLoading } = useSchool();
   const { branch, branchInfo } = useBranch();
-  const { theme } = useTheme();
+
   const [context, setContext] = useState({
-    sessionId: currentSession?.id || "",
+    sessionId: "",
     classId: "",
     sectionId: "",
   });
 
+  const [classTransportFee, setClassTransportFee] = useState(0);
+  const [templates, setTemplates] = useState([]);
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
+
+  useEffect(() => {
+    if (currentSession) {
+      setContext(prev => ({ ...prev, sessionId: currentSession.id }));
+    }
+  }, [currentSession]);
+
+  useEffect(() => {
+    if (!context.classId || !schoolUser) {
+      setClassTransportFee(0);
+      setTemplates([]);
+      return;
+    }
+    const fetchTransportFee = async () => {
+      try {
+        const snap = await getDocs(
+          query(
+            collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "templates", "items"),
+            where("className", "==", context.classId),
+            where("status", "==", "active")
+          )
+        );
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setTemplates(list);
+        let tFee = 0;
+        const transportTpl = list.find(t =>
+          t.items?.some(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport")
+        );
+        if (transportTpl) {
+          const tItem = transportTpl.items.find(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport");
+          if (tItem) {
+            tFee = Number(tItem.amount || 0);
+          }
+        }
+        setClassTransportFee(tFee);
+        setRows(prev => prev.map(r => {
+          let selected = null;
+          if (r.transport === "yes") {
+            selected = list.find(t =>
+              t.name?.toLowerCase().includes("transport") ||
+              t.items?.some(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport")
+            );
+          }
+          if (!selected) {
+            selected = list.find(t => t.name?.toLowerCase().includes("default")) || list[0];
+          }
+          return {
+            ...r,
+            transportFee: r.transport === "yes" ? tFee : 0,
+            templateId: selected?.id || "",
+            templateName: selected?.name || "",
+          };
+        }));
+      } catch {
+        setClassTransportFee(0);
+        setTemplates([]);
+      }
+    };
+    fetchTransportFee();
+  }, [context.classId, schoolUser, branch]);
+
   function downloadTemplate() {
     const ws = XLSX.utils.json_to_sheet([
       {
@@ -102,12 +163,41 @@ export default function ImportExportAdmissions() {
             admissionId: admId,
             name: name,
             dob: dob,
+            transport: "no",
+            transportFee: 0,
             _status: status,
           };
         })
       );
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function toggleStudentTransport(rowNum, val) {
+    setRows(prev =>
+      prev.map(r => {
+        if (r.row === rowNum) {
+          let selected = null;
+          if (val === "yes") {
+            selected = templates.find(t =>
+              t.name?.toLowerCase().includes("transport") ||
+              t.items?.some(item => item.headName?.toLowerCase().includes("transport") || item.category === "transport")
+            );
+          }
+          if (!selected) {
+            selected = templates.find(t => t.name?.toLowerCase().includes("default")) || templates[0];
+          }
+          return {
+            ...r,
+            transport: val,
+            transportFee: val === "yes" ? classTransportFee : 0,
+            templateId: selected?.id || "",
+            templateName: selected?.name || ""
+          };
+        }
+        return r;
+      })
+    );
   }
 
   async function importStudents() {
@@ -143,305 +233,251 @@ export default function ImportExportAdmissions() {
     }
   }
 
-  async function exportStudents() {
-    if (!context.sessionId || !context.classId || !context.sectionId) {
-      toast.error("Select session, class and section");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await secureAxios.post(
-        "/api/school/admissions/export",
-        { branch, ...context },
-        { responseType: "blob" }
-      );
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "students_export.xlsx";
-      a.click();
-    } catch {
-      toast.error("Export failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const editable = canManage(schoolUser, "admission.import.manage", currentPlan);
 
   return (
     <RequirePermission permission="admission.import.view">
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row gap-3 justify-between items-start pb-2">
+      <div className="space-y-4 pb-20 text-sm">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start pb-2">
           <div className="flex items-start gap-3">
             <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
               <FileSpreadsheet size={20} />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-(--text)">Import / Export</h1>
+              <h1 className="text-lg font-semibold text-(--text)">Import Students</h1>
               <p className="text-xs font-semibold text-(--text-muted)">
-                Bulk student onboarding via Excel
+                Bulk student onboarding via Excel spreadsheet
               </p>
             </div>
           </div>
-          <button onClick={downloadTemplate} className="btn-primary">
-            <Download size={16} /> Download Template
+          <button onClick={downloadTemplate} className="btn-outline flex items-center gap-2">
+            <Download size={16} className="text-(--primary)" /> Download Template
           </button>
         </div>
-        <div className="grid md:grid-cols-5 gap-3">
-          <select
-            className="input"
-            value={context.sessionId}
-            onChange={(e) =>
-              setContext({ ...context, sessionId: e.target.value })
-            }
-          >
-            <option value="">Select Session</option>
-            {sessionList?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.id}
-              </option>
-            ))}
-          </select>
-          <select
-            className="input"
-            value={context.classId}
-            onChange={(e) =>
-              setContext({ ...context, classId: e.target.value, sectionId: "" })
-            }
-          >
-            <option value="">Select Class</option>
-            {classData && classData?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="input"
-            disabled={!context.classId}
-            value={context.sectionId}
-            onChange={(e) =>
-              setContext({ ...context, sectionId: e.target.value })
-            }
-          >
-            <option value="">Select Section</option>
-            {(
-              classData && classData.find((c) => c.id === context.classId)?.sections || []
-            ).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          {editable && (
-            <label className="btn-primary flex justify-center items-center gap-2 cursor-pointer">
-              <Upload size={16} /> Upload Excel
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                hidden
-                onChange={handleFileUpload}
-              />
-            </label>
-          )}
-          <button onClick={exportStudents} className="btn-outline">
-            <Download size={16} /> Export Students
-          </button>
-        </div>
-        {rows.length == 0 && (
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-2">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg 
-                  ${theme == "light" ? 'bg-blue-100 text-blue-600' : 'text-blue-600 dark:bg-blue-950'}`}>
-                  <Upload size={20} />
-                </div>
-                <h3 className="font-semibold text-lg">Import Students</h3>
+
+        {editable && !fileName && (
+          <label className="border-2 border-dashed border-(--border) hover:border-(--primary)/50 rounded-2xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all bg-(--bg-card) group relative overflow-hidden shadow-sm">
+            <Upload size={40} className="text-(--primary) animate-bounce group-hover:text-(--primary) transition-colors mb-3" />
+            <span className="text-sm font-semibold text-(--text) group-hover:text-(--primary) transition-colors">Upload Excel Spreadsheet</span>
+            <span className="text-xs text-(--text-muted) mt-1">Drag & drop your student list (.xlsx or .xls), or click to browse</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              hidden
+              onChange={handleFileUpload}
+            />
+          </label>
+        )}
+
+        {fileName && (
+          <div className="bg-(--bg-card) border border-(--border) rounded-xl px-5 py-4 flex items-center justify-between shadow-none animate-in fade-in duration-300">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600">
+                <FileSpreadsheet size={20} />
               </div>
-              <p className="text-sm text-(--text-muted) pt-2">
-                Bulk add students using an Excel file. Ideal for onboarding existing
-                students at the start of a session.
-              </p>
-              <ul className="text-sm space-y-1 text-(--text-muted)">
-                <li>• Supports 100+ students at once</li>
-                <li>• Auto-generates login & roll numbers</li>
-                <li>• Same rules as New Admission</li>
-              </ul>
-            </div>
-            <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-2">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg 
-                  ${theme == "light" ? 'bg-green-100 text-green-600' : 'text-green-600 bg-green-950'}`}>
-                  <Download size={20} />
-                </div>
-                <h3 className="font-semibold text-lg">Export Students</h3>
+              <div>
+                <p className="text-sm font-semibold text-(--text) truncate max-w-md">{fileName}</p>
+                <p className="text-xs text-(--text-muted)">{rows.length} records parsed successfully</p>
               </div>
-              <p className="text-sm text-(--text-muted) pt-2">
-                Download the student list of a class and section in Excel format, including key details like roll number, name, admission number.
-              </p>
-              <ul className="text-sm space-y-1 text-(--text-muted)">
-                <li>• Class & section-wise export</li>
-                <li>• Useful for backups & offline edits</li>
-                <li>• Re-import supported</li>
-              </ul>
             </div>
+            <button
+              onClick={() => { setRows([]); setFileName(""); }}
+              className="btn-outline px-3 py-2 text-xs border-red-500/20 text-red-600 hover:bg-red-50 flex items-center gap-1.5"
+            >
+              <Trash2 size={14} /> Clear & Reset
+            </button>
           </div>
         )}
-        {rows.length == 0 && (
-          <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-(--border) bg-(--bg)">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-(--primary-soft) text-(--primary)">
+
+        {!fileName && (
+          <div className="grid md:grid-cols-2 gap-5 animate-in fade-in duration-300">
+            <div className="bg-(--bg-card) border border-(--border) rounded-2xl p-5 space-y-4 shadow-sm">
+              <div className="flex items-center gap-3 border-b border-(--border) pb-3">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
                   <FileSpreadsheet size={18} />
                 </div>
-                <div>
-                  <h3 className="font-semibold text-base">Student Import Workflow</h3>
-                  <p className="text-xs text-(--text-muted)">
-                    Bulk admission process followed by Appitor
-                  </p>
-                </div>
+                <h3 className="font-semibold text-sm">Required Excel Format</h3>
               </div>
+              <ul className="text-xs space-y-3 text-(--text-muted)">
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-600 shrink-0" />
+                  <span><strong>admissionId</strong>: A unique identification number for each candidate</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-600 shrink-0" />
+                  <span><strong>name</strong>: Full name of the student</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-green-600 shrink-0" />
+                  <span><strong>dob</strong>: Date of birth in YYYY-MM-DD or standard Excel date format</span>
+                </li>
+              </ul>
+              <p className="text-[11px] text-(--text-muted) bg-(--bg-soft) p-3 rounded-lg border border-(--border)">
+                * All additional metadata (Session, Class, Section) and student transport facilities will be configured directly in Step 2.
+              </p>
             </div>
-            <div className="p-5 grid lg:grid-cols-3 gap-6">
-              <div className="space-y-4">
-                {[
-                  {
-                    step: "01",
-                    title: "Select Context",
-                    desc: "Choose Session, Class and Section for students",
-                  },
-                  {
-                    step: "02",
-                    title: "Prepare Excel",
-                    desc: "Use Appitor template with admissionId, name & dob",
-                  },
-                  {
-                    step: "03",
-                    title: "Validate Data",
-                    desc: "System checks duplicates & required fields",
-                  },
-                  {
-                    step: "04",
-                    title: "Import Students",
-                    desc: "Accounts & roll numbers created automatically",
-                  },
-                ].map((s) => (
-                  <div key={s.step} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="w-8 h-8 rounded-full bg-(--primary-soft) text-(--primary) flex items-center justify-center text-xs font-semibold">
-                        {s.step}
-                      </div>
-                      <div className="flex-1 w-px bg-(--border) mt-1" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-(--text)">
-                        {s.title}
-                      </p>
-                      <p className="text-xs text-(--text-muted)">
-                        {s.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-(--bg) border border-(--border) rounded-lg p-4 space-y-3">
-                <p className="text-sm font-semibold text-(--text)">
-                  Required in Excel
-                </p>
-                <ul className="text-sm space-y-2 text-(--text-muted)">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    admissionId (unique)
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    Student name
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    DOB (YYYY-MM-DD)
-                  </li>
-                </ul>
 
-                <div className="text-xs text-(--text-muted) border-t border-(--border) pt-2">
-                  Class, Section & Session are selected in Appitor — not in Excel.
+            <div className="bg-(--bg-card) border border-(--border) rounded-2xl p-5 space-y-4 shadow-sm">
+              <div className="flex items-center gap-3 border-b border-(--border) pb-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600">
+                  <CheckCircle size={18} />
                 </div>
+                <h3 className="font-semibold text-sm">System Operations</h3>
               </div>
-              <div className="bg-(--bg) border border-(--border) rounded-lg p-4 space-y-3">
-                <p className="text-sm font-semibold text-(--text)">
-                  What Appitor Does
-                </p>
-                <ul className="text-sm space-y-2 text-(--text-muted)">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    Creates student login accounts
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    Assigns roll numbers automatically
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    Updates class roster & records
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-green-600" />
-                    Ensures all-or-nothing import
-                  </li>
-                </ul>
-                <div className="text-xs text-(--text-muted) border-t border-(--border) pt-2">
-                  If any record fails, no student is imported.
-                </div>
-              </div>
+              <ul className="text-xs space-y-3 text-(--text-muted)">
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                  <span>Registers active student logs in the current roster database</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                  <span>Assigns roll numbers automatically based on current roster count</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                  <span>Generates unique credential login accounts (ID & DOB password)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                  <span>Supports safe execution (reverts all imports if any row contains issues)</span>
+                </li>
+              </ul>
             </div>
           </div>
         )}
-        {rows.length > 0 && (
-          <div className="bg-(--bg-card) border border-(--border) rounded-lg overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-(--bg)">
-                <tr>
-                  <th className="px-4 py-3 text-left">Row</th>
-                  <th className="px-4 py-3 text-left">Admission ID</th>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Gender</th>
-                  <th className="px-4 py-3 text-left">DOB</th>
-                  <th className="px-4 py-3 text-left">Phone</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className={`border-t border-(--border) ${r._status !== 'valid' ? 'bg-red-500/5' : ''}`}>
-                    <td className="px-4 py-3 text-left font-bold text-(--text-muted)">{r.row}</td>
-                    <td className="px-4 py-3 text-left font-semibold">{r.admissionId || ''}</td>
-                    <td className="px-4 py-3 text-left font-semibold">{r.name || ''}</td>
-                    <td className="px-4 py-3 text-left uppercase text-[10px] font-bold">{r.gender || ''}</td>
-                    <td className="px-4 py-3 text-left text-xs">{r.dob || ''}</td>
-                    <td className="px-4 py-3 text-left text-xs">{r.phone || ''}</td>
-                    <td className="px-4 py-3 text-left">
-                      {r._status === "valid" ? (
-                        <span className="text-green-600 flex items-center gap-1 font-bold text-[10px] uppercase">
-                          <CheckCircle size={14} /> Valid
-                        </span>
-                      ) : (
-                        <span className="text-red-600 flex items-center gap-1 font-bold text-[10px] uppercase">
-                          <AlertCircle size={14} /> {r._status === 'duplicate' ? 'Duplicate' : 'Error'}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="p-3 border-t border-(--border)">
-              <button onClick={importStudents} className="btn-primary w-full">
-                Import {rows.length} Students
-              </button>
+
+        {fileName && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="bg-(--bg-card) border border-(--border) rounded-xl px-5 py-4 shadow-none space-y-3">
+              <h3 className="font-bold text-sm text-(--primary) uppercase border-b border-(--border) pb-2">Step 2: Select Context</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-(--text-muted)">Session</label>
+                  <select
+                    className="input bg-(--bg-soft)"
+                    value={context.sessionId}
+                    onChange={(e) =>
+                      setContext({ ...context, sessionId: e.target.value })
+                    }
+                  >
+                    <option value="">Select Session</option>
+                    {sessionList?.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-(--text-muted)">Class</label>
+                  <select
+                    className="input bg-(--bg-soft)"
+                    value={context.classId}
+                    onChange={(e) =>
+                      setContext({ ...context, classId: e.target.value, sectionId: "" })
+                    }
+                  >
+                    <option value="">Select Class</option>
+                    {classData && classData?.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-(--text-muted)">Section</label>
+                  <select
+                    className="input bg-(--bg-soft)"
+                    disabled={!context.classId}
+                    value={context.sectionId}
+                    onChange={(e) =>
+                      setContext({ ...context, sectionId: e.target.value })
+                    }
+                  >
+                    <option value="">Select Section</option>
+                    {(
+                      classData && classData.find((c) => c.id === context.classId)?.sections || []
+                    ).map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-(--bg-card) border border-(--border) rounded-2xl overflow-hidden shadow-none">
+              <div className="px-5 py-4 border-b border-(--border) bg-(--bg-card) flex items-center justify-between">
+                <h3 className="font-bold text-(--primary) uppercase text-sm">Preview & Adjust Transport</h3>
+                <span className="text-xs font-semibold text-(--text-muted)">Set transport status individually per student</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-(--bg) border-b border-(--border)">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Row</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Admission ID</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Name</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Gender</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">DOB</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Phone</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted) w-32">Transport</th>
+                      <th className="px-4 py-3 text-left font-semibold text-(--text-muted)">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-(--border)">
+                    {rows.map((r, i) => (
+                      <tr key={i} className={r._status !== 'valid' ? 'bg-red-500/5' : ''}>
+                        <td className="px-4 py-3 font-bold text-(--text-muted)">{r.row}</td>
+                        <td className="px-4 py-3 font-semibold">{r.admissionId || ''}</td>
+                        <td className="px-4 py-3 font-semibold">{r.name || ''}</td>
+                        <td className="px-4 py-3 uppercase font-semibold text-[10px]">{r.gender || ''}</td>
+                        <td className="px-4 py-3">{r.dob || ''}</td>
+                        <td className="px-4 py-3">{r.phone || ''}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => toggleStudentTransport(r.row, r.transport === "yes" ? "no" : "yes")}
+                              className={`relative w-9 h-5 rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${r.transport === "yes" ? "bg-(--primary)" : "bg-gray-200 dark:bg-gray-700"
+                                }`}
+                            >
+                              <div
+                                className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ease-in-out ${r.transport === "yes" ? "left-[18px]" : "left-0.5"
+                                  }`}
+                              />
+                            </button>
+                            <span className={`font-semibold text-[11px] uppercase ${r.transport === "yes" ? "text-(--primary)" : "text-(--text-muted)"}`}>
+                              {r.transport === "yes" ? "Yes" : "No"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {r._status === "valid" ? (
+                            <span className="text-green-600 flex items-center gap-1 font-bold text-[10px] uppercase">
+                              <CheckCircle size={14} /> Valid
+                            </span>
+                          ) : (
+                            <span className="text-red-600 flex items-center gap-1 font-bold text-[10px] uppercase">
+                              <AlertCircle size={14} /> {r._status === 'duplicate' ? 'Duplicate' : 'Error'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="p-4 bg-(--bg) border-t border-(--border)">
+                <button onClick={importStudents} className="btn-primary w-full py-3 shadow-lg shadow-orange-500/10 font-semibold">
+                  Import {rows.length} Students
+                </button>
+              </div>
             </div>
           </div>
         )}

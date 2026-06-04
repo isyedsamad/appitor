@@ -44,6 +44,21 @@ export async function POST(req) {
       admissionSet.add(s.admissionId);
     }
 
+    const headsSnap = await adminDb
+      .collection("schools")
+      .doc(user.schoolId)
+      .collection("branches")
+      .doc(branch)
+      .collection("fees")
+      .doc("heads")
+      .collection("items")
+      .where("category", "==", "transport")
+      .where("status", "==", "active")
+      .get();
+
+    const transportHead = headsSnap.docs[0];
+    const transportHeadId = transportHead ? transportHead.id : null;
+
     const lastRollSnap = await adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -88,6 +103,10 @@ export async function POST(req) {
         gender: s.gender?.toString().trim() || "",
         phone: s.phone?.toString().trim() || "",
         address: s.address?.toString().trim() || "",
+        transport: s.transport || "no",
+        transportFee: Number(s.transportFee) || 0,
+        templateId: s.templateId || "",
+        templateName: s.templateName || "",
       });
     }
 
@@ -100,7 +119,21 @@ export async function POST(req) {
         .collection("meta")
         .doc(`${classId}_${sectionId}_${sessionId}`);
 
-      const rosterSnap = await tx.get(rosterRef);
+      const metaRef = adminDb
+        .collection("schools")
+        .doc(user.schoolId)
+        .collection("branches")
+        .doc(branch)
+        .collection("fees")
+        .doc("metadata")
+        .collection("selectiveAssignments")
+        .doc(sessionId);
+
+      const [rosterSnap, metaSnap] = await Promise.all([
+        tx.get(rosterRef),
+        tx.get(metaRef),
+      ]);
+
       let rosterStudents = [];
       if (rosterSnap.exists) {
         rosterStudents = rosterSnap.data().students || [];
@@ -133,6 +166,8 @@ export async function POST(req) {
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           createdBy: user.uid,
+          transport: s.transport,
+          transportFee: s.transportFee,
           academicHistory: [
             {
               session: sessionId,
@@ -159,6 +194,32 @@ export async function POST(req) {
         });
 
         tx.set(studentRef, studentData);
+
+        if (s.templateId && s.templateName) {
+          const assignmentRef = adminDb
+            .collection("schools")
+            .doc(user.schoolId)
+            .collection("branches")
+            .doc(branch)
+            .collection("fees")
+            .doc("assignments")
+            .collection("items")
+            .doc();
+
+          tx.set(assignmentRef, {
+            studentId: s.uid,
+            studentName: s.name,
+            className: classId,
+            section: sectionId,
+            templateId: s.templateId,
+            templateName: s.templateName,
+            sessionId: sessionId,
+            status: "active",
+            assignedAt: FieldValue.serverTimestamp(),
+            assignedBy: user.uid,
+          });
+        }
+
         rosterStudents.push({
           uid: s.uid,
           name: s.name,
@@ -185,6 +246,29 @@ export async function POST(req) {
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
+
+      let selections = {};
+      if (metaSnap.exists) {
+        selections = metaSnap.data().selections || {};
+      }
+      if (transportHeadId) {
+        if (!selections[classId]) {
+          selections[classId] = {};
+        }
+        if (!selections[classId][transportHeadId]) {
+          selections[classId][transportHeadId] = [];
+        }
+        for (const s of preparedStudents) {
+          if (s.transport === "yes") {
+            if (!selections[classId][transportHeadId].includes(s.uid)) {
+              selections[classId][transportHeadId].push(s.uid);
+            }
+          } else {
+            selections[classId][transportHeadId] = selections[classId][transportHeadId].filter(id => id !== s.uid);
+          }
+        }
+      }
+      tx.set(metaRef, { selections, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
 
       await incrementStudentCount(tx, adminDb, user.schoolId, branch, preparedStudents.length);
     });
