@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Users,
   CheckSquare,
@@ -48,6 +48,7 @@ export default function PromoteDemotePage() {
   const [loadingList, setLoadingList] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [searched, setSearched] = useState(false);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -71,6 +72,11 @@ export default function PromoteDemotePage() {
       setFromSession(currentSession);
     }
   }, [currentSession]);
+
+  useEffect(() => {
+    setSearched(false);
+    setStudents([]);
+  }, [fromSession, fromClass, fromSection]);
 
   const filteredStudents = useMemo(() => {
     if (!searchTerm) return students;
@@ -139,6 +145,7 @@ export default function PromoteDemotePage() {
         setStudents(results);
       }
       setSelected([]);
+      setSearched(true);
     } catch (err) {
       console.error("LOAD STUDENTS ERROR:", err);
       toast.error("Failed to load students");
@@ -260,6 +267,17 @@ export default function PromoteDemotePage() {
               </select>
             </div>
 
+            <div className="md:col-span-2">
+              <button
+                onClick={loadStudents}
+                disabled={loadingList || !fromSection || !fromSession}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                {loadingList ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
+                Search
+              </button>
+            </div>
+
             <div className="md:col-span-3 relative group">
               <label className="text-[10px] uppercase font-bold text-(--text-muted) tracking-wider ml-1">Search Loaded</label>
               <div className="relative">
@@ -273,106 +291,101 @@ export default function PromoteDemotePage() {
                 />
               </div>
             </div>
-
-            <div className="md:col-span-2">
-              <button
-                onClick={loadStudents}
-                disabled={loadingList || !fromSection || !fromSession}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                {loadingList ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
-                Search
-              </button>
-            </div>
           </div>
         </div>
 
-        <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-(--bg) border-b border-(--border)">
-                  <th className="px-5 py-3 w-12">
-                    <button
-                      onClick={toggleAll}
-                      className="w-5 h-5 rounded border border-(--border) flex items-center justify-center bg-(--bg)"
-                    >
-                      {selected.length === sortedStudents.length && sortedStudents.length > 0 ? (
-                        <Check size={14} className="text-(--primary)" />
-                      ) : (
-                        <Square size={14} className="text-(--text-muted)" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('rollNo')}>
-                    <div className="flex items-center">Roll No {getSortIcon('rollNo')}</div>
-                  </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('appId')}>
-                    <div className="flex items-center">App ID {getSortIcon('appId')}</div>
-                  </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('name')}>
-                    <div className="flex items-center">Name {getSortIcon('name')}</div>
-                  </th>
-                  <th className="px-5 py-3 font-semibold text-(--text-muted) text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-(--border)">
-                {loadingList ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td colSpan="5" className="px-5 py-6">
-                        <div className="h-4 bg-(--bg) rounded-full w-3/4"></div>
-                      </td>
-                    </tr>
-                  ))
-                ) : sortedStudents.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-5 py-10 text-center">
-                      <div className="flex flex-col items-center">
-                        <div className="w-16 h-16 rounded-full bg-(--bg) flex items-center justify-center text-(--text-muted)">
-                          <Users size={32} />
-                        </div>
-                        <h3 className="text-base mt-4 font-semibold text-(--text)">No students to display</h3>
-                        <p className="text-xs text-(--text-muted)">Select a class and section to load students for promotion</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  sortedStudents.map((student) => {
-                    const isSelected = selected.includes(student.uid);
-                    return (
-                      <tr
-                        key={student.uid}
-                        onClick={() => toggle(student.uid)}
-                        className={`group cursor-pointer transition-colors ${isSelected ? 'bg-(--primary-soft)/20' : 'hover:bg-(--bg-soft)/30'}`}
+        {!searched ? (
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+            <div className="w-16 h-16 rounded-full bg-(--primary-soft) flex items-center justify-center text-(--primary) mx-auto mb-4">
+              <Users size={32} />
+            </div>
+            <h3 className="text-base font-bold text-(--text)">Search and Select Students for Promotion</h3>
+            <p className="text-xs text-(--text-muted) font-medium">Select academic session, class, and section to load students for promotion</p>
+          </div>
+        ) : sortedStudents.length === 0 && !loadingList ? (
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+            <div className="w-16 h-16 rounded-full bg-(--bg-soft) flex items-center justify-center mx-auto mb-4">
+              <Users size={32} className="opacity-50" />
+            </div>
+            <h3 className="text-base font-bold text-(--text)">No Students to display</h3>
+            <p className="text-xs text-(--text-muted) font-medium">No active students found in this section for the selected session</p>
+          </div>
+        ) : (
+          <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-(--bg) border-b border-(--border)">
+                    <th className="px-5 py-3 w-12">
+                      <button
+                        onClick={toggleAll}
+                        className="w-5 h-5 bg-(--bg) flex items-center justify-center"
                       >
-                        <td className="px-5 py-3">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center bg-(--bg) ${isSelected ? 'border-(--primary)' : 'border-(--text-muted)'}`}>
-                            {isSelected ? <Check size={14} className="text-(--primary)" /> : null}
-                          </div>
-                        </td>
-                        <td className={`px-5 py-3 font-semibold text-xs ${isSelected ? 'text-(--primary)' : 'text-(--text-muted)'}`}>
-                          {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
-                        </td>
-                        <td className="px-5 py-3 uppercase font-semibold">
-                          {student.appId}
-                        </td>
-                        <td className="px-5 py-3 font-semibold text-(--text) capitalize">
-                          {student.name}
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${student.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                            {student.status}
-                          </span>
+                        {selected.length === sortedStudents.length && sortedStudents.length > 0 ? (
+                          <Check size={20} className="text-(--primary)" />
+                        ) : (
+                          <Square size={20} className="text-(--text-muted)" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('rollNo')}>
+                      <div className="flex items-center">Roll No {getSortIcon('rollNo')}</div>
+                    </th>
+                    <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('appId')}>
+                      <div className="flex items-center">App ID {getSortIcon('appId')}</div>
+                    </th>
+                    <th className="px-5 py-3 font-semibold text-(--text-muted) cursor-pointer hover:text-(--text) transition-colors select-none" onClick={() => handleSort('name')}>
+                      <div className="flex items-center">Name {getSortIcon('name')}</div>
+                    </th>
+                    <th className="px-5 py-3 font-semibold text-(--text-muted) text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-(--border)">
+                  {loadingList ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td colSpan="5" className="px-5 py-6">
+                          <div className="h-4 bg-(--bg) rounded-full w-3/4"></div>
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                    ))
+                  ) : (
+                    sortedStudents.map((student) => {
+                      const isSelected = selected.includes(student.uid);
+                      return (
+                        <tr
+                          key={student.uid}
+                          onClick={() => toggle(student.uid)}
+                          className={`group cursor-pointer transition-colors ${isSelected ? 'bg-(--primary-soft)/20' : 'hover:bg-(--bg-soft)/30'}`}
+                        >
+                          <td className="px-5 py-3">
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center bg-(--bg) ${isSelected ? 'border-(--primary)' : 'border-(--text-muted)'}`}>
+                              {isSelected ? <Check size={14} className="text-(--primary)" /> : null}
+                            </div>
+                          </td>
+                          <td className={`px-5 py-3 font-semibold text-xs ${isSelected ? 'text-(--primary)' : 'text-(--text-muted)'}`}>
+                            {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
+                          </td>
+                          <td className="px-5 py-3 uppercase font-semibold">
+                            {student.appId}
+                          </td>
+                          <td className="px-5 py-3 font-semibold text-(--text) capitalize">
+                            {student.name}
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${student.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                              {student.status}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
         {selected.length > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-5xl z-40 animate-in slide-in-from-bottom-8 duration-300">
             <div className="bg-(--bg) border border-(--border) rounded-2xl p-4 shadow-2xl flex flex-col lg:flex-row gap-4 items-center justify-between ring-4 ring-black/5 dark:ring-white/5">

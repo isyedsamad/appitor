@@ -626,12 +626,22 @@ export default function ExamReportsPage() {
                 )}
 
                 {searched && reports.length === 0 && (
-                    <div className="p-10 text-center text-(--text-muted) border border-(--border) rounded-2xl bg-(--bg-card)">
+                    <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
                         <div className="w-16 h-16 bg-(--bg-soft) rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Search size={32} className="opacity-50" />
+                            <BarChart3 size={32} className="opacity-50" />
                         </div>
-                        <p className="font-semibold text-lg">No Results Found</p>
-                        <p className="text-sm">No marks have been entered for this class term yet.</p>
+                        <h3 className="text-base font-bold text-(--text)">No Reports to display</h3>
+                        <p className="text-xs text-(--text-muted) font-medium">No marks have been entered for this class term yet</p>
+                    </div>
+                )}
+
+                {!searched && (
+                    <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+                        <div className="w-16 h-16 bg-(--primary-soft) rounded-full flex items-center justify-center mx-auto mb-4 text-(--primary)">
+                            <BarChart3 size={32} />
+                        </div>
+                        <h3 className="text-base font-bold text-(--text)">Search and View Exam Reports & Rankings</h3>
+                        <p className="text-xs text-(--text-muted) font-medium">Select session, exam term, class, and section to load report cards and rankings</p>
                     </div>
                 )}
             </div>

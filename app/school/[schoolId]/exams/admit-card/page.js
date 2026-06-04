@@ -61,6 +61,7 @@ export default function AdmitCardsPage() {
     const [examDate, setExamDate] = useState("");
     const [examTime, setExamTime] = useState("");
     const [instructions, setInstructions] = useState("1. Bring this admit card to the exam hall.\n2. Arrive 15 minutes before the exam.");
+    const [searched, setSearched] = useState(false);
 
     const selectedClass = classData?.find(c => c.id === className);
     const selectedTerm = terms?.find(t => t.id === termId);
@@ -81,6 +82,11 @@ export default function AdmitCardsPage() {
             setExamTitle(selectedTerm.name || selectedTerm.id);
         }
     }, [selectedTerm]);
+
+    useEffect(() => {
+        setSearched(false);
+        setStudents([]);
+    }, [session, termId, className, section]);
 
     async function fetchTerms(session) {
         setLoading(true);
@@ -111,6 +117,7 @@ export default function AdmitCardsPage() {
             if (!snap.exists()) {
                 setStudents([]);
                 toast.info("No roster found for this section");
+                setSearched(true);
                 return;
             }
 
@@ -121,6 +128,7 @@ export default function AdmitCardsPage() {
             });
             setStudents(results);
             setSelectedIds(new Set());
+            setSearched(true);
         } catch (err) {
             toast.error("Failed to load students");
         } finally {
@@ -207,6 +215,7 @@ export default function AdmitCardsPage() {
                         selectedIds={selectedIds} toggleSelect={toggleSelect}
                         selectAll={selectAll} searchTerm={searchTerm} setSearchTerm={setSearchTerm}
                         onNext={goToDesign}
+                        searched={searched}
                     />
                 ) : (
                     <DesignStep
@@ -260,7 +269,7 @@ function SelectionStep({
     termId, setTermId, terms,
     className, setClassName, section, setSection, classData, selectedClass,
     loadStudents, loading, students, filteredStudents, selectedIds,
-    toggleSelect, selectAll, searchTerm, setSearchTerm, onNext
+    toggleSelect, selectAll, searchTerm, setSearchTerm, onNext, searched
 }) {
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
@@ -313,87 +322,105 @@ function SelectionStep({
                 </div>
             </div>
 
-            <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-(--bg) border-b border-(--border)">
-                                <th className="px-5 py-3 w-12 text-center">
-                                    <button
-                                        onClick={selectAll}
-                                        disabled={filteredStudents.length === 0}
-                                        className="w-5 h-5 rounded border border-(--border) flex items-center justify-center bg-(--bg) mx-auto"
-                                    >
-                                        {selectedIds.size === filteredStudents.length && filteredStudents.length > 0 ? (
-                                            <Check size={14} className="text-(--primary)" />
-                                        ) : (
-                                            <Square size={14} className="text-(--text-muted)" />
-                                        )}
-                                    </button>
-                                </th>
-                                <th className="px-5 py-3 font-semibold text-(--text-muted)">Roll No</th>
-                                <th className="px-5 py-3 font-semibold text-(--text-muted)">App ID</th>
-                                <th className="px-5 py-3 font-semibold text-(--text-muted)">Name</th>
-                                <th className="px-5 py-3 font-semibold text-(--text-muted) text-right whitespace-nowrap">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-(--border)">
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <tr key={i} className="animate-pulse">
-                                        <td colSpan="5" className="px-5 py-6">
-                                            <div className="h-4 bg-(--bg) rounded-full w-3/4 mx-auto"></div>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : filteredStudents.length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" className="px-5 py-10 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-16 h-16 rounded-full bg-(--bg) flex items-center justify-center text-(--text-muted)">
-                                                <Users size={32} />
-                                            </div>
-                                            <h3 className="text-base mt-4 font-semibold text-(--text)">No students to display</h3>
-                                            <p className="text-xs text-(--text-muted)">Select term, class and section to load students</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredStudents.map((student) => {
-                                    const isSelected = selectedIds.has(student.uid);
-                                    return (
-                                        <tr
-                                            key={student.uid}
-                                            onClick={() => toggleSelect(student.uid)}
-                                            className={`group cursor-pointer transition-colors ${isSelected ? 'bg-(--primary-soft)/20' : 'hover:bg-(--bg-soft)/30'}`}
+            {!searched ? (
+                <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+                    <div className="w-16 h-16 rounded-full bg-(--primary-soft) flex items-center justify-center text-(--primary) mx-auto mb-4">
+                        <Users size={32} />
+                    </div>
+                    <h3 className="text-base font-bold text-(--text)">Search and Generate Exam Admit Cards</h3>
+                    <p className="text-xs text-(--text-muted) font-medium">Select session, exam term, class, and section to view or generate admit cards</p>
+                </div>
+            ) : students.length === 0 && !loading ? (
+                <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+                    <div className="w-16 h-16 rounded-full bg-(--bg-soft) flex items-center justify-center mx-auto mb-4">
+                        <Users size={32} className="opacity-50" />
+                    </div>
+                    <h3 className="text-base font-bold text-(--text)">No Students to display</h3>
+                    <p className="text-xs text-(--text-muted) font-medium">No active students found in this section for the selected session</p>
+                </div>
+            ) : (
+                <div className="bg-(--bg-card) border border-(--border) rounded-2xl shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-(--bg) border-b border-(--border)">
+                                    <th className="px-5 py-3 w-12 text-center">
+                                        <button
+                                            onClick={selectAll}
+                                            disabled={filteredStudents.length === 0}
+                                            className="w-5 h-5 rounded border border-(--border) flex items-center justify-center bg-(--bg) mx-auto"
                                         >
-                                            <td className="px-5 py-3 text-center">
-                                                <div className={`mx-auto w-5 h-5 rounded border-2 flex items-center justify-center bg-(--bg) ${isSelected ? 'border-(--primary)' : 'border-(--text-muted)'}`}>
-                                                    {isSelected ? <Check size={14} className="text-(--primary)" /> : null}
-                                                </div>
-                                            </td>
-                                            <td className={`px-5 py-3 font-semibold text-xs ${isSelected ? 'text-(--primary)' : 'text-(--text-muted)'}`}>
-                                                {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
-                                            </td>
-                                            <td className="px-5 py-3 uppercase font-semibold">
-                                                {student.appId}
-                                            </td>
-                                            <td className="px-5 py-3 font-semibold text-(--text) capitalize">
-                                                {student.name}
-                                            </td>
-                                            <td className="px-5 py-3 text-right">
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${student.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
-                                                    {student.status}
-                                                </span>
+                                            {selectedIds.size === filteredStudents.length && filteredStudents.length > 0 ? (
+                                                <Check size={14} className="text-(--primary)" />
+                                            ) : (
+                                                <Square size={14} className="text-(--text-muted)" />
+                                            )}
+                                        </button>
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold text-(--text-muted)">Roll No</th>
+                                    <th className="px-5 py-3 font-semibold text-(--text-muted)">App ID</th>
+                                    <th className="px-5 py-3 font-semibold text-(--text-muted)">Name</th>
+                                    <th className="px-5 py-3 font-semibold text-(--text-muted) text-right whitespace-nowrap">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-(--border)">
+                                {loading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <tr key={i} className="animate-pulse">
+                                            <td colSpan="5" className="px-5 py-6">
+                                                <div className="h-4 bg-(--bg) rounded-full w-3/4 mx-auto"></div>
                                             </td>
                                         </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                                    ))
+                                ) : filteredStudents.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-5 py-10 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-16 h-16 rounded-full bg-(--primary-soft) flex items-center justify-center text-(--primary)">
+                                                    <Users size={32} />
+                                                </div>
+                                                <h3 className="text-base mt-4 font-bold text-(--text)">No Students to display</h3>
+                                                <p className="text-xs text-(--text-muted) font-medium">Select a student or refine your search filters</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredStudents.map((student) => {
+                                        const isSelected = selectedIds.has(student.uid);
+                                        return (
+                                            <tr
+                                                key={student.uid}
+                                                onClick={() => toggleSelect(student.uid)}
+                                                className={`group cursor-pointer transition-colors ${isSelected ? 'bg-(--primary-soft)/20' : 'hover:bg-(--bg-soft)/30'}`}
+                                            >
+                                                <td className="px-5 py-3 text-center">
+                                                    <div className={`mx-auto w-5 h-5 rounded border-2 flex items-center justify-center bg-(--bg) ${isSelected ? 'border-(--primary)' : 'border-(--text-muted)'}`}>
+                                                        {isSelected ? <Check size={14} className="text-(--primary)" /> : null}
+                                                    </div>
+                                                </td>
+                                                <td className={`px-5 py-3 font-semibold text-xs ${isSelected ? 'text-(--primary)' : 'text-(--text-muted)'}`}>
+                                                    {student.rollNo ? student.rollNo.toString().padStart(2, '0') : '--'}
+                                                </td>
+                                                <td className="px-5 py-3 uppercase font-semibold">
+                                                    {student.appId}
+                                                </td>
+                                                <td className="px-5 py-3 font-semibold text-(--text) capitalize">
+                                                    {student.name}
+                                                </td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${student.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-600'}`}>
+                                                        {student.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {selectedIds.size > 0 && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-2xl z-40 animate-in slide-in-from-bottom-8 duration-300">

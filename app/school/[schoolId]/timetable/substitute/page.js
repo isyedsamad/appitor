@@ -292,7 +292,16 @@ export default function SubstitutionPage() {
                     </button>
                 </div>
 
-                {/* Timetable Grid */}
+                {!searched && (
+                    <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+                        <div className="w-16 h-16 bg-(--primary-soft) rounded-full flex items-center justify-center mx-auto mb-4 text-(--primary)">
+                            <CalendarClock size={32} />
+                        </div>
+                        <h3 className="text-base font-bold text-(--text)">Search and Manage Faculty Substitutions</h3>
+                        <p className="text-xs text-(--text-muted) font-medium">Select a date, class, and section to view or manage faculty overrides</p>
+                    </div>
+                )}
+
                 {searched && (
                     <div className="rounded-xl bg-(--bg-card) border border-(--border) overflow-hidden shadow-sm">
                         <div className="timetable-grid" style={{ '--days-count': 1 }}>

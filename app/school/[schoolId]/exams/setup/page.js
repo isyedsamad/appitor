@@ -591,14 +591,22 @@ export default function ExamSetupPage() {
             )}
           </div>
         ) : searched ? (
-          <div className="p-10 text-center text-(--text-muted) border border-(--border) rounded-2xl bg-(--bg-card)">
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
             <div className="w-16 h-16 bg-(--bg-soft) rounded-full flex items-center justify-center mx-auto mb-4">
               <ClipboardList size={32} className="opacity-50" />
             </div>
-            <p className="font-semibold text-lg">No Subjects Mapped</p>
-            <p className="text-sm">Please check the subject-teacher mappings for this class section.</p>
+            <h3 className="text-base font-bold text-(--text)">No Subjects Mapped</h3>
+            <p className="text-xs text-(--text-muted) font-medium">Please check the subject-teacher mappings for this class section</p>
           </div>
-        ) : null}
+        ) : (
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+            <div className="w-16 h-16 bg-(--primary-soft) rounded-full flex items-center justify-center mx-auto mb-4 text-(--primary)">
+              <ClipboardList size={32} />
+            </div>
+            <h3 className="text-base font-bold text-(--text)">Search and Manage Exam Schedules</h3>
+            <p className="text-xs text-(--text-muted) font-medium">Select session, exam term, class, and section to view or configure subject exam schedules</p>
+          </div>
+        )}
       </div>
     </RequirePermission>
   );

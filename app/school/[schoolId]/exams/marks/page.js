@@ -298,7 +298,7 @@ export default function MarksEntryPage() {
             Search
           </button>
         </div>
-        {searched && (
+        {searched && students.length > 0 ? (
           <div className="rounded-xl border border-(--border) bg-(--bg-card) overflow-hidden">
             <div className="overflow-auto max-h-[70vh]">
               <table className="w-full text-[13px] border-collapse">
@@ -484,8 +484,24 @@ export default function MarksEntryPage() {
               </table>
             </div>
           </div>
+        ) : searched ? (
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+            <div className="w-16 h-16 bg-(--bg-soft) rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trophy size={32} className="opacity-50" />
+            </div>
+            <h3 className="text-base font-bold text-(--text)">No Students to display</h3>
+            <p className="text-xs text-(--text-muted) font-medium">No active students found in this section for the selected session</p>
+          </div>
+        ) : (
+          <div className="p-10 text-center border border-(--border) rounded-2xl bg-(--bg-card) shadow-none">
+            <div className="w-16 h-16 bg-(--primary-soft) rounded-full flex items-center justify-center mx-auto mb-4 text-(--primary)">
+              <Trophy size={32} />
+            </div>
+            <h3 className="text-base font-bold text-(--text)">Search and Enter Marks for Exams</h3>
+            <p className="text-xs text-(--text-muted) font-medium">Select session, term, class, and section to load students and enter their marks or grades</p>
+          </div>
         )}
-        {searched && canManage && (
+        {searched && students.length > 0 && canManage && (
           <div className="flex justify-end">
             <button onClick={saveMarks} className="btn-primary flex gap-2">
               <Save size={16} />
