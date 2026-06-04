@@ -1,8 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Search, ArrowRight, ArrowLeft, CheckSquare, Square, Trash2, Plus, IndianRupee, User, Wallet, Percent, Layers, ShieldCheck, Info, CheckCircle, Printer, X } from "lucide-react";
-import { collection, getDocs, getDoc, query, where, doc } from "firebase/firestore";
+import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  Search,
+  ArrowRight,
+  ArrowLeft,
+  CheckSquare,
+  Square,
+  Trash2,
+  Plus,
+  IndianRupee,
+  User,
+  Wallet,
+  Percent,
+  Layers,
+  ShieldCheck,
+  Info,
+  CheckCircle,
+  Printer,
+  X
+} from "lucide-react";
+import {
+  collection,
+  getDocs,
+  getDoc,
+  query,
+  where,
+  doc
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import secureAxios from "@/lib/secureAxios";
 import { useSchool } from "@/context/SchoolContext";
@@ -17,7 +42,9 @@ import { formatDateSlash } from "@/lib/dateUtils";
 export default function FeeCollectionPage() {
   const { schoolUser, loading, setLoading, sessionList, currentSession, classData } = useSchool();
   const { branch, branchInfo } = useBranch();
-  const [appIdSearch, setAppIdSearch] = useState('');
+  const amountPaidRef = useRef(null);
+  const pageRef = useRef(null);
+  const [appIdSearch, setAppIdSearch] = useState("");
   const [sessionId, setSessionId] = useState(null);
   const [sessionMeta, setSessionMeta] = useState(null);
   const [step, setStep] = useState(1);
@@ -25,6 +52,8 @@ export default function FeeCollectionPage() {
   const [template, setTemplate] = useState(null);
   const [dues, setDues] = useState([]);
   const [selectedMonths, setSelectedMonths] = useState([]);
+  const [selectedOneTimeIds, setSelectedOneTimeIds] = useState([]);
+
   const [flexibleHeads, setFlexibleHeads] = useState([]);
   const [flexibleItems, setFlexibleItems] = useState([]);
   const [flexForm, setFlexForm] = useState({
@@ -42,12 +71,14 @@ export default function FeeCollectionPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [savedReceipt, setSavedReceipt] = useState(null);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [pdfOptions, setPdfOptions] = useState({ size: '1/2', copies: 2 });
+  const [pdfOptions, setPdfOptions] = useState({ size: "1/2", copies: 2 });
   const [receiptDocToPrint, setReceiptDocToPrint] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const getClassName = id => classData.find(c => c.id === id)?.name;
   const getSectionName = (cid, sid) =>
     classData.find(c => c.id === cid)?.sections.find(s => s.id === sid)?.name;
+
   useEffect(() => {
     if (schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
@@ -55,10 +86,29 @@ export default function FeeCollectionPage() {
         s => s.id === currentSession
       );
       setSessionMeta(current);
-    } else {
-      return;
     }
-  }, [schoolUser, sessionList, currentSession])
+  }, [schoolUser, sessionList, currentSession]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    let el = pageRef.current;
+    while (el) {
+      if (el.scrollTop > 0 || el.scrollHeight > el.clientHeight) {
+        el.scrollTop = 0;
+      }
+      el = el.parentElement;
+    }
+    if (step === 3) {
+      setTimeout(() => {
+        if (amountPaidRef.current) {
+          amountPaidRef.current.focus();
+        }
+      }, 50);
+    }
+  }, [step]);
+
   const searchStudent = async (appId) => {
     if (!appId.trim()) return;
     if (!sessionId) {
@@ -71,6 +121,8 @@ export default function FeeCollectionPage() {
     setTemplate(null);
     setDues([]);
     setSelectedMonths([]);
+    setSelectedOneTimeIds([]);
+
     setFlexibleItems([]);
     setPayment({
       paidAmount: "",
@@ -78,7 +130,7 @@ export default function FeeCollectionPage() {
       discountType: "flat",
       discountValue: "",
       remark: "",
-    })
+    });
     try {
       const sSnap = await getDocs(
         query(
@@ -87,7 +139,7 @@ export default function FeeCollectionPage() {
         )
       );
       if (sSnap.empty) {
-        toast.error('No Student Found!');
+        toast.error("No Student Found!");
         return;
       }
       const s = { id: sSnap.docs[0].id, ...sSnap.docs[0].data() };
@@ -100,7 +152,7 @@ export default function FeeCollectionPage() {
         )
       );
       if (aSnap.empty) {
-        toast.error('Fees is not Assigned to Student!');
+        toast.error("Fees is not Assigned to Student!");
         return;
       }
       const assignment = aSnap.docs[0].data();
@@ -135,55 +187,116 @@ export default function FeeCollectionPage() {
       );
       setFlexibleHeads(hSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
-      toast.error('Failed: ' + err)
+      toast.error("Failed: " + err);
     } finally {
       setLoading(false);
     }
   };
-  const MONTHS = useMemo(() =>
-    buildMonthsForSession(sessionMeta)
-    , [sessionMeta]);
+
+  const MONTHS = useMemo(() => buildMonthsForSession(sessionMeta), [sessionMeta]);
+
   const monthRows = useMemo(() => {
     if (!template || !MONTHS?.length) return [];
     return MONTHS.map(m => {
       const dueEntry = dues.find(d => d.period === m.key);
+      let breakdown = [];
+      let total = 0;
+      let paid = 0;
+      let status = "due";
+
       if (dueEntry) {
-        return {
-          ...m,
-          breakdown: dueEntry.headsSnapshot || [],
-          total: Number(dueEntry.total || 0),
-          paid: Number(dueEntry.paid || 0),
-          due: Number(dueEntry.total || 0) - Number(dueEntry.paid || 0),
-          status: dueEntry.status,
-        };
+        breakdown = [...(dueEntry.headsSnapshot || [])];
+        total = Number(dueEntry.total || 0);
+        paid = Number(dueEntry.paid || 0);
+        status = dueEntry.status;
+      } else {
+        const applicable = template.items.filter(i => {
+          if (i.frequency === "monthly") return true;
+          if (i.frequency === "quarterly") return m.q;
+          return false;
+        });
+        breakdown = [...applicable];
+        total = applicable.reduce((s, i) => s + Number(i.amount), 0);
+        paid = 0;
+        status = "due";
       }
-      const applicable = template.items.filter(i => {
-        if (i.frequency === "monthly") return true;
-        if (i.frequency === "quarterly") return m.q;
-        if (i.frequency === "yearly") return m.y;
-        return false;
+
+      const occasionalDuesForMonth = dues.filter(
+        d => d.period.startsWith("occasional-") && d.period.endsWith(`-${m.key}`)
+      );
+      occasionalDuesForMonth.forEach(od => {
+        if (od.headsSnapshot) {
+          od.headsSnapshot.forEach(h => {
+            if (!breakdown.some(x => x.headId === h.headId)) {
+              breakdown.push(h);
+            }
+          });
+        }
+        total += Number(od.total || 0);
+        paid += Number(od.paid || 0);
       });
-      const total = applicable.reduce((s, i) => s + Number(i.amount), 0);
+
+      const due = total - paid;
+      if (total > 0 && paid === total) {
+        status = "paid";
+      } else if (paid > 0) {
+        status = "partial";
+      }
+
       return {
         ...m,
-        breakdown: applicable,
+        breakdown,
         total,
-        paid: 0,
-        due: total,
-        status: "due",
+        paid,
+        due,
+        status,
       };
     });
   }, [template, dues, MONTHS]);
-  const step1Payable = selectedMonths.reduce(
-    (s, k) => s + (monthRows.find(m => m.key === k)?.due || 0),
-    0
-  );
+
+
+
+  const oneTimeRows = useMemo(() => {
+    if (!template) return [];
+    return template.items
+      .filter(i => i.frequency === "one-time")
+      .map(item => {
+        const periodKey = `one-time-${item.headId}`;
+        const dueEntry = dues.find(d => d.period === periodKey);
+        if (dueEntry) {
+          return {
+            ...item,
+            periodKey,
+            total: Number(dueEntry.total || 0),
+            paid: Number(dueEntry.paid || 0),
+            due: Number(dueEntry.total || 0) - Number(dueEntry.paid || 0),
+            status: dueEntry.status,
+          };
+        }
+        return {
+          ...item,
+          periodKey,
+          total: Number(item.amount),
+          paid: 0,
+          due: Number(item.amount),
+          status: "due",
+        };
+      });
+  }, [template, dues]);
+
+  const occasionalRows = useMemo(() => {
+    if (!template) return [];
+    return template.items.filter(i => i.frequency === "occasional" || i.frequency === "yearly");
+  }, [template]);
+
   const step2Items = useMemo(() => {
-    if (selectedMonths.length == 0 && flexibleItems.length == 0) return [];
-    const monthItems = selectedMonths.map(k => {
-      const m = monthRows.find(x => x.key === k.key);
+    const monthItems = selectedMonths.map(m => {
       return {
-        id: k.key, key: k.key, label: m.label, amount: m.due, type: "month",
+        id: m.key,
+        key: m.key,
+        label: `Monthly Fee (${m.label})`,
+        amount: m.due,
+        type: "month",
         headsSnapshot: m.breakdown.map(b => ({
           headId: b.headId,
           headName: b.headName,
@@ -191,35 +304,98 @@ export default function FeeCollectionPage() {
         }))
       };
     });
-    return [...monthItems, ...flexibleItems];
-  }, [selectedMonths, flexibleItems]);
+
+    const oneTimeItems = oneTimeRows
+      .filter(r => selectedOneTimeIds.includes(r.periodKey) && r.due > 0)
+      .map(r => ({
+        id: r.periodKey,
+        key: r.periodKey,
+        label: r.headName,
+        amount: r.due,
+        type: "month",
+        headsSnapshot: [
+          {
+            headId: r.headId,
+            headName: r.headName,
+            amount: r.total,
+          }
+        ]
+      }));
+
+    const selectedMonthKeys = selectedMonths.map(m => m.key);
+    const occasionalItemsMapped = selectedOneTimeIds
+      .filter(id => id.startsWith("occasional-"))
+      .filter(periodKey => {
+        const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`));
+        if (!matchingItem) return false;
+        const monthKey = periodKey.replace(`occasional-${matchingItem.headId}-`, "");
+        const hasDue = dues.some(d => d.period === periodKey);
+        return !(selectedMonthKeys.includes(monthKey) && hasDue);
+      })
+      .map(periodKey => {
+        const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`));
+        if (!matchingItem) return null;
+        const monthKey = periodKey.replace(`occasional-${matchingItem.headId}-`, "");
+        const monthLabel = MONTHS.find(m => m.key === monthKey)?.label || monthKey;
+        const dueEntry = dues.find(d => d.period === periodKey);
+        const amount = dueEntry ? Number(dueEntry.total - dueEntry.paid) : Number(matchingItem.amount);
+        const total = dueEntry ? Number(dueEntry.total) : Number(matchingItem.amount);
+        return {
+          id: periodKey,
+          key: periodKey,
+          label: `${matchingItem.headName} (${monthLabel})`,
+          amount,
+          type: "month",
+          headsSnapshot: [
+            {
+              headId: matchingItem.headId,
+              headName: matchingItem.headName,
+              amount: total,
+            }
+          ]
+        };
+      })
+      .filter(Boolean);
+
+    return [...monthItems, ...oneTimeItems, ...occasionalItemsMapped, ...flexibleItems];
+  }, [selectedMonths, oneTimeRows, template, dues, MONTHS, selectedOneTimeIds, flexibleItems]);
+
   const payable = step2Items.reduce((s, i) => s + i.amount, 0);
+
   const discountAmount =
     payment.discountType === "percent"
       ? (payable * Number(payment.discountValue || 0)) / 100
       : Number(payment.discountValue || 0);
+
   const finalDue = payable - discountAmount - Number(payment.paidAmount || 0);
 
   const addFlexible = () => {
     const head = flexibleHeads.find(h => h.id === flexForm.headId);
+    if (!head || !flexForm.amount) return;
     setFlexibleItems(prev => [
       ...prev,
       { id: Date.now(), headId: head.id, label: head.name, amount: Number(flexForm.amount), type: "flexible" },
     ]);
     setFlexForm({ headId: "", amount: "" });
   };
-  const savePayment = async () => {
+
+  const triggerSavePayment = () => {
     if (!student || payable <= 0 || !payment.paidAmount) return;
     const netPayable = payable - discountAmount;
     if (Number(payment.paidAmount) > netPayable) {
       toast.error(`Paid amount should not be more than the net payable (₹${netPayable})`);
       return;
     }
-    const totalFlexible = flexibleItems.reduce((s, f) => s + f.amount, 0);
+    const totalFlexible = flexibleItems.reduce((s, f) => s + Number(f.amount), 0);
     if (Number(payment.paidAmount) + discountAmount < totalFlexible) {
       toast.error(`Paid amount + discount must cover flexible fees (₹${totalFlexible})`);
       return;
     }
+    setShowConfirmModal(true);
+  };
+
+  const savePayment = async () => {
+    setShowConfirmModal(false);
     setLoading(true);
     try {
       const res = await secureAxios.post("/api/school/fees/collect", {
@@ -242,9 +418,9 @@ export default function FeeCollectionPage() {
         section: student.section
       });
       setShowSuccessModal(true);
-      toast.success('Fee Submitted!');
+      toast.success("Fee Submitted!");
     } catch (err) {
-      toast.error('Failed: ' + err.response.data.message);
+      toast.error("Failed: " + err.response.data.message);
     } finally {
       setLoading(false);
     }
@@ -297,22 +473,23 @@ export default function FeeCollectionPage() {
 
   const removeItem = (item) => {
     if (item.type === "month") {
-      setSelectedMonths(prev =>
-        prev.filter(m => m.key !== item.key)
-      );
+      if (item.key.startsWith("one-time-") || item.key.startsWith("occasional-")) {
+        setSelectedOneTimeIds(prev => prev.filter(id => id !== item.key));
+      } else {
+        setSelectedMonths(prev => prev.filter(m => m.key !== item.key));
+      }
     }
     if (item.type === "flexible") {
-      setFlexibleItems(prev =>
-        prev.filter(f => f.id !== item.id)
-      );
+      setFlexibleItems(prev => prev.filter(f => f.id !== item.id));
     }
   };
+
   const currentPlan = branchInfo?.plan || schoolUser.plan || "trial";
   const editable = canManage(schoolUser, "fee.operations.manage", currentPlan);
 
   return (
     <RequirePermission permission="fee.operations.view">
-      <div className="max-w-7xl mx-auto space-y-5">
+      <div ref={pageRef} className="max-w-7xl mx-auto space-y-5">
         <div className="flex items-start gap-3">
           <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
             <Wallet size={20} />
@@ -346,12 +523,14 @@ export default function FeeCollectionPage() {
             <p className="text-sm text-(--text-muted) font-medium">Session</p>
             <select
               className="input max-w-xs"
-              value={sessionId ? sessionId : ''}
+              value={sessionId ? sessionId : ""}
               onChange={e => {
                 const id = e.target.value;
                 setSessionId(id);
                 setSessionMeta(sessionList && sessionList.find(s => s.id === id));
                 setSelectedMonths([]);
+                setSelectedOneTimeIds([]);
+                setFlexibleItems([]);
               }}
             >
               {sessionList && sessionList.map(s => (
@@ -363,6 +542,7 @@ export default function FeeCollectionPage() {
             </select>
           </div>
         </div>
+
         {!student && (
           <div className="bg-(--status-m-bg) border border-(--status-m-border) rounded-2xl p-5 md:p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-4 items-start">
@@ -394,6 +574,7 @@ export default function FeeCollectionPage() {
             </div>
           </div>
         )}
+
         {student && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="space-y-4 lg:sticky lg:top-4 h-fit">
@@ -422,6 +603,7 @@ export default function FeeCollectionPage() {
                 </div>
               </div>
             </div>
+
             <div className="lg:col-span-3 space-y-4">
               {step === 1 && (
                 <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
@@ -439,17 +621,19 @@ export default function FeeCollectionPage() {
                         {monthRows.map(m => (
                           <tr key={m.key} className="border-t border-(--border) hover:bg-(--bg)">
                             <td className="px-4 py-3">
-                              {Number(m.total) == Number(m.paid) ?
+                              {Number(m.total) === Number(m.paid) ? (
                                 <ShieldCheck onClick={() => {
-                                  setSelectedMonths(prev => prev.filter(x => x.key !== m.key))
+                                  setSelectedMonths(prev => prev.filter(x => x.key !== m.key));
                                 }} className="cursor-pointer text-green-500" />
-                                : selectedMonths.includes(m)
-                                  ? <CheckSquare onClick={() => {
-                                    setSelectedMonths(prev => prev.filter(x => x.key !== m.key))
-                                  }} className="cursor-pointer text-(--primary)" />
-                                  : <Square onClick={() => {
-                                    m.due > 0 && setSelectedMonths(prev => [...prev, m])
-                                  }} className="cursor-pointer" />}
+                              ) : selectedMonths.includes(m) ? (
+                                <CheckSquare onClick={() => {
+                                  setSelectedMonths(prev => prev.filter(x => x.key !== m.key));
+                                }} className="cursor-pointer text-(--primary)" />
+                              ) : (
+                                <Square onClick={() => {
+                                  m.due > 0 && setSelectedMonths(prev => [...prev, m]);
+                                }} className="cursor-pointer" />
+                              )}
                             </td>
                             <td className="px-4 py-3 text-left font-semibold">{m.label}</td>
                             <td className="px-4 py-3 text-xs text-(--text-muted) text-left space-y-1 font-medium">
@@ -457,11 +641,15 @@ export default function FeeCollectionPage() {
                             </td>
                             <td className="px-4 py-3 text-right font-semibold">
                               <div className="flex justify-center flex-col items-end gap-1">
-                                {m.paid > 0
-                                  ? Number(m.total) == Number(m.paid)
-                                    ? (<span className="py-1 px-2 rounded-md text-(--status-p-text) bg-(--status-p-bg) whitespace-nowrap">₹ {Number(m.total) - Number(m.paid)}</span>)
-                                    : (<span className="py-1 px-2 rounded-md text-(--status-a-text) bg-(--status-a-bg) whitespace-nowrap">₹ {Number(m.total) - Number(m.paid)}</span>)
-                                  : (<span className="whitespace-nowrap">₹ {m.total}</span>)}
+                                {m.paid > 0 ? (
+                                  Number(m.total) === Number(m.paid) ? (
+                                    <span className="py-1 px-2 rounded-md text-(--status-p-text) bg-(--status-p-bg) whitespace-nowrap">₹ {Number(m.total) - Number(m.paid)}</span>
+                                  ) : (
+                                    <span className="py-1 px-2 rounded-md text-(--status-a-text) bg-(--status-a-bg) whitespace-nowrap">₹ {Number(m.total) - Number(m.paid)}</span>
+                                  )
+                                ) : (
+                                  <span className="whitespace-nowrap">₹ {m.total}</span>
+                                )}
                                 {m.paid > 0 && <div className="text-xs text-(--warning) whitespace-nowrap">Paid: ₹ {m.paid}</div>}
                               </div>
                             </td>
@@ -477,6 +665,7 @@ export default function FeeCollectionPage() {
                   </div>
                 </div>
               )}
+
               {step === 2 && (
                 <>
                   <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
@@ -493,8 +682,16 @@ export default function FeeCollectionPage() {
                         <tbody>
                           {step2Items.map(i => (
                             <tr key={i.id} className="border-t border-(--border)">
-                              <td className="px-4 py-3 text-left font-semibold">{i.type === "month" ? "Monthly Fee" : i.label}</td>
-                              <td className="px-4 py-3 text-left font-semibold">{i.type === "month" ? i.label : "—"}</td>
+                              <td className="px-4 py-3 text-left font-semibold">
+                                {i.type === "month"
+                                  ? i.key.startsWith("one-time-")
+                                    ? "One-time Fee"
+                                    : i.key.startsWith("occasional-")
+                                      ? "Occasional Fee"
+                                      : "Monthly Fee"
+                                  : i.label}
+                              </td>
+                              <td className="px-4 py-3 text-left font-semibold">{i.type === "month" ? i.label : "-"}</td>
                               <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">₹ {i.amount}</td>
                               <td className="px-4 py-3">
                                 <div className="flex justify-end">
@@ -513,11 +710,157 @@ export default function FeeCollectionPage() {
                       </table>
                     </div>
                   </div>
-                  <div className="bg-(--bg-card) border border-(--border) rounded-xl flex flex-col">
-                    <div className="flex items-center gap-2 bg-(--bg) p-4 rounded-t-xl text-sm font-semibold text-(--text-muted)">
-                      <Layers size={15} /> Add Fee Head to Pay
+
+                  {((oneTimeRows && oneTimeRows.length > 0) || (occasionalRows && occasionalRows.length > 0)) && (
+                    <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
+                      <div className="flex items-center gap-1 text-sm font-bold text-(--primary) uppercase">
+                        Add One-time & Occasional Fees
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {oneTimeRows.map(r => {
+                          const isChecked = selectedOneTimeIds.includes(r.periodKey);
+                          const isFullyPaid = r.due === 0;
+                          return (
+                            <div key={r.periodKey} className="flex flex-col justify-between px-3 py-2 rounded-lg bg-(--bg) border border-(--border) transition">
+                              <div className="flex justify-between items-center w-full mb-1">
+                                <div>
+                                  <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
+                                  <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
+                                    {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
+                                  </p>
+                                </div>
+                                {isFullyPaid && (
+                                  <button className="py-0.5 px-2 uppercase rounded-md text-[9px] font-bold transition bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white">
+                                    One-Time
+                                  </button>
+                                )}
+                                {!isFullyPaid && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOneTimeIds(prev =>
+                                        prev.includes(r.periodKey)
+                                          ? prev.filter(id => id !== r.periodKey)
+                                          : [...prev, r.periodKey]
+                                      );
+                                    }}
+                                    className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isChecked
+                                      ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                      : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                                      }`}
+                                  >
+                                    {isChecked ? "Selected" : "Select"}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-(--text-muted) font-semibold uppercase">One-time Fee</div>
+                            </div>
+                          );
+                        })}
+
+                        {occasionalRows.map(item => {
+                          const existingInstances = dues.filter(d => d.period.startsWith(`occasional-${item.headId}-`));
+                          return (
+                            <div key={item.headId} className="flex flex-col px-3 py-2 rounded-lg border border-(--border) transition bg-(--bg) space-y-3">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="text-sm font-semibold text-(--text)">{item.headName}</p>
+                                  <p className="text-xs text-(--text-muted) font-medium">Standard Amount: ₹{item.amount}</p>
+                                </div>
+                                <span className="text-[9px] bg-(--primary-soft) text-(--primary) px-2 py-0.5 rounded font-bold uppercase">Occasional</span>
+                              </div>
+
+                              {existingInstances.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <div className="text-[10px] font-bold text-(--text-muted) uppercase">Existing Dues</div>
+                                  <div className="space-y-1">
+                                    {existingInstances.map(inst => {
+                                      const monthKey = inst.period.replace(`occasional-${item.headId}-`, "");
+                                      const monthLabel = MONTHS.find(m => m.key === monthKey)?.label || monthKey;
+                                      const isFullyPaid = inst.due === 0;
+                                      const isMergedInMonth = selectedMonths.some(sm => sm.key === monthKey);
+                                      const isChecked = selectedOneTimeIds.includes(inst.period);
+                                      return (
+                                        <div key={inst.period} className="flex justify-between items-center p-2 rounded bg-(--bg-card) border border-(--border) text-xs">
+                                          <div>
+                                            <span className="font-medium">{monthLabel}</span>
+                                            <span className={`ml-2 text-[10px] font-bold ${isFullyPaid ? "text-emerald-600" : "text-red-500"}`}>
+                                              {isFullyPaid ? "PAID" : `Due ₹${inst.due}`}
+                                            </span>
+                                          </div>
+                                          {isFullyPaid ? null : isMergedInMonth ? (
+                                            <span className="text-[10px] font-bold text-(--text-muted) bg-(--bg-soft) border border-(--border) px-2 py-0.5 rounded">
+                                              Included in Month
+                                            </span>
+                                          ) : (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedOneTimeIds(prev =>
+                                                  prev.includes(inst.period)
+                                                    ? prev.filter(id => id !== inst.period)
+                                                    : [...prev, inst.period]
+                                                );
+                                              }}
+                                              className={`p-1 px-2.5 rounded text-[10px] font-bold transition ${isChecked
+                                                ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                                : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                                                }`}
+                                            >
+                                              {isChecked ? "Selected" : "Select"}
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedMonths.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="text-[10px] font-bold text-(--text-muted) uppercase">Add to Selected Months</div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {selectedMonths.map(m => {
+                                      const periodKey = `occasional-${item.headId}-${m.key}`;
+                                      const existingDue = dues.find(d => d.period === periodKey);
+                                      if (existingDue) return null;
+                                      const isChecked = selectedOneTimeIds.includes(periodKey);
+                                      return (
+                                        <div onClick={() => {
+                                          setSelectedOneTimeIds(prev =>
+                                            prev.includes(periodKey)
+                                              ? prev.filter(id => id !== periodKey)
+                                              : [...prev, periodKey]
+                                          );
+                                        }} key={periodKey} className={`p-1 flex px-2.5 rounded text-[10px] cursor-pointer font-bold transition ${isChecked
+                                          ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                          : "bg-(--bg-card) text-(--text) hover:bg-(--bg-card-hover) border border-(--border)"
+                                          }`}
+                                        >
+                                          {m.label}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedMonths.length === 0 && existingInstances.length === 0 && (
+                                <div className="text-xs text-(--text-muted) italic py-2 text-center bg-(--bg-soft) rounded-lg border border-dashed border-(--border)">
+                                  Select a month in Step 1 to assign this fee
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-4 p-5 items-end">
+                  )}
+
+                  <div className="bg-(--bg-card) border border-(--border) rounded-xl flex flex-col gap-2">
+                    <div className="flex items-center gap-2 pt-4 px-5 text-sm font-bold text-(--primary) uppercase">
+                      Add Flexible Fees
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4 px-5 pb-5 items-end">
                       <div className="flex flex-col gap-1">
                         <p className="text-sm font-medium text-(--text-muted)">Fee Heads</p>
                         <select className="input" value={flexForm.headId} onChange={e => setFlexForm({ ...flexForm, headId: e.target.value })}>
@@ -534,75 +877,154 @@ export default function FeeCollectionPage() {
                       )}
                     </div>
                   </div>
+
+                  <div className="flex justify-between">
+                    <button onClick={() => setStep(1)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
+                    <button
+                      onClick={() => {
+                        if (step2Items.length === 0) {
+                          toast.error("Please select at least one fee item to proceed.");
+                          return;
+                        }
+                        setStep(3);
+                      }}
+                      className="btn-primary flex gap-2"
+                    >
+                      Continue <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {step === 3 && (
+                <>
                   <div className="bg-(--bg-card) border border-(--border) rounded-xl">
                     <div className="flex items-center gap-2 bg-(--bg) p-4 rounded-t-xl text-sm font-semibold text-(--text-muted)">
                       <IndianRupee size={15} /> Payment Details
                     </div>
-                    <div className="p-5 space-y-3">
-                      <div className="grid grid-col-1 md:grid-cols-2 gap-2 md:gap-4">
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium text-(--text-muted)">Amount Paid (in ₹)</p>
-                          <input
-                            type="number" onWheel={(e) => e.preventDefault()}
-                            className="input"
-                            placeholder="i.e. 1200"
-                            value={payment.paidAmount}
-                            onChange={e => setPayment({ ...payment, paidAmount: e.target.value })}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium text-(--text-muted)">Payment Mode</p>
-                          <select
-                            className="input"
-                            value={payment.payType}
-                            onChange={e => setPayment({ ...payment, payType: e.target.value })}
-                          >
-                            <option value="cash">Cash</option>
-                            <option value="upi">UPI / QR</option>
-                            <option value="card">Card (Debit/Credit)</option>
-                            <option value="netbanking">Net Banking</option>
-                            <option value="wallet">Wallet (Paytm/PhonePe)</option>
-                            <option value="cheque">Cheque</option>
-                          </select>
+                    <div className="p-5 space-y-4 divide-y divide-(--border)">
+                      <div className="space-y-3 pb-4">
+                        <h4 className="text-xs font-bold text-(--primary) uppercase">1. Settle Amount</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium text-(--text-muted)">Amount Paid (in ₹)</p>
+                            <div className="relative flex items-center">
+                              <input
+                                ref={amountPaidRef}
+                                type="number" onWheel={(e) => e.preventDefault()}
+                                className="input pr-32 w-full"
+                                placeholder="i.e. 1200"
+                                value={payment.paidAmount}
+                                onChange={e => setPayment({ ...payment, paidAmount: e.target.value })}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPayment({ ...payment, paidAmount: String(Math.max(0, payable - discountAmount)) })}
+                                className="absolute right-2 px-2 py-1 text-[10px] font-bold text-(--primary) hover:text-(--primary)/80 bg-(--primary-soft) rounded transition active:scale-95 border border-(--primary)/10"
+                              >
+                                Pay Full (₹{Math.max(0, payable - discountAmount)})
+                              </button>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium text-(--text-muted)">Payment Mode</p>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { id: "cash", label: "Cash" },
+                                { id: "upi", label: "UPI / QR" },
+                                { id: "card", label: "Card" },
+                                { id: "netbanking", label: "Net Banking" },
+                                { id: "wallet", label: "Wallet" },
+                                { id: "cheque", label: "Cheque" }
+                              ].map(m => (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  onClick={() => setPayment({ ...payment, payType: m.id })}
+                                  className={`px-3 py-2 rounded-lg border text-xs font-semibold transition active:scale-95 flex-1 text-center min-w-[70px]
+                                    ${payment.payType === m.id
+                                      ? "border-(--primary) bg-(--primary-soft) text-(--primary)"
+                                      : "border-(--border) hover:border-(--text-muted) text-(--text-muted) bg-(--bg-card)"
+                                    }`}
+                                >
+                                  {m.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 md:gap-4">
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium text-(--text-muted)">Discount Type</p>
-                          <select
-                            className="input"
-                            value={payment.discountType}
-                            onChange={e => setPayment({ ...payment, discountType: e.target.value })}
-                          >
-                            <option value="flat">₹ (in Rupees)</option>
-                            <option value="percent">% (in Percentage)</option>
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <p className="text-sm font-medium text-(--text-muted)">Discount Value</p>
-                          <input
-                            type="number" onWheel={(e) => e.preventDefault()}
-                            className="input"
-                            placeholder="i.e. 10 or 550"
-                            value={payment.discountValue}
-                            onChange={e => setPayment({ ...payment, discountValue: e.target.value })}
-                          />
+
+                      <div className="space-y-3 py-4">
+                        <h4 className="text-xs font-bold text-(--primary) uppercase">2. Discount Adjustments</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium text-(--text-muted)">Discount Type</p>
+                            <select
+                              className="input"
+                              value={payment.discountType}
+                              onChange={e => setPayment({ ...payment, discountType: e.target.value })}
+                            >
+                              <option value="flat">₹ (Flat Rupees)</option>
+                              <option value="percent">% (Percentage)</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium text-(--text-muted)">Discount Value</p>
+                            <input
+                              type="number" onWheel={(e) => e.preventDefault()}
+                              className="input"
+                              placeholder="i.e. 10 or 550"
+                              value={payment.discountValue}
+                              onChange={e => setPayment({ ...payment, discountValue: e.target.value })}
+                            />
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {(payment.discountType === "flat" ? [50, 100, 200, 500] : [5, 10, 15, 20]).map(val => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setPayment({ ...payment, discountValue: String(val) })}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition active:scale-95 border
+                                    ${Number(payment.discountValue) === val
+                                      ? "border-(--primary) bg-(--primary-soft) text-(--primary)"
+                                      : "border-(--border) hover:border-(--text-muted) text-(--text-muted) bg-(--bg-card)"
+                                    }`}
+                                >
+                                  {payment.discountType === "flat" ? `₹${val}` : `${val}%`}
+                                </button>
+                              ))}
+                              {payment.discountValue && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPayment({ ...payment, discountValue: "" })}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold border border-(--danger)/20 bg-(--danger-soft) text-(--danger) hover:border-(--danger)/40 transition active:scale-95"
+                                >
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium text-(--text-muted)">Remark (if any)</p>
-                        <textarea
-                          className="input"
-                          placeholder="Remark"
-                          onChange={e => setPayment({ ...payment, remark: e.target.value })}
-                        />
+
+                      <div className="space-y-3 pt-4">
+                        <h4 className="text-xs font-bold text-(--primary) uppercase">3. Notes</h4>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-sm font-medium text-(--text-muted)">Remark (if any)</p>
+                          <textarea
+                            className="input h-20 resize-none"
+                            placeholder="Remark"
+                            value={payment.remark}
+                            onChange={e => setPayment({ ...payment, remark: e.target.value })}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <button onClick={() => setStep(1)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
+                    <button onClick={() => setStep(2)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
                     {editable && (
-                      <button onClick={savePayment} className="btn-primary font-semibold"><ShieldCheck size={17} /> Save Payment</button>
+                      <button onClick={triggerSavePayment} className="btn-primary font-semibold flex gap-2"><ShieldCheck size={17} /> Save Payment</button>
                     )}
                   </div>
                 </>
@@ -612,6 +1034,95 @@ export default function FeeCollectionPage() {
         )}
       </div>
 
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="py-3 px-6 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)/50">
+              <h3 className="font-semibold text-base text-(--text)">Confirm Fee Collection</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="p-2 hover:bg-(--bg-soft) rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+              <div className="border border-(--border) bg-(--bg-soft)/40 rounded-xl px-4 py-3 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student Name</span>
+                  <span className="font-semibold text-(--text)">{student.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student ID / App ID</span>
+                  <span className="font-semibold text-(--text)">{student.appId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Class & Section</span>
+                  <span className="font-semibold text-(--text)">
+                    {getClassName(student.className)} - {getSectionName(student.className, student.section)}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--primary)">Particulars Summary</p>
+                <div className="border border-(--border) rounded-xl divide-y divide-(--border) bg-(--bg-soft)/20">
+                  {step2Items.filter(i => i.type === "month").map((m, idx) => (
+                    <div key={idx} className="flex justify-between py-2 px-4">
+                      <span className="font-medium text-(--text)">Fee Period: {m.label || m.period}</span>
+                      <span className="font-bold text-(--primary)">₹ {m.amount}</span>
+                    </div>
+                  ))}
+                  {flexibleItems.map((f, idx) => (
+                    <div key={idx} className="flex justify-between py-2 px-4">
+                      <span className="font-medium text-(--text)">Flexible: {f.label}</span>
+                      <span className="font-bold text-(--primary)">₹ {f.amount}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="border border-(--border) rounded-xl px-4 py-2 bg-(--bg) space-y-2.5">
+                <div className="flex justify-between font-medium">
+                  <span className="text-(--text-muted)">Total Due</span>
+                  <span className="text-(--text)">₹ {payable}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between font-medium text-red-500">
+                    <span>Discount</span>
+                    <span>(-) ₹ {discountAmount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-(--primary)">
+                  <span>Net Payable</span>
+                  <span className="font-semibold">₹ {payable - discountAmount}</span>
+                </div>
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-green-600">
+                  <span>Collecting Amount</span>
+                  <span className="font-semibold">₹ {payment.paidAmount}</span>
+                </div>
+                <div className="flex justify-between font-medium text-md border-t border-(--border) pt-2 text-red-600">
+                  <span>Fee Due</span>
+                  <span className="font-semibold">₹ {finalDue}</span>
+                </div>
+                <div className="flex justify-between font-medium text-xs border-t border-(--border) pt-2 text-(--text-muted)">
+                  <span>Payment Mode</span>
+                  <span className="capitalize">{payment.payType}</span>
+                </div>
+                {payment.remark?.trim() && (
+                  <div className="flex justify-between font-medium text-xs text-(--text-muted)">
+                    <span>Remark</span>
+                    <span>{payment.remark}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-(--border) bg-(--bg-soft)/30 flex justify-end gap-3">
+              <button onClick={() => setShowConfirmModal(false)} className="btn-outline px-4 py-2 text-sm font-semibold">
+                Cancel
+              </button>
+              <button onClick={savePayment} className="btn-primary px-5 py-2 text-sm font-semibold shadow-md">
+                Confirm & Collect
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showSuccessModal && savedReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-(--bg-card) w-full max-w-md rounded-xl border border-(--border) shadow-xl shadow-(--status-p-bg)/20 overflow-hidden transform transition-all animate-in zoom-in-95 duration-200 flex flex-col items-center p-8 text-center relative">
@@ -638,7 +1149,7 @@ export default function FeeCollectionPage() {
             <div className="w-full space-y-3">
               <button
                 onClick={handlePrintRequest}
-                className="w-full py-3 rounded-lg border border-(--status-p-border) font-semibold text-(status-p-text) shadow-sm transition-transform active:scale-95 flex items-center justify-center gap-2 bg-(--status-p-bg) hover:bg-(--status-p-bg)/60"
+                className="w-full py-3 rounded-lg border border-(--status-p-border) font-semibold text-(status-p-text) shadow-none transition-transform active:scale-95 flex items-center justify-center gap-2 bg-(--status-p-bg) hover:bg-(--status-p-bg)/60"
               >
                 <Printer size={15} /> Print Receipt
               </button>
@@ -670,8 +1181,8 @@ export default function FeeCollectionPage() {
                 <p className="text-[11px] font-bold text-(--text-muted) uppercase">Layout Size</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { id: 'a4', label: 'Full A4' },
-                    { id: '1/2', label: '1/2 A4' },
+                    { id: "a4", label: "Full A4" },
+                    { id: "1/2", label: "1/2 A4" },
                   ].map(sz => (
                     <button
                       key={sz.id}
@@ -689,9 +1200,9 @@ export default function FeeCollectionPage() {
                 <p className="text-[11px] font-bold text-(--text-muted) uppercase">Copies on Page</p>
                 <div className="flex gap-2">
                   {[1, 2, 3, 4].map(num => {
-                    const disabled = (pdfOptions.size === 'a4' && num > 1) ||
-                      (pdfOptions.size === '1/2' && num > 2) ||
-                      (pdfOptions.size === '1/3' && num > 3);
+                    const disabled = (pdfOptions.size === "a4" && num > 1) ||
+                      (pdfOptions.size === "1/2" && num > 2) ||
+                      (pdfOptions.size === "1/3" && num > 3);
                     return (
                       <button
                         key={num}
@@ -703,7 +1214,7 @@ export default function FeeCollectionPage() {
                       >
                         {num}
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -731,6 +1242,8 @@ export default function FeeCollectionPage() {
           </div>
         </div>
       )}
+
+
     </RequirePermission>
   );
 }

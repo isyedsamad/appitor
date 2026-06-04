@@ -364,7 +364,7 @@ export default function StudentsListPage() {
                       <td className="px-5 py-2">
                         <div className="flex flex-col items-center justify-center">
                           <span className="font-semibold text-xs">
-                            {classData?.find(c => c.id === student.classId)?.name || student.classId} {selectedClass?.sections.find(sec => sec.id === student.sectionId)?.name || student.sectionId}
+                            {classData?.find(c => c.id === student.classId)?.name || student.classId} {classData?.find(c => c.id === student.classId)?.sections.find(sec => sec.id === student.sectionId)?.name || student.sectionId}
                           </span>
                         </div>
                       </td>

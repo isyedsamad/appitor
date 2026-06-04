@@ -73,6 +73,7 @@ export default function StudentProfilePage() {
   const [monthlyLogs, setMonthlyLogs] = useState(null);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [feeSummary, setFeeSummary] = useState(null);
+  const [template, setTemplate] = useState(null);
   const [payments, setPayments] = useState([]);
   const [refunds, setRefunds] = useState([]);
   const [loadingFees, setLoadingFees] = useState(false);
@@ -173,6 +174,23 @@ export default function StudentProfilePage() {
       const summarySnap = await getDoc(summaryRef);
       setFeeSummary(summarySnap.exists() ? summarySnap.data() : null);
 
+      const assignSnap = await getDocs(
+        query(
+          collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "assignments", "items"),
+          where("studentId", "==", uid),
+          where("status", "==", "active")
+        )
+      );
+      if (!assignSnap.empty) {
+        const assignment = assignSnap.docs[0].data();
+        const tSnap = await getDoc(
+          doc(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "templates", "items", assignment.templateId)
+        );
+        setTemplate(tSnap.exists() ? tSnap.data() : null);
+      } else {
+        setTemplate(null);
+      }
+
       const paymentsRef = collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "payments", "items");
       const pQuery = query(paymentsRef, where("studentId", "==", uid), where("sessionId", "==", selectedSession));
       const pSnap = await getDocs(pQuery);
@@ -236,22 +254,117 @@ export default function StudentProfilePage() {
 
   const monthRows = useMemo(() => {
     if (!MONTHS?.length) return [];
-    return MONTHS.map(m => {
+    
+    const mRows = MONTHS.map(m => {
       const monthData = feeSummary?.months?.[m.key];
+      let breakdown = [];
+      let total = 0;
+      let paid = 0;
+      let status = "pending";
+
       if (monthData) {
-        return {
-          ...m,
-          ...monthData,
-        };
+        breakdown = [...(monthData.headsSnapshot || [])];
+        total = Number(monthData.total || 0);
+        paid = Number(monthData.paid || 0);
+        status = monthData.status;
+      } else {
+        const activeHeads = template?.items?.filter(
+          item => item.frequency === "monthly"
+        ) || [];
+        breakdown = [...activeHeads];
+        total = activeHeads.reduce((s, h) => s + h.amount, 0);
+        paid = 0;
+        status = activeHeads.length > 0 ? "due" : "pending";
       }
+
+      if (feeSummary?.months) {
+        Object.entries(feeSummary.months).forEach(([periodKey, data]) => {
+          if (periodKey.startsWith("occasional-") && periodKey.endsWith(`-${m.key}`)) {
+            if (data.headsSnapshot) {
+              data.headsSnapshot.forEach(h => {
+                if (!breakdown.some(x => x.headId === h.headId)) {
+                  breakdown.push(h);
+                }
+              });
+            }
+            total += Number(data.total || 0);
+            paid += Number(data.paid || 0);
+          }
+        });
+      }
+
+      const due = total - paid;
+      if (total > 0 && paid === total) {
+        status = "paid";
+      } else if (paid > 0) {
+        status = "partial";
+      }
+
       return {
-        ...m,
-        total: 0,
-        paid: 0,
-        status: "pending",
+        key: m.key,
+        label: m.label,
+        type: "month",
+        headsSnapshot: breakdown,
+        total,
+        paid,
+        status,
       };
     });
-  }, [feeSummary, MONTHS]);
+
+    const oRows = [];
+    if (template) {
+      const oneTimeItems = template.items.filter(item => item.frequency === "one-time");
+      oneTimeItems.forEach(item => {
+        const periodKey = `one-time-${item.headId}`;
+        const monthData = feeSummary?.months?.[periodKey];
+        if (monthData) {
+          oRows.push({
+            key: periodKey,
+            label: `${item.headName} (One-time)`,
+            type: "one-time",
+            ...monthData,
+          });
+        } else {
+          oRows.push({
+            key: periodKey,
+            label: `${item.headName} (One-time)`,
+            type: "one-time",
+            headsSnapshot: [{ headId: item.headId, headName: item.headName, amount: item.amount }],
+            total: item.amount,
+            paid: 0,
+            status: "due",
+          });
+        }
+      });
+    }
+
+    const occRows = [];
+    if (feeSummary?.months) {
+      Object.entries(feeSummary.months).forEach(([periodKey, data]) => {
+        if (periodKey.startsWith("occasional-")) {
+          const isMerged = MONTHS.some(m => periodKey.endsWith(`-${m.key}`));
+          if (isMerged) return;
+          
+          if (occRows.some(x => x.key === periodKey)) return;
+          const parts = periodKey.split("-");
+          const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`) || periodKey === `occasional-${item.headId}`);
+          const headName = matchingItem ? matchingItem.headName : "Occasional Fee";
+          const hasMonth = parts.length > 2;
+          const monthKey = hasMonth ? (matchingItem ? periodKey.replace(`occasional-${matchingItem.headId}-`, "") : parts[2]) : null;
+          const monthLabel = monthKey ? (MONTHS.find(m => m.key === monthKey)?.label || monthKey) : "";
+          const label = monthLabel ? `${headName} (${monthLabel})` : `${headName} (Occasional)`;
+          occRows.push({
+            key: periodKey,
+            label,
+            type: "occasional",
+            ...data,
+          });
+        }
+      });
+    }
+
+    return [...mRows, ...oRows, ...occRows];
+  }, [feeSummary, template, MONTHS]);
   const update = (k, v) =>
     setForm(p => ({ ...p, [k]: v }));
   const selectedClass = classData && classData.find(
@@ -277,6 +390,7 @@ export default function StudentProfilePage() {
           section: form.section,
           gender: form.gender,
           dob: form.dob,
+          transport: form.transport || "no",
         },
       });
       toast.success("Student Profile updated!");
@@ -407,6 +521,20 @@ export default function StudentProfilePage() {
                     <Field label="Full Name" value={form.name || ""} onChange={v => update("name", v)} icon={User} disabled={!editable} />
                     <Field label="Gender" value={form.gender || ""} onChange={v => update("gender", v)} options={["Male", "Female", "Other"]} icon={User} disabled={!editable} />
                     <Field label="Date of Birth" value={toInputDate(form.dob) || ""} onChange={v => update("dob", formatInputDate(v))} type="date" icon={Calendar} disabled={!editable} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
+                        <User size={12} /> Transport Facility
+                      </label>
+                      <select
+                        className="input text-sm"
+                        value={form.transport || "no"}
+                        disabled={!editable}
+                        onChange={e => update("transport", e.target.value)}
+                      >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
                   </div>
                 </section>
 
@@ -941,6 +1069,25 @@ function FeeInfoModal({ periodId, payments, refunds, loading, onClose, onPrint }
   const periodPayments = payments.filter(p => p.items?.some(i => i.period === periodId || (i.id && i.id.toString() === periodId)));
   const periodRefunds = refunds.filter(r => r.refundItems?.[periodId]);
 
+  const displayPeriod = (() => {
+    if (periodId.startsWith("one-time-") || periodId.startsWith("onetime-")) {
+      const headName = periodPayments[0]?.items?.find(i => i.period === periodId)?.headsSnapshot?.[0]?.headName;
+      return headName ? `One-time: ${headName}` : "One-time Fee";
+    }
+    if (periodId.startsWith("occasional-")) {
+      const headName = periodPayments[0]?.items?.find(i => i.period === periodId)?.headsSnapshot?.[0]?.headName;
+      const parts = periodId.split("-");
+      const ym = parts.slice(-2);
+      if (ym.length === 2 && ym[0].length === 4) {
+        const dt = new Date(`${ym[0]}-${ym[1]}-01`);
+        const ml = dt.toLocaleString("en-US", { month: "short", year: "numeric" });
+        return headName ? `Occasional: ${headName} (${ml})` : `Occasional (${ml})`;
+      }
+      return headName ? `Occasional: ${headName}` : "Occasional Fee";
+    }
+    return periodId;
+  })();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-(--bg-card) border border-(--border) w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -949,7 +1096,7 @@ function FeeInfoModal({ periodId, payments, refunds, loading, onClose, onPrint }
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <Info size={18} className="text-(--primary)" /> Transaction Insights
             </h3>
-            <p className="text-xs font-semibold text-(--text-muted)">Details for: <span className="font-semibold text-(--text)">{periodId}</span></p>
+            <p className="text-xs font-semibold text-(--text-muted)">Details for: <span className="font-semibold text-(--text)">{displayPeriod}</span></p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-(--bg-soft) rounded-xl transition-colors">
             <X size={18} />

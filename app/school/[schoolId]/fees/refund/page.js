@@ -12,6 +12,17 @@ import secureAxios from "@/lib/secureAxios";
 import { formatDateSlash } from "@/lib/dateUtils";
 
 export default function RefundPage() {
+  const formatOccasionalLabel = (period, headsSnapshot) => {
+    const headName = headsSnapshot?.[0]?.headName || "Occasional Fee";
+    const parts = period.split("-");
+    const ym = parts.slice(-2);
+    if (ym.length === 2 && ym[0].length === 4) {
+      const dt = new Date(`${ym[0]}-${ym[1]}-01`);
+      const ml = dt.toLocaleString("en-US", { month: "short", year: "numeric" });
+      return `Occasional Fee: ${headName} (${ml})`;
+    }
+    return `Occasional Fee: ${headName}`;
+  };
   const { schoolUser, setLoading, currentSession, sessionList } = useSchool();
   const { branch, branchInfo } = useBranch();
   const [sessionId, setSessionId] = useState(null);
@@ -22,13 +33,16 @@ export default function RefundPage() {
   const [refundMap, setRefundMap] = useState({});
   const [refundRemark, setRefundRemark] = useState('');
   const [payType, setPayType] = useState('cash');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   useEffect(() => {
-    if (searchType == "receipt") {
-      setQueryText("RCPT/" + branchInfo?.branchCode + "/" + currentSession + "/");
+    if (searchType === "receipt") {
+      if (branchInfo?.branchCode && currentSession) {
+        setQueryText("RCPT/" + branchInfo.branchCode + "/" + currentSession + "/");
+      }
     } else {
       setQueryText("");
     }
-  }, [searchType]);
+  }, [searchType, branchInfo, currentSession]);
   useEffect(() => {
     if (schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
@@ -77,7 +91,7 @@ export default function RefundPage() {
             "payments",
             "items"
           ),
-          where("studentId", "==", studentData.uid),
+          where("studentId", "==", studentData.uid || snapStudent.docs[0].id),
           where('sessionId', '==', sessionId),
           orderBy('createdAt', 'desc')
         );
@@ -107,32 +121,37 @@ export default function RefundPage() {
     (s, v) => s + Number(v || 0),
     0
   );
-  const submitRefund = async () => {
+  const triggerRefund = () => {
+    if (!openPayment) {
+      toast.error("No payment selected for refund");
+      return;
+    }
+    if (!refundMap || Object.keys(refundMap).length === 0) {
+      toast.error("Please enter refund amount");
+      return;
+    }
+    if (totalRefund <= 0) {
+      toast.error("Refund amount must be greater than 0");
+      return;
+    }
+    const invalidEntry = Object.entries(refundMap).find(
+      ([_, amt]) => Number(amt) < 0
+    );
+    if (invalidEntry) {
+      toast.error("Invalid refund amount detected");
+      return;
+    }
+    if (!refundRemark?.trim()) {
+      toast.error("Refund remark is required");
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeRefund = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
     try {
-      if (!openPayment) {
-        toast.error("No payment selected for refund");
-        return;
-      }
-      if (!refundMap || Object.keys(refundMap).length === 0) {
-        toast.error("Please enter refund amount");
-        return;
-      }
-      if (totalRefund <= 0) {
-        toast.error("Refund amount must be greater than 0");
-        return;
-      }
-      const invalidEntry = Object.entries(refundMap).find(
-        ([_, amt]) => Number(amt) < 0
-      );
-      if (invalidEntry) {
-        toast.error("Invalid refund amount detected");
-        return;
-      }
-      if (!refundRemark?.trim()) {
-        toast.error("Refund remark is required");
-        return;
-      }
-      setLoading(true);
       await secureAxios.post("/api/school/fees/refund", {
         branch,
         paymentId: openPayment.id,
@@ -146,6 +165,7 @@ export default function RefundPage() {
         payType
       });
       toast.success("Refund processed successfully");
+      await searchPayments();
       setOpenPayment(null);
       setRefundMap({});
       setRefundRemark("");
@@ -174,49 +194,61 @@ export default function RefundPage() {
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <div className="flex rounded-lg overflow-hidden">
+          <div className="flex rounded-md overflow-hidden shadow-sm border border-(--border) w-fit bg-(--bg-card)">
             {["student", "receipt"].map(t => (
               <button
                 key={t}
                 onClick={() => setSearchType(t)}
-                className={`px-4 py-2 text-sm font-medium rounded-none border ${searchType === t
+                className={`px-5 py-2 text-sm font-semibold flex items-center gap-2 transition-all ${searchType === t
                   ? "bg-(--primary) text-white border-(--primary)"
-                  : "bg-(--bg-card) border-(--border)"
+                  : "text-(--text-muted) hover:text-(--text) hover:bg-(--bg-soft)"
                   }
                   ${t === "receipt" ? "rounded-r-md" : "rounded-l-md"}`}
               >
-                {t === "receipt" ? (<><Hash size={16} /> Receipt No</>) : (<><User size={16} /> App ID</>)}
+                {t === "receipt" ? (
+                  <>
+                    <Hash size={15} />
+                    <span>Receipt No</span>
+                  </>
+                ) : (
+                  <>
+                    <User size={15} />
+                    <span>Student ID</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
-          <div className={`grid gap-3 items-end ${searchType == 'receipt' ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-5'}`}>
-            {searchType != 'receipt' && (
-              <div>
-                <p className="text-sm text-(--text-muted) font-medium">Session</p>
+          <div className="flex flex-wrap gap-4 items-end py-2">
+            {searchType !== "receipt" && (
+              <div className="w-full sm:w-auto min-w-[200px]">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">
+                  Academic Session
+                </p>
                 <select
-                  className="input max-w-xs"
-                  value={sessionId ? sessionId : ''}
-                  onChange={e => {
-                    const id = e.target.value;
-                    setSessionId(id);
-                  }}
+                  className="input w-full"
+                  value={sessionId ? sessionId : ""}
+                  onChange={e => setSessionId(e.target.value)}
                 >
-                  {sessionList && sessionList.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.id}
-                      {s.id === sessionId ? " (Current)" : ""}
-                    </option>
-                  ))}
+                  {sessionList &&
+                    sessionList.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.id}
+                        {s.id === sessionId ? " (Current)" : ""}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
-            <div>
-              <p className="text-sm text-(--text-muted) font-medium">{searchType == 'receipt' ? 'Receipt No' : 'Student App ID'}</p>
+            <div className="flex-1 min-w-[250px]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">
+                {searchType === "receipt" ? "Receipt Number" : "Student ID"}
+              </p>
               <input
-                className={`input flex-1`}
+                className="input w-full"
                 placeholder={
                   searchType === "receipt"
-                    ? `i.e. RCPT/${branchInfo?.branchCode || 'BRN'}/${currentSession || '2025-26'}/001928`
+                    ? `i.e. RCPT/${branchInfo?.branchCode || "BRN"}/${currentSession || "2025-26"}/001928`
                     : "i.e. A250001"
                 }
                 value={queryText}
@@ -224,47 +256,68 @@ export default function RefundPage() {
                 onKeyDown={e => e.key === "Enter" && searchPayments()}
               />
             </div>
-            <button onClick={searchPayments} className="btn-primary">
-              <Search size={18} /> Search
+            <button
+              onClick={searchPayments}
+              className="btn-primary px-6 py-2.5 h-[42px] w-full sm:w-auto font-semibold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+            >
+              <Search size={16} />
+              <span>Search Payments</span>
             </button>
           </div>
         </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
+        <div className="bg-(--bg-card) border border-(--border) rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-(--bg)">
+              <thead className="bg-(--bg) border-b border-(--border)">
                 <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Receipt</th>
-                  <th className="px-4 py-3 text-left">Mode</th>
-                  <th className="px-4 py-3 text-right">Paid</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Receipt No
+                  </th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Payment Mode
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Paid Amount
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
-                      className="px-4 py-6 text-center text-(--text-muted)"
+                      colSpan={5}
+                      className="px-6 py-10 text-center text-(--text-muted) font-medium"
                     >
                       No receipt found
                     </td>
                   </tr>
                 ) : (
                   rows.map(r => (
-                    <tr key={r.id} className="border-t border-(--border)">
-                      <td className="px-4 py-3 font-semibold">
+                    <tr
+                      key={r.id}
+                      className="border-t border-(--border) hover:bg-(--bg-soft)/50 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-semibold text-(--text)">
                         {formatDateSlash(r.createdAt?.toDate())}
                       </td>
-                      <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
-                      <td className="px-4 py-3 capitalize font-medium">{r.paymentMode}</td>
-                      <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                      <td className="px-6 py-4 font-semibold text-(--text)">
+                        {r.receiptNo}
+                      </td>
+                      <td className="px-6 py-4 capitalize font-semibold text-(--text)">
+                        {r.paymentMode}
+                      </td>
+                      <td className="px-6 py-4 text-right font-bold text-(--text) whitespace-nowrap">
                         ₹ {r.paidAmount}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-6 py-4 text-right">
                         <button
-                          className="btn-outline text-sm font-semibold bg-(--status-a-bg) text-(--status-a-text) border border-(--status-a-border) hover:opacity-70"
+                          className="px-4 py-1.5 text-xs font-bold bg-(--status-a-bg) text-(--status-a-text) border border-(--status-a-border) rounded-lg shadow-sm hover:opacity-80 transition-all"
                           onClick={() => setOpenPayment(r)}
                         >
                           Refund
@@ -310,7 +363,6 @@ export default function RefundPage() {
                         Collected By
                       </div>
                       <div className="flex items-center gap-2 font-medium">
-                        {/* <User size={14} /> */}
                         {openPayment.collectedBy?.name}
                       </div>
                       <div className="text-xs font-semibold text-(--text-muted)">
@@ -389,7 +441,17 @@ export default function RefundPage() {
                         >
                           <div className="flex bg-(--bg) border-b border-(--border) rounded-t-xl py-3 px-4 flex-col md:flex-row md:justify-between md:items-center gap-1">
                             <div className="font-semibold text-(--primary) text-md">
-                              {item.type === "month" ? `Fee Period: ${item.period}` : `Flexible Fee: ${item.label}`}
+                              {item.type === "month" ? (
+                                item.period.startsWith("one-time-") || item.period.startsWith("onetime-") ? (
+                                  `One-time Fee: ${item.headsSnapshot?.[0]?.headName || "One-Time Fee"}`
+                                ) : item.period.startsWith("occasional-") ? (
+                                  formatOccasionalLabel(item.period, item.headsSnapshot)
+                                ) : (
+                                  `Fee Period: ${item.period}`
+                                )
+                              ) : (
+                                `Flexible Fee: ${item.label}`
+                              )}
                             </div>
                             <div className="text-xs font-medium text-(--text-muted)">
                               Paid on {formatDateSlash(item.paidAt.toDate())}
@@ -459,7 +521,7 @@ export default function RefundPage() {
               <div className="flex flex-col md:flex-row justify-end gap-3 px-4 md:px-6 py-4 border-t border-(--border)">
                 <button onClick={() => setOpenPayment(null)}
                   className="btn-outline w-full md:w-auto">Cancel</button>
-                <button disabled={totalRefund <= 0} onClick={submitRefund}
+                <button disabled={totalRefund <= 0} onClick={triggerRefund}
                   className="btn-primary font-semibold w-full md:w-auto flex gap-2 items-center">
                   <ShieldCheck size={18} /> Confirm Refund
                 </button>
@@ -467,6 +529,80 @@ export default function RefundPage() {
             </div>
           </div>
         )}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="py-4 px-6 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)/50">
+              <h3 className="font-bold text-base text-(--text)">Confirm Fee Refund</h3>
+              <button onClick={() => setShowConfirmModal(false)} className="p-2 hover:bg-(--bg-soft) rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+              <div className="border border-(--border) bg-(--bg-soft)/40 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Receipt Number</span>
+                  <span className="font-bold text-(--text)">{openPayment.receiptNo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Student ID / App ID</span>
+                  <span className="font-semibold text-(--text)">{openPayment.appId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-(--text-muted) font-medium">Refund Mode</span>
+                  <span className="font-semibold text-(--text) capitalize">{payType}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">Refund Breakdown</p>
+                <div className="border border-(--border) rounded-xl divide-y divide-(--border) bg-(--bg-soft)/20">
+                  {Object.entries(refundMap).filter(([_, amt]) => Number(amt) > 0).map(([periodOrId, amt]) => {
+                    const item = openPayment.items.find(i => (i.type === "month" ? i.period === periodOrId : i.id?.toString() === periodOrId));
+                    return (
+                      <div key={periodOrId} className="flex justify-between p-3">
+                        <span className="font-medium text-(--text)">
+                          {item?.type === "month" ? (
+                            item.period.startsWith("one-time-") || item.period.startsWith("onetime-") ? (
+                              `One-time Fee: ${item.headsSnapshot?.[0]?.headName || "One-Time Fee"}`
+                            ) : item.period.startsWith("occasional-") ? (
+                              formatOccasionalLabel(item.period, item.headsSnapshot)
+                            ) : (
+                              `Fee Period: ${item.period}`
+                            )
+                          ) : (
+                            `Flexible: ${item?.label || item?.name}`
+                          )}
+                        </span>
+                        <span className="font-bold text-red-500">₹ {amt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="border border-(--border) rounded-xl p-4 bg-(--bg) space-y-2">
+                <div className="flex justify-between font-bold text-md text-red-500">
+                  <span>Total Refund Amount</span>
+                  <span>₹ {totalRefund}</span>
+                </div>
+                {refundRemark?.trim() && (
+                  <div className="flex justify-between font-semibold text-xs text-(--text-muted) border-t border-(--border) pt-2">
+                    <span>Remark/Reason</span>
+                    <span>{refundRemark}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t border-(--border) bg-(--bg-soft)/30 flex justify-end gap-3">
+              <button onClick={() => setShowConfirmModal(false)} className="btn-outline px-4 py-2 font-semibold">
+                Cancel
+              </button>
+              <button onClick={executeRefund} className="btn-primary px-5 py-2 font-bold shadow-md bg-red-600 border-red-600 hover:bg-red-700">
+                Confirm & Refund
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </RequirePermission >
   );

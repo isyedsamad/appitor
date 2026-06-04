@@ -80,7 +80,7 @@ export default function AdminDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          <div className="group relative overflow-hidden rounded-[2rem] bg-[var(--text)] p-8 shadow-xl transition-all hover:shadow-(--primary)/10">
+          <div className="group relative overflow-hidden rounded-[2rem] bg-(--bg-card) p-8 shadow-xl transition-all hover:shadow-(--primary)/10">
             <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-(--primary)/20 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
