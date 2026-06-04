@@ -75,7 +75,7 @@ export async function DELETE(req) {
     const { searchParams } = new URL(req.url);
     const branch = searchParams.get("branch");
     const classId = searchParams.get("classId");
-    const sectionId = searchParams.get("sectionId");
+    const sectionId = searchParams.get("sectionId") || searchParams.get("secId");
     if (!branch || !classId || !sectionId) {
       return NextResponse.json(
         { message: "branch, classId and sectionId are required" },
