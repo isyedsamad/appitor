@@ -53,6 +53,7 @@ export default function FeeCollectionPage() {
   const [dues, setDues] = useState([]);
   const [selectedMonths, setSelectedMonths] = useState([]);
   const [selectedOneTimeIds, setSelectedOneTimeIds] = useState([]);
+
   const [flexibleHeads, setFlexibleHeads] = useState([]);
   const [flexibleItems, setFlexibleItems] = useState([]);
   const [flexForm, setFlexForm] = useState({
@@ -121,6 +122,7 @@ export default function FeeCollectionPage() {
     setDues([]);
     setSelectedMonths([]);
     setSelectedOneTimeIds([]);
+
     setFlexibleItems([]);
     setPayment({
       paidAmount: "",
@@ -197,32 +199,62 @@ export default function FeeCollectionPage() {
     if (!template || !MONTHS?.length) return [];
     return MONTHS.map(m => {
       const dueEntry = dues.find(d => d.period === m.key);
+      let breakdown = [];
+      let total = 0;
+      let paid = 0;
+      let status = "due";
+
       if (dueEntry) {
-        return {
-          ...m,
-          breakdown: dueEntry.headsSnapshot || [],
-          total: Number(dueEntry.total || 0),
-          paid: Number(dueEntry.paid || 0),
-          due: Number(dueEntry.total || 0) - Number(dueEntry.paid || 0),
-          status: dueEntry.status,
-        };
+        breakdown = [...(dueEntry.headsSnapshot || [])];
+        total = Number(dueEntry.total || 0);
+        paid = Number(dueEntry.paid || 0);
+        status = dueEntry.status;
+      } else {
+        const applicable = template.items.filter(i => {
+          if (i.frequency === "monthly") return true;
+          if (i.frequency === "quarterly") return m.q;
+          return false;
+        });
+        breakdown = [...applicable];
+        total = applicable.reduce((s, i) => s + Number(i.amount), 0);
+        paid = 0;
+        status = "due";
       }
-      const applicable = template.items.filter(i => {
-        if (i.frequency === "monthly") return true;
-        if (i.frequency === "quarterly") return m.q;
-        return false;
+
+      const occasionalDuesForMonth = dues.filter(
+        d => d.period.startsWith("occasional-") && d.period.endsWith(`-${m.key}`)
+      );
+      occasionalDuesForMonth.forEach(od => {
+        if (od.headsSnapshot) {
+          od.headsSnapshot.forEach(h => {
+            if (!breakdown.some(x => x.headId === h.headId)) {
+              breakdown.push(h);
+            }
+          });
+        }
+        total += Number(od.total || 0);
+        paid += Number(od.paid || 0);
       });
-      const total = applicable.reduce((s, i) => s + Number(i.amount), 0);
+
+      const due = total - paid;
+      if (total > 0 && paid === total) {
+        status = "paid";
+      } else if (paid > 0) {
+        status = "partial";
+      }
+
       return {
         ...m,
-        breakdown: applicable,
+        breakdown,
         total,
-        paid: 0,
-        due: total,
-        status: "due",
+        paid,
+        due,
+        status,
       };
     });
   }, [template, dues, MONTHS]);
+
+
 
   const oneTimeRows = useMemo(() => {
     if (!template) return [];
@@ -254,31 +286,8 @@ export default function FeeCollectionPage() {
 
   const occasionalRows = useMemo(() => {
     if (!template) return [];
-    return template.items
-      .filter(i => i.frequency === "occasional" || i.frequency === "yearly")
-      .map(item => {
-        const periodKey = `occasional-${item.headId}`;
-        const dueEntry = dues.find(d => d.period === periodKey);
-        if (dueEntry) {
-          return {
-            ...item,
-            periodKey,
-            total: Number(dueEntry.total || 0),
-            paid: Number(dueEntry.paid || 0),
-            due: Number(dueEntry.total || 0) - Number(dueEntry.paid || 0),
-            status: dueEntry.status,
-          };
-        }
-        return {
-          ...item,
-          periodKey,
-          total: Number(item.amount),
-          paid: 0,
-          due: Number(item.amount),
-          status: "due",
-        };
-      });
-  }, [template, dues]);
+    return template.items.filter(i => i.frequency === "occasional" || i.frequency === "yearly");
+  }, [template]);
 
   const step2Items = useMemo(() => {
     const monthItems = selectedMonths.map(m => {
@@ -313,25 +322,43 @@ export default function FeeCollectionPage() {
         ]
       }));
 
-    const occasionalItemsMapped = occasionalRows
-      .filter(r => selectedOneTimeIds.includes(r.periodKey) && r.due > 0)
-      .map(r => ({
-        id: r.periodKey,
-        key: r.periodKey,
-        label: r.headName,
-        amount: r.due,
-        type: "month",
-        headsSnapshot: [
-          {
-            headId: r.headId,
-            headName: r.headName,
-            amount: r.total,
-          }
-        ]
-      }));
+    const selectedMonthKeys = selectedMonths.map(m => m.key);
+    const occasionalItemsMapped = selectedOneTimeIds
+      .filter(id => id.startsWith("occasional-"))
+      .filter(periodKey => {
+        const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`));
+        if (!matchingItem) return false;
+        const monthKey = periodKey.replace(`occasional-${matchingItem.headId}-`, "");
+        const hasDue = dues.some(d => d.period === periodKey);
+        return !(selectedMonthKeys.includes(monthKey) && hasDue);
+      })
+      .map(periodKey => {
+        const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`));
+        if (!matchingItem) return null;
+        const monthKey = periodKey.replace(`occasional-${matchingItem.headId}-`, "");
+        const monthLabel = MONTHS.find(m => m.key === monthKey)?.label || monthKey;
+        const dueEntry = dues.find(d => d.period === periodKey);
+        const amount = dueEntry ? Number(dueEntry.total - dueEntry.paid) : Number(matchingItem.amount);
+        const total = dueEntry ? Number(dueEntry.total) : Number(matchingItem.amount);
+        return {
+          id: periodKey,
+          key: periodKey,
+          label: `${matchingItem.headName} (${monthLabel})`,
+          amount,
+          type: "month",
+          headsSnapshot: [
+            {
+              headId: matchingItem.headId,
+              headName: matchingItem.headName,
+              amount: total,
+            }
+          ]
+        };
+      })
+      .filter(Boolean);
 
     return [...monthItems, ...oneTimeItems, ...occasionalItemsMapped, ...flexibleItems];
-  }, [selectedMonths, oneTimeRows, occasionalRows, selectedOneTimeIds, flexibleItems]);
+  }, [selectedMonths, oneTimeRows, template, dues, MONTHS, selectedOneTimeIds, flexibleItems]);
 
   const payable = step2Items.reduce((s, i) => s + i.amount, 0);
 
@@ -659,7 +686,9 @@ export default function FeeCollectionPage() {
                                 {i.type === "month"
                                   ? i.key.startsWith("one-time-")
                                     ? "One-time Fee"
-                                    : "Monthly Fee"
+                                    : i.key.startsWith("occasional-")
+                                      ? "Occasional Fee"
+                                      : "Monthly Fee"
                                   : i.label}
                               </td>
                               <td className="px-4 py-3 text-left font-semibold">{i.type === "month" ? i.label : "-"}</td>
@@ -692,7 +721,7 @@ export default function FeeCollectionPage() {
                           const isChecked = selectedOneTimeIds.includes(r.periodKey);
                           const isFullyPaid = r.due === 0;
                           return (
-                            <div key={r.periodKey} className="flex flex-col justify-between p-3 rounded-lg border border-(--border) transition bg-(--bg-soft)/25">
+                            <div key={r.periodKey} className="flex flex-col justify-between px-3 py-2 rounded-lg bg-(--bg) border border-(--border) transition">
                               <div className="flex justify-between items-center w-full mb-1">
                                 <div>
                                   <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
@@ -700,6 +729,11 @@ export default function FeeCollectionPage() {
                                     {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
                                   </p>
                                 </div>
+                                {isFullyPaid && (
+                                  <button className="py-0.5 px-2 uppercase rounded-md text-[9px] font-bold transition bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white">
+                                    One-Time
+                                  </button>
+                                )}
                                 {!isFullyPaid && (
                                   <button
                                     onClick={() => {
@@ -723,37 +757,98 @@ export default function FeeCollectionPage() {
                           );
                         })}
 
-                        {occasionalRows.map(r => {
-                          const isChecked = selectedOneTimeIds.includes(r.periodKey);
-                          const isFullyPaid = r.due === 0;
+                        {occasionalRows.map(item => {
+                          const existingInstances = dues.filter(d => d.period.startsWith(`occasional-${item.headId}-`));
                           return (
-                            <div key={r.periodKey} className="flex flex-col justify-between p-3 rounded-lg border border-(--border) transition bg-(--bg-soft)/25">
-                              <div className="flex justify-between items-center w-full mb-1">
+                            <div key={item.headId} className="flex flex-col px-3 py-2 rounded-lg border border-(--border) transition bg-(--bg) space-y-3">
+                              <div className="flex justify-between items-start">
                                 <div>
-                                  <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
-                                  <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
-                                    {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
-                                  </p>
+                                  <p className="text-sm font-semibold text-(--text)">{item.headName}</p>
+                                  <p className="text-xs text-(--text-muted) font-medium">Standard Amount: ₹{item.amount}</p>
                                 </div>
-                                {!isFullyPaid && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedOneTimeIds(prev =>
-                                        prev.includes(r.periodKey)
-                                          ? prev.filter(id => id !== r.periodKey)
-                                          : [...prev, r.periodKey]
-                                      );
-                                    }}
-                                    className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isChecked
-                                      ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
-                                      : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
-                                      }`}
-                                  >
-                                    {isChecked ? "Selected" : "Select"}
-                                  </button>
-                                )}
+                                <span className="text-[9px] bg-(--primary-soft) text-(--primary) px-2 py-0.5 rounded font-bold uppercase">Occasional</span>
                               </div>
-                              <div className="text-[10px] text-(--text-muted) font-semibold uppercase">Occasional Fee</div>
+
+                              {existingInstances.length > 0 && (
+                                <div className="space-y-1.5">
+                                  <div className="text-[10px] font-bold text-(--text-muted) uppercase">Existing Dues</div>
+                                  <div className="space-y-1">
+                                    {existingInstances.map(inst => {
+                                      const monthKey = inst.period.replace(`occasional-${item.headId}-`, "");
+                                      const monthLabel = MONTHS.find(m => m.key === monthKey)?.label || monthKey;
+                                      const isFullyPaid = inst.due === 0;
+                                      const isMergedInMonth = selectedMonths.some(sm => sm.key === monthKey);
+                                      const isChecked = selectedOneTimeIds.includes(inst.period);
+                                      return (
+                                        <div key={inst.period} className="flex justify-between items-center p-2 rounded bg-(--bg-card) border border-(--border) text-xs">
+                                          <div>
+                                            <span className="font-medium">{monthLabel}</span>
+                                            <span className={`ml-2 text-[10px] font-bold ${isFullyPaid ? "text-emerald-600" : "text-red-500"}`}>
+                                              {isFullyPaid ? "PAID" : `Due ₹${inst.due}`}
+                                            </span>
+                                          </div>
+                                          {isFullyPaid ? null : isMergedInMonth ? (
+                                            <span className="text-[10px] font-bold text-(--text-muted) bg-(--bg-soft) border border-(--border) px-2 py-0.5 rounded">
+                                              Included in Month
+                                            </span>
+                                          ) : (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedOneTimeIds(prev =>
+                                                  prev.includes(inst.period)
+                                                    ? prev.filter(id => id !== inst.period)
+                                                    : [...prev, inst.period]
+                                                );
+                                              }}
+                                              className={`p-1 px-2.5 rounded text-[10px] font-bold transition ${isChecked
+                                                ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                                : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                                                }`}
+                                            >
+                                              {isChecked ? "Selected" : "Select"}
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedMonths.length > 0 && (
+                                <div className="space-y-1">
+                                  <div className="text-[10px] font-bold text-(--text-muted) uppercase">Add to Selected Months</div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {selectedMonths.map(m => {
+                                      const periodKey = `occasional-${item.headId}-${m.key}`;
+                                      const existingDue = dues.find(d => d.period === periodKey);
+                                      if (existingDue) return null;
+                                      const isChecked = selectedOneTimeIds.includes(periodKey);
+                                      return (
+                                        <div onClick={() => {
+                                          setSelectedOneTimeIds(prev =>
+                                            prev.includes(periodKey)
+                                              ? prev.filter(id => id !== periodKey)
+                                              : [...prev, periodKey]
+                                          );
+                                        }} key={periodKey} className={`p-1 flex px-2.5 rounded text-[10px] cursor-pointer font-bold transition ${isChecked
+                                          ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                          : "bg-(--bg-card) text-(--text) hover:bg-(--bg-card-hover) border border-(--border)"
+                                          }`}
+                                        >
+                                          {m.label}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedMonths.length === 0 && existingInstances.length === 0 && (
+                                <div className="text-xs text-(--text-muted) italic py-2 text-center bg-(--bg-soft) rounded-lg border border-dashed border-(--border)">
+                                  Select a month in Step 1 to assign this fee
+                                </div>
+                              )}
                             </div>
                           );
                         })}
@@ -1147,6 +1242,8 @@ export default function FeeCollectionPage() {
           </div>
         </div>
       )}
+
+
     </RequirePermission>
   );
 }

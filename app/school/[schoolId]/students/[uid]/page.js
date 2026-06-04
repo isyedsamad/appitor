@@ -257,26 +257,57 @@ export default function StudentProfilePage() {
     
     const mRows = MONTHS.map(m => {
       const monthData = feeSummary?.months?.[m.key];
+      let breakdown = [];
+      let total = 0;
+      let paid = 0;
+      let status = "pending";
+
       if (monthData) {
-        return {
-          key: m.key,
-          label: m.label,
-          type: "month",
-          ...monthData,
-        };
+        breakdown = [...(monthData.headsSnapshot || [])];
+        total = Number(monthData.total || 0);
+        paid = Number(monthData.paid || 0);
+        status = monthData.status;
+      } else {
+        const activeHeads = template?.items?.filter(
+          item => item.frequency === "monthly"
+        ) || [];
+        breakdown = [...activeHeads];
+        total = activeHeads.reduce((s, h) => s + h.amount, 0);
+        paid = 0;
+        status = activeHeads.length > 0 ? "due" : "pending";
       }
-      const activeHeads = template?.items?.filter(
-        item => item.frequency === "monthly"
-      ) || [];
-      const sum = activeHeads.reduce((s, h) => s + h.amount, 0);
+
+      if (feeSummary?.months) {
+        Object.entries(feeSummary.months).forEach(([periodKey, data]) => {
+          if (periodKey.startsWith("occasional-") && periodKey.endsWith(`-${m.key}`)) {
+            if (data.headsSnapshot) {
+              data.headsSnapshot.forEach(h => {
+                if (!breakdown.some(x => x.headId === h.headId)) {
+                  breakdown.push(h);
+                }
+              });
+            }
+            total += Number(data.total || 0);
+            paid += Number(data.paid || 0);
+          }
+        });
+      }
+
+      const due = total - paid;
+      if (total > 0 && paid === total) {
+        status = "paid";
+      } else if (paid > 0) {
+        status = "partial";
+      }
+
       return {
         key: m.key,
         label: m.label,
         type: "month",
-        headsSnapshot: activeHeads,
-        total: sum,
-        paid: 0,
-        status: activeHeads.length > 0 ? "due" : "pending",
+        headsSnapshot: breakdown,
+        total,
+        paid,
+        status,
       };
     });
 
@@ -308,35 +339,12 @@ export default function StudentProfilePage() {
     }
 
     const occRows = [];
-    if (template) {
-      const occasionalItems = template.items.filter(item => item.frequency === "occasional" || item.frequency === "yearly");
-      occasionalItems.forEach(item => {
-        const periodKey = `occasional-${item.headId}`;
-        const monthData = feeSummary?.months?.[periodKey];
-        if (monthData) {
-          occRows.push({
-            key: periodKey,
-            label: `${item.headName} (Occasional)`,
-            type: "occasional",
-            ...monthData,
-          });
-        } else {
-          occRows.push({
-            key: periodKey,
-            label: `${item.headName} (Occasional)`,
-            type: "occasional",
-            headsSnapshot: [{ headId: item.headId, headName: item.headName, amount: item.amount }],
-            total: item.amount,
-            paid: 0,
-            status: "due",
-          });
-        }
-      });
-    }
-
     if (feeSummary?.months) {
       Object.entries(feeSummary.months).forEach(([periodKey, data]) => {
         if (periodKey.startsWith("occasional-")) {
+          const isMerged = MONTHS.some(m => periodKey.endsWith(`-${m.key}`));
+          if (isMerged) return;
+          
           if (occRows.some(x => x.key === periodKey)) return;
           const parts = periodKey.split("-");
           const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`) || periodKey === `occasional-${item.headId}`);
@@ -1061,6 +1069,25 @@ function FeeInfoModal({ periodId, payments, refunds, loading, onClose, onPrint }
   const periodPayments = payments.filter(p => p.items?.some(i => i.period === periodId || (i.id && i.id.toString() === periodId)));
   const periodRefunds = refunds.filter(r => r.refundItems?.[periodId]);
 
+  const displayPeriod = (() => {
+    if (periodId.startsWith("one-time-") || periodId.startsWith("onetime-")) {
+      const headName = periodPayments[0]?.items?.find(i => i.period === periodId)?.headsSnapshot?.[0]?.headName;
+      return headName ? `One-time: ${headName}` : "One-time Fee";
+    }
+    if (periodId.startsWith("occasional-")) {
+      const headName = periodPayments[0]?.items?.find(i => i.period === periodId)?.headsSnapshot?.[0]?.headName;
+      const parts = periodId.split("-");
+      const ym = parts.slice(-2);
+      if (ym.length === 2 && ym[0].length === 4) {
+        const dt = new Date(`${ym[0]}-${ym[1]}-01`);
+        const ml = dt.toLocaleString("en-US", { month: "short", year: "numeric" });
+        return headName ? `Occasional: ${headName} (${ml})` : `Occasional (${ml})`;
+      }
+      return headName ? `Occasional: ${headName}` : "Occasional Fee";
+    }
+    return periodId;
+  })();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-(--bg-card) border border-(--border) w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
@@ -1069,7 +1096,7 @@ function FeeInfoModal({ periodId, payments, refunds, loading, onClose, onPrint }
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <Info size={18} className="text-(--primary)" /> Transaction Insights
             </h3>
-            <p className="text-xs font-semibold text-(--text-muted)">Details for: <span className="font-semibold text-(--text)">{periodId}</span></p>
+            <p className="text-xs font-semibold text-(--text-muted)">Details for: <span className="font-semibold text-(--text)">{displayPeriod}</span></p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-(--bg-soft) rounded-xl transition-colors">
             <X size={18} />

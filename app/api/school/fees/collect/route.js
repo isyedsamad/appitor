@@ -192,18 +192,18 @@ export async function POST(req) {
           };
         })
         .sort((a, b) => {
-          const aIsOneTime = a.period.startsWith("one-time-");
-          const bIsOneTime = b.period.startsWith("one-time-");
-          if (aIsOneTime && !bIsOneTime) return -1;
-          if (!aIsOneTime && bIsOneTime) return 1;
+          const getScore = (p) => {
+            if (p.startsWith("occasional-")) return 1;
+            if (p.startsWith("one-time-") || p.startsWith("onetime-")) return 2;
+            return 3;
+          };
+          const scoreA = getScore(a.period);
+          const scoreB = getScore(b.period);
+          if (scoreA !== scoreB) return scoreA - scoreB;
           return a.period.localeCompare(b.period);
         });
 
       for (const { period, amount, headsSnapshot } of normalizedMonths) {
-        if (remaining <= 0) break;
-
-        // If the month wasn't in summary before, this means it's the first time it's being paid.
-        // We initialize its total using the 'amount' which is effectively 'total due' right now.
         const existing = summary.months[period] || {
           total: amount,
           paid: 0,
@@ -212,20 +212,16 @@ export async function POST(req) {
           headsSnapshot,
         };
 
-        // Note: we do NOT intentionally blindly overwrite 'existing.total = amount' because 'amount' 
-        // sent from frontend is simply the remainder due mapped from 'step2Items'. The existing 
-        // month total should be preserved.
         if (!existing.headsSnapshot || !existing.headsSnapshot.length) {
           existing.headsSnapshot = headsSnapshot;
         }
 
         const pending = existing.total - existing.paid;
-        if (pending <= 0) continue;
 
-        const payNow = Math.min(pending, remaining);
+        const payNow = pending > 0 ? Math.min(pending, remaining) : 0;
         existing.paid += payNow;
-        existing.status = existing.paid === existing.total ? "paid" : "partial";
-        existing.lastPaidAt = nowTs;
+        existing.status = existing.paid === existing.total ? "paid" : (existing.paid > 0 ? "partial" : "due");
+        if (payNow > 0) existing.lastPaidAt = nowTs;
 
         summary.months[period] = existing;
 
@@ -247,24 +243,26 @@ export async function POST(req) {
             paid: existing.paid,
             due: existing.total - existing.paid,
             status: existing.status,
-            lastPaidAt: nowTs,
+            lastPaidAt: payNow > 0 ? nowTs : (existing.lastPaidAt || null),
             updatedAt: nowServer,
           },
           { merge: true }
         );
 
-        allocations.push({
-          type: "month",
-          period,
-          headsSnapshot: existing.headsSnapshot,
-          label: period,
-          amount: payNow,
-          payable: amount,
-          paidAt: nowTs,
-        });
+        if (payNow > 0) {
+          allocations.push({
+            type: "month",
+            period,
+            headsSnapshot: existing.headsSnapshot,
+            label: period,
+            amount: payNow,
+            payable: amount,
+            paidAt: nowTs,
+          });
 
-        remaining -= payNow;
-        summary.totals.totalPaid += payNow;
+          remaining -= payNow;
+          summary.totals.totalPaid += payNow;
+        }
       }
 
       summary.totals.totalDiscount = (summary.totals.totalDiscount || 0) + discountAmount;

@@ -12,6 +12,17 @@ import secureAxios from "@/lib/secureAxios";
 import { formatDateSlash } from "@/lib/dateUtils";
 
 export default function RefundPage() {
+  const formatOccasionalLabel = (period, headsSnapshot) => {
+    const headName = headsSnapshot?.[0]?.headName || "Occasional Fee";
+    const parts = period.split("-");
+    const ym = parts.slice(-2);
+    if (ym.length === 2 && ym[0].length === 4) {
+      const dt = new Date(`${ym[0]}-${ym[1]}-01`);
+      const ml = dt.toLocaleString("en-US", { month: "short", year: "numeric" });
+      return `Occasional Fee: ${headName} (${ml})`;
+    }
+    return `Occasional Fee: ${headName}`;
+  };
   const { schoolUser, setLoading, currentSession, sessionList } = useSchool();
   const { branch, branchInfo } = useBranch();
   const [sessionId, setSessionId] = useState(null);
@@ -430,7 +441,17 @@ export default function RefundPage() {
                         >
                           <div className="flex bg-(--bg) border-b border-(--border) rounded-t-xl py-3 px-4 flex-col md:flex-row md:justify-between md:items-center gap-1">
                             <div className="font-semibold text-(--primary) text-md">
-                              {item.type === "month" ? `Fee Period: ${item.period}` : `Flexible Fee: ${item.label}`}
+                              {item.type === "month" ? (
+                                item.period.startsWith("one-time-") || item.period.startsWith("onetime-") ? (
+                                  `One-time Fee: ${item.headsSnapshot?.[0]?.headName || "One-Time Fee"}`
+                                ) : item.period.startsWith("occasional-") ? (
+                                  formatOccasionalLabel(item.period, item.headsSnapshot)
+                                ) : (
+                                  `Fee Period: ${item.period}`
+                                )
+                              ) : (
+                                `Flexible Fee: ${item.label}`
+                              )}
                             </div>
                             <div className="text-xs font-medium text-(--text-muted)">
                               Paid on {formatDateSlash(item.paidAt.toDate())}
@@ -540,7 +561,17 @@ export default function RefundPage() {
                     return (
                       <div key={periodOrId} className="flex justify-between p-3">
                         <span className="font-medium text-(--text)">
-                          {item?.type === "month" ? `Fee Period: ${item.period}` : `Flexible: ${item?.label || item?.name}`}
+                          {item?.type === "month" ? (
+                            item.period.startsWith("one-time-") || item.period.startsWith("onetime-") ? (
+                              `One-time Fee: ${item.headsSnapshot?.[0]?.headName || "One-Time Fee"}`
+                            ) : item.period.startsWith("occasional-") ? (
+                              formatOccasionalLabel(item.period, item.headsSnapshot)
+                            ) : (
+                              `Fee Period: ${item.period}`
+                            )
+                          ) : (
+                            `Flexible: ${item?.label || item?.name}`
+                          )}
                         </span>
                         <span className="font-bold text-red-500">₹ {amt}</span>
                       </div>
