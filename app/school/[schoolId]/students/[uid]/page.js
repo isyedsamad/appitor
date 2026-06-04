@@ -73,6 +73,7 @@ export default function StudentProfilePage() {
   const [monthlyLogs, setMonthlyLogs] = useState(null);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [feeSummary, setFeeSummary] = useState(null);
+  const [template, setTemplate] = useState(null);
   const [payments, setPayments] = useState([]);
   const [refunds, setRefunds] = useState([]);
   const [loadingFees, setLoadingFees] = useState(false);
@@ -173,6 +174,23 @@ export default function StudentProfilePage() {
       const summarySnap = await getDoc(summaryRef);
       setFeeSummary(summarySnap.exists() ? summarySnap.data() : null);
 
+      const assignSnap = await getDocs(
+        query(
+          collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "assignments", "items"),
+          where("studentId", "==", uid),
+          where("status", "==", "active")
+        )
+      );
+      if (!assignSnap.empty) {
+        const assignment = assignSnap.docs[0].data();
+        const tSnap = await getDoc(
+          doc(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "templates", "items", assignment.templateId)
+        );
+        setTemplate(tSnap.exists() ? tSnap.data() : null);
+      } else {
+        setTemplate(null);
+      }
+
       const paymentsRef = collection(db, "schools", schoolUser.schoolId, "branches", branch, "fees", "payments", "items");
       const pQuery = query(paymentsRef, where("studentId", "==", uid), where("sessionId", "==", selectedSession));
       const pSnap = await getDocs(pQuery);
@@ -244,14 +262,19 @@ export default function StudentProfilePage() {
           ...monthData,
         };
       }
+      const activeHeads = template?.items?.filter(
+        item => item.frequency === "monthly"
+      ) || [];
+      const sum = activeHeads.reduce((s, h) => s + h.amount, 0);
       return {
         ...m,
-        total: 0,
+        headsSnapshot: activeHeads,
+        total: sum,
         paid: 0,
-        status: "pending",
+        status: activeHeads.length > 0 ? "due" : "pending",
       };
     });
-  }, [feeSummary, MONTHS]);
+  }, [feeSummary, template, MONTHS]);
   const update = (k, v) =>
     setForm(p => ({ ...p, [k]: v }));
   const selectedClass = classData && classData.find(
@@ -277,6 +300,7 @@ export default function StudentProfilePage() {
           section: form.section,
           gender: form.gender,
           dob: form.dob,
+          transport: form.transport || "no",
         },
       });
       toast.success("Student Profile updated!");
@@ -407,6 +431,20 @@ export default function StudentProfilePage() {
                     <Field label="Full Name" value={form.name || ""} onChange={v => update("name", v)} icon={User} disabled={!editable} />
                     <Field label="Gender" value={form.gender || ""} onChange={v => update("gender", v)} options={["Male", "Female", "Other"]} icon={User} disabled={!editable} />
                     <Field label="Date of Birth" value={toInputDate(form.dob) || ""} onChange={v => update("dob", formatInputDate(v))} type="date" icon={Calendar} disabled={!editable} />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-(--text-muted) flex items-center gap-2">
+                        <User size={12} /> Transport Facility
+                      </label>
+                      <select
+                        className="input text-sm"
+                        value={form.transport || "no"}
+                        disabled={!editable}
+                        onChange={e => update("transport", e.target.value)}
+                      >
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
                   </div>
                 </section>
 
