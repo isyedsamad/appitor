@@ -7,8 +7,8 @@ export async function POST(req) {
   try {
     const user = await verifyUser(req, "academic.subjects.manage");
     const body = await req.json();
-    const { branch, subjectId, name } = body;
-    if (!name) {
+    const { branch, subjectId, name, names } = body;
+    if (!name && (!names || !Array.isArray(names) || names.length === 0)) {
       return NextResponse.json(
         { message: "Subject name is required" },
         { status: 400 }
@@ -23,23 +23,45 @@ export async function POST(req) {
       .doc("branch_subjects");
     const subjectsSnap = await subjectsRef.get();
     if (!subjectsSnap.exists) {
-      await subjectsRef.set({
-        subjects: [{
+      const initialSubjects = [];
+      if (names && Array.isArray(names)) {
+        names.forEach(n => {
+          initialSubjects.push({
+            id: crypto.randomUUID(),
+            name: n,
+            isActive: true,
+          });
+        });
+      } else {
+        initialSubjects.push({
           id: crypto.randomUUID(),
           name,
           isActive: true,
-        }]
+        });
+      }
+      await subjectsRef.set({
+        subjects: initialSubjects
       })
       return NextResponse.json({ success: true });
     }
     const subjectData = subjectsSnap.data();
     let subjects = subjectData.subjects || [];
     if (!subjectId) {
-      subjects.push({
-        id: crypto.randomUUID(),
-        name,
-        isActive: true,
-      });
+      if (names && Array.isArray(names)) {
+        names.forEach(n => {
+          subjects.push({
+            id: crypto.randomUUID(),
+            name: n,
+            isActive: true,
+          });
+        });
+      } else {
+        subjects.push({
+          id: crypto.randomUUID(),
+          name,
+          isActive: true,
+        });
+      }
     }
     else {
       subjects = subjects.map(sub =>

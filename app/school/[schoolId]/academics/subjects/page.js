@@ -35,6 +35,58 @@ export default function SubjectsPage() {
     }
   };
 
+  const addCommonSubjects = async () => {
+    const commonSubjects = [
+      "Mathematics",
+      "Science",
+      "English",
+      "Social Studies",
+      "Hindi",
+      "Computer Science",
+      "Art & Craft",
+      "Physical Education",
+      "General Knowledge",
+      "Environmental Studies (EVS)",
+      "Urdu",
+      "Sanskrit",
+      "Game",
+      "Music"
+    ];
+
+    const existingNames = subjects.map(s => s.name?.trim().toLowerCase() || "");
+    const missingSubjects = commonSubjects.filter(
+      name => !existingNames.includes(name.trim().toLowerCase())
+    );
+
+    if (missingSubjects.length === 0) {
+      toast.info("All common school subjects are already present in your curriculum!", {
+        theme: "colored"
+      });
+      return;
+    }
+
+    if (!confirm(`Do you want to add these ${missingSubjects.length} common school subjects to your curriculum?\n\n${missingSubjects.join(", ")}`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await secureAxios.post("/api/school/academics/subjects", {
+        names: missingSubjects,
+        branch,
+      });
+      toast.success(`Successfully imported ${missingSubjects.length} subjects!`, {
+        theme: "colored"
+      });
+    } catch (error) {
+      toast.error("Error importing subjects: " + (error?.response?.data?.message || error.message), {
+        theme: "colored"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const editable = canManage(schoolUser, "academic.subjects.manage", currentPlan);
 
@@ -56,15 +108,24 @@ export default function SubjectsPage() {
             </div>
           </div>
           {editable && (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setSubjectToEdit(null);
-                setOpenSubjectModal(true);
-              }}
-            >
-              <Plus size={16} /> Add Subject
-            </button>
+            <div className="flex flex-wrap gap-2.5">
+              <button
+                className="btn-outline shadow-none bg-(--primary-soft) font-medium flex items-center gap-1.5 border-(--primary)/20 text-(--primary) hover:bg-(--primary-soft)/80 hover:border-(--primary)/40 transition-all duration-300"
+                onClick={addCommonSubjects}
+              >
+                <Sparkles size={16} className="text-(--primary) animate-pulse" />
+                Quick Add Subjects
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setSubjectToEdit(null);
+                  setOpenSubjectModal(true);
+                }}
+              >
+                <Plus size={16} /> Add Subject
+              </button>
+            </div>
           )}
         </div>
         {!loading && subjects.length === 0 ? (

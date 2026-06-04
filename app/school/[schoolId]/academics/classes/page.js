@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Settings2, Check, X, RefreshCw, Layers } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Settings2, Check, X, RefreshCw, Layers, Sparkles } from "lucide-react";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 import RequirePermission from "@/components/school/RequirePermission";
 import ClassModal from "@/lib/school/academics/ClassModal";
 import SectionModal from "@/lib/school/academics/SectionModal";
+import BulkClassModal from "@/lib/school/academics/BulkClassModal";
 import { toast } from "react-toastify";
 import secureAxios from "@/lib/secureAxios";
 import { canManage } from "@/lib/school/permissionUtils";
@@ -17,6 +18,7 @@ export default function ClassesPage() {
   const [localClasses, setLocalClasses] = useState([]);
   const [isOrderingMode, setIsOrderingMode] = useState(false);
   const [openClassModal, setOpenClassModal] = useState(false);
+  const [openBulkModal, setOpenBulkModal] = useState(false);
   const [openSectionModal, setOpenSectionModal] = useState(null);
   const [classToEdit, setClassToEdit] = useState(null);
   const [sectionToEdit, setSectionToEdit] = useState(null);
@@ -124,13 +126,20 @@ export default function ClassesPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 w-full">
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     {classesToDisplay.length > 0 && <button
                       onClick={startOrdering}
                       className="btn-outline"
                     >
                       <Settings2 size={16} /> Edit Order
                     </button>}
+                    <button
+                      className="btn-outline shadow-none bg-(--primary-soft) font-medium flex items-center gap-1.5 border-(--primary)/20 text-(--primary) hover:bg-(--primary-soft)/80 hover:border-(--primary)/40 transition-all duration-300"
+                      onClick={() => setOpenBulkModal(true)}
+                    >
+                      <Sparkles size={16} className="text-(--primary) animate-pulse" />
+                      Quick Add Classes
+                    </button>
                     <button
                       className="btn-primary"
                       onClick={() => {
@@ -154,12 +163,22 @@ export default function ClassesPage() {
             </div>
             <p className="text-(--text-muted) font-medium text-sm">No classes found in this branch.</p>
             {editable && (
-              <button
-                onClick={() => setOpenClassModal(true)}
-                className="mt-4 text-(--primary) text-xs font-semibold uppercase tracking-wider hover:underline"
-              >
-                Create your first class
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
+                <button
+                  onClick={() => setOpenClassModal(true)}
+                  className="text-(--primary) text-xs font-semibold uppercase tracking-wider hover:underline"
+                >
+                  Create your first class
+                </button>
+                <span className="text-(--border)/50">|</span>
+                <button
+                  onClick={() => setOpenBulkModal(true)}
+                  className="text-(--primary) text-xs font-semibold uppercase tracking-wider hover:underline flex items-center gap-1"
+                >
+                  <Sparkles size={12} className="text-(--primary) animate-pulse" />
+                  Quick Setup School Classes
+                </button>
+              </div>
             )}
           </div>
         ) : (
@@ -279,6 +298,12 @@ export default function ClassesPage() {
           classDataPage={openSectionModal}
           sectionData={sectionToEdit}
           onClose={() => { setSectionToEdit(null); setOpenSectionModal(null); }}
+          onSuccess={() => { }}
+        />
+
+        <BulkClassModal
+          open={openBulkModal}
+          onClose={() => setOpenBulkModal(false)}
           onSuccess={() => { }}
         />
       </div>
