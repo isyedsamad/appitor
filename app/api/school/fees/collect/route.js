@@ -166,6 +166,7 @@ export async function POST(req) {
           headId: f.headId,
           label: f.label,
           amount: f.amount,
+          payable: f.amount,
           paidAt: nowTs,
         });
         summary.flexible.push({
@@ -190,7 +191,13 @@ export async function POST(req) {
             headsSnapshot: m.headsSnapshot || [],
           };
         })
-        .sort((a, b) => a.period.localeCompare(b.period));
+        .sort((a, b) => {
+          const aIsOneTime = a.period.startsWith("one-time-");
+          const bIsOneTime = b.period.startsWith("one-time-");
+          if (aIsOneTime && !bIsOneTime) return -1;
+          if (!aIsOneTime && bIsOneTime) return 1;
+          return a.period.localeCompare(b.period);
+        });
 
       for (const { period, amount, headsSnapshot } of normalizedMonths) {
         if (remaining <= 0) break;
@@ -252,6 +259,7 @@ export async function POST(req) {
           headsSnapshot: existing.headsSnapshot,
           label: period,
           amount: payNow,
+          payable: amount,
           paidAt: nowTs,
         });
 

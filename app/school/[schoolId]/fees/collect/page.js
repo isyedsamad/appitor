@@ -43,6 +43,7 @@ export default function FeeCollectionPage() {
   const { schoolUser, loading, setLoading, sessionList, currentSession, classData } = useSchool();
   const { branch, branchInfo } = useBranch();
   const amountPaidRef = useRef(null);
+  const pageRef = useRef(null);
   const [appIdSearch, setAppIdSearch] = useState("");
   const [sessionId, setSessionId] = useState(null);
   const [sessionMeta, setSessionMeta] = useState(null);
@@ -87,6 +88,16 @@ export default function FeeCollectionPage() {
   }, [schoolUser, sessionList, currentSession]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    let el = pageRef.current;
+    while (el) {
+      if (el.scrollTop > 0 || el.scrollHeight > el.clientHeight) {
+        el.scrollTop = 0;
+      }
+      el = el.parentElement;
+    }
     if (step === 3) {
       setTimeout(() => {
         if (amountPaidRef.current) {
@@ -401,7 +412,7 @@ export default function FeeCollectionPage() {
 
   return (
     <RequirePermission permission="fee.operations.view">
-      <div className="max-w-7xl mx-auto space-y-5">
+      <div ref={pageRef} className="max-w-7xl mx-auto space-y-5">
         <div className="flex items-start gap-3">
           <div className="p-3 rounded-lg shadow-sm border border-(--primary)/20 bg-(--primary-soft) text-(--primary)">
             <Wallet size={20} />
@@ -631,11 +642,11 @@ export default function FeeCollectionPage() {
                           const isChecked = selectedOneTimeIds.includes(r.periodKey);
                           const isFullyPaid = r.due === 0;
                           return (
-                            <div key={r.periodKey} className={`flex justify-between items-center p-3 rounded-lg border border-(--border) transition ${isFullyPaid ? "opacity-50" : ""}`}>
+                            <div key={r.periodKey} className={`flex justify-between items-center p-3 rounded-lg border border-(--border) transition ${isFullyPaid ? "cursor-not-allowed" : "cursor-pointer"}`}>
                               <div>
                                 <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
-                                <p className="text-[10px] text-(--text-muted) capitalize font-semibold">
-                                  {isFullyPaid ? "Paid" : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
+                                <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
+                                  {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
                                 </p>
                               </div>
                               {!isFullyPaid && (
@@ -686,7 +697,18 @@ export default function FeeCollectionPage() {
 
                   <div className="flex justify-between">
                     <button onClick={() => setStep(1)} className="btn-secondary flex gap-2"><ArrowLeft size={16} /> Back</button>
-                    <button onClick={() => setStep(3)} className="btn-primary flex gap-2">Continue <ArrowRight size={16} /></button>
+                    <button
+                      onClick={() => {
+                        if (step2Items.length === 0) {
+                          toast.error("Please select at least one fee item to proceed.");
+                          return;
+                        }
+                        setStep(3);
+                      }}
+                      className="btn-primary flex gap-2"
+                    >
+                      Continue <ArrowRight size={16} />
+                    </button>
                   </div>
                 </>
               )}
