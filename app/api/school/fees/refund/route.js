@@ -44,7 +44,6 @@ export async function POST(req) {
     };
 
     await adminDb.runTransaction(async tx => {
-      // 1. INITIAL READS
       const [paymentSnap, summarySnap] = await Promise.all([
         tx.get(paymentRef),
         tx.get(summaryRef)
@@ -63,7 +62,6 @@ export async function POST(req) {
         throw new Error(`OVER_REFUND: Cannot refund more cash than originally paid (Remaining: ₹${cashPaid - alreadyRefunded})`);
       }
 
-      // Identify which dues docs we need to read
       const neededDuesInfo = [];
       const validRefundEntries = Object.entries(refundItems).filter(([_, amount]) => {
         const val = Number(amount);
@@ -78,24 +76,12 @@ export async function POST(req) {
         }
       }
 
-      // Read book snapshots and dues snapshots
       const [bookSnapshots, duesSnapshots] = await Promise.all([
         Promise.all(refs.map(ref => tx.get(ref))),
         Promise.all(neededDuesInfo.map(info => tx.get(info.duesRef)))
       ]);
 
-      // 2. LOGIC AND CALCULATIONS
       let calculatedTotalRefund = 0;
-
-      // Handle books initialization if they don't exist
-      bookSnapshots.forEach((snap, index) => {
-        if (!snap.exists) {
-          tx.set(refs[index], {
-            ...emptyBook,
-            updatedAt: FieldValue.serverTimestamp(),
-          });
-        }
-      });
 
       for (const [itemKey, refundAmountRaw] of validRefundEntries) {
         const refundAmount = Number(refundAmountRaw);
@@ -156,24 +142,38 @@ export async function POST(req) {
         throw new Error("INVALID_REFUND_AMOUNT");
       }
 
-      // Final summary updates
       const totalMonthFees = Object.values(summary.months || {}).reduce((s, m) => s + m.total, 0);
       const totalFlexFees = (summary.flexible || []).reduce((s, f) => s + f.amount, 0);
       summary.totals.totalFee = totalMonthFees + totalFlexFees;
       summary.totals.totalDue = summary.totals.totalFee - summary.totals.totalPaid;
       summary.updatedAt = nowServer;
 
-      // 3. WRITES
-      for (const ref of refs) {
-        tx.update(ref, {
-          "refunds.total": FieldValue.increment(calculatedTotalRefund),
-          [`refunds.${payType}`]: FieldValue.increment(calculatedTotalRefund),
-          net: FieldValue.increment(-calculatedTotalRefund),
-          transactions: FieldValue.increment(1),
-          transactionsRefund: FieldValue.increment(1),
-          updatedAt: FieldValue.serverTimestamp(),
-        });
-      }
+      bookSnapshots.forEach((snap, index) => {
+        const ref = refs[index];
+        if (!snap.exists) {
+          tx.set(ref, {
+            ...emptyBook,
+            refunds: {
+              ...emptyBook.refunds,
+              total: calculatedTotalRefund,
+              [payType]: calculatedTotalRefund,
+            },
+            net: -calculatedTotalRefund,
+            transactions: 1,
+            transactionsRefund: 1,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        } else {
+          tx.update(ref, {
+            "refunds.total": FieldValue.increment(calculatedTotalRefund),
+            [`refunds.${payType}`]: FieldValue.increment(calculatedTotalRefund),
+            net: FieldValue.increment(-calculatedTotalRefund),
+            transactions: FieldValue.increment(1),
+            transactionsRefund: FieldValue.increment(1),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+      });
 
       const refundLedgerRef = branchRef.collection("fees").doc("ledger").collection("items").doc();
       tx.set(refundLedgerRef, {

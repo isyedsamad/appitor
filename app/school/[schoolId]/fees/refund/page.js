@@ -23,12 +23,14 @@ export default function RefundPage() {
   const [refundRemark, setRefundRemark] = useState('');
   const [payType, setPayType] = useState('cash');
   useEffect(() => {
-    if (searchType == "receipt") {
-      setQueryText("RCPT/" + branchInfo?.branchCode + "/" + currentSession + "/");
+    if (searchType === "receipt") {
+      if (branchInfo?.branchCode && currentSession) {
+        setQueryText("RCPT/" + branchInfo.branchCode + "/" + currentSession + "/");
+      }
     } else {
       setQueryText("");
     }
-  }, [searchType]);
+  }, [searchType, branchInfo, currentSession]);
   useEffect(() => {
     if (schoolUser && sessionList && currentSession) {
       setSessionId(currentSession);
@@ -77,7 +79,7 @@ export default function RefundPage() {
             "payments",
             "items"
           ),
-          where("studentId", "==", studentData.uid),
+          where("studentId", "==", studentData.uid || snapStudent.docs[0].id),
           where('sessionId', '==', sessionId),
           orderBy('createdAt', 'desc')
         );
@@ -146,6 +148,7 @@ export default function RefundPage() {
         payType
       });
       toast.success("Refund processed successfully");
+      await searchPayments();
       setOpenPayment(null);
       setRefundMap({});
       setRefundRemark("");
@@ -174,49 +177,61 @@ export default function RefundPage() {
           </div>
         </div>
         <div className="flex flex-col gap-4">
-          <div className="flex rounded-lg overflow-hidden">
+          <div className="flex rounded-md overflow-hidden shadow-sm border border-(--border) w-fit bg-(--bg-card)">
             {["student", "receipt"].map(t => (
               <button
                 key={t}
                 onClick={() => setSearchType(t)}
-                className={`px-4 py-2 text-sm font-medium rounded-none border ${searchType === t
+                className={`px-5 py-2 text-sm font-semibold flex items-center gap-2 transition-all ${searchType === t
                   ? "bg-(--primary) text-white border-(--primary)"
-                  : "bg-(--bg-card) border-(--border)"
+                  : "text-(--text-muted) hover:text-(--text) hover:bg-(--bg-soft)"
                   }
                   ${t === "receipt" ? "rounded-r-md" : "rounded-l-md"}`}
               >
-                {t === "receipt" ? (<><Hash size={16} /> Receipt No</>) : (<><User size={16} /> App ID</>)}
+                {t === "receipt" ? (
+                  <>
+                    <Hash size={15} />
+                    <span>Receipt No</span>
+                  </>
+                ) : (
+                  <>
+                    <User size={15} />
+                    <span>Student ID</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
-          <div className={`grid gap-3 items-end ${searchType == 'receipt' ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-5'}`}>
-            {searchType != 'receipt' && (
-              <div>
-                <p className="text-sm text-(--text-muted) font-medium">Session</p>
+          <div className="flex flex-wrap gap-4 items-end py-2">
+            {searchType !== "receipt" && (
+              <div className="w-full sm:w-auto min-w-[200px]">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">
+                  Academic Session
+                </p>
                 <select
-                  className="input max-w-xs"
-                  value={sessionId ? sessionId : ''}
-                  onChange={e => {
-                    const id = e.target.value;
-                    setSessionId(id);
-                  }}
+                  className="input w-full"
+                  value={sessionId ? sessionId : ""}
+                  onChange={e => setSessionId(e.target.value)}
                 >
-                  {sessionList && sessionList.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.id}
-                      {s.id === sessionId ? " (Current)" : ""}
-                    </option>
-                  ))}
+                  {sessionList &&
+                    sessionList.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.id}
+                        {s.id === sessionId ? " (Current)" : ""}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}
-            <div>
-              <p className="text-sm text-(--text-muted) font-medium">{searchType == 'receipt' ? 'Receipt No' : 'Student App ID'}</p>
+            <div className="flex-1 min-w-[250px]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-(--text-muted)">
+                {searchType === "receipt" ? "Receipt Number" : "Student ID"}
+              </p>
               <input
-                className={`input flex-1`}
+                className="input w-full"
                 placeholder={
                   searchType === "receipt"
-                    ? `i.e. RCPT/${branchInfo?.branchCode || 'BRN'}/${currentSession || '2025-26'}/001928`
+                    ? `i.e. RCPT/${branchInfo?.branchCode || "BRN"}/${currentSession || "2025-26"}/001928`
                     : "i.e. A250001"
                 }
                 value={queryText}
@@ -224,47 +239,68 @@ export default function RefundPage() {
                 onKeyDown={e => e.key === "Enter" && searchPayments()}
               />
             </div>
-            <button onClick={searchPayments} className="btn-primary">
-              <Search size={18} /> Search
+            <button
+              onClick={searchPayments}
+              className="btn-primary px-6 py-2.5 h-[42px] w-full sm:w-auto font-semibold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
+            >
+              <Search size={16} />
+              <span>Search Payments</span>
             </button>
           </div>
         </div>
-        <div className="bg-(--bg-card) border border-(--border) rounded-xl overflow-hidden">
+        <div className="bg-(--bg-card) border border-(--border) rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-(--bg)">
+              <thead className="bg-(--bg) border-b border-(--border)">
                 <tr>
-                  <th className="px-4 py-3 text-left">Date</th>
-                  <th className="px-4 py-3 text-left">Receipt</th>
-                  <th className="px-4 py-3 text-left">Mode</th>
-                  <th className="px-4 py-3 text-right">Paid</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Receipt No
+                  </th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Payment Mode
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Paid Amount
+                  </th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold text-(--text-muted) uppercase tracking-widest">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={6}
-                      className="px-4 py-6 text-center text-(--text-muted)"
+                      colSpan={5}
+                      className="px-6 py-10 text-center text-(--text-muted) font-medium"
                     >
                       No receipt found
                     </td>
                   </tr>
                 ) : (
                   rows.map(r => (
-                    <tr key={r.id} className="border-t border-(--border)">
-                      <td className="px-4 py-3 font-semibold">
+                    <tr
+                      key={r.id}
+                      className="border-t border-(--border) hover:bg-(--bg-soft)/50 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-semibold text-(--text)">
                         {formatDateSlash(r.createdAt?.toDate())}
                       </td>
-                      <td className="px-4 py-3 font-semibold">{r.receiptNo}</td>
-                      <td className="px-4 py-3 capitalize font-medium">{r.paymentMode}</td>
-                      <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">
+                      <td className="px-6 py-4 font-semibold text-(--text)">
+                        {r.receiptNo}
+                      </td>
+                      <td className="px-6 py-4 capitalize font-semibold text-(--text)">
+                        {r.paymentMode}
+                      </td>
+                      <td className="px-6 py-4 text-right font-bold text-(--text) whitespace-nowrap">
                         ₹ {r.paidAmount}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-6 py-4 text-right">
                         <button
-                          className="btn-outline text-sm font-semibold bg-(--status-a-bg) text-(--status-a-text) border border-(--status-a-border) hover:opacity-70"
+                          className="px-4 py-1.5 text-xs font-bold bg-(--status-a-bg) text-(--status-a-text) border border-(--status-a-border) rounded-lg shadow-sm hover:opacity-80 transition-all"
                           onClick={() => setOpenPayment(r)}
                         >
                           Refund
@@ -310,7 +346,6 @@ export default function RefundPage() {
                         Collected By
                       </div>
                       <div className="flex items-center gap-2 font-medium">
-                        {/* <User size={14} /> */}
                         {openPayment.collectedBy?.name}
                       </div>
                       <div className="text-xs font-semibold text-(--text-muted)">
