@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BookOpen, Plus, Trash2, CheckCircle2, Search, X, Save, CalendarRange, Wallet, Filter, AlertTriangle, RefreshCcw } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
@@ -19,7 +19,20 @@ export default function ExamTermsPage() {
   const canManage = hasPermission(schoolUser, "exam.terms.manage", false, currentPlan);
 
   const [terms, setTerms] = useState([]);
-  const [selectedSession, setSelectedSession] = useState("");
+  const [selectedSession, setSelectedSession] = useState(currentSession || "");
+
+  useEffect(() => {
+    if (currentSession) {
+      setSelectedSession(currentSession);
+    }
+  }, [currentSession]);
+
+  useEffect(() => {
+    if (schoolUser?.schoolId && branch && selectedSession) {
+      fetchTerms();
+    }
+  }, [schoolUser?.schoolId, branch, selectedSession]);
+
   const [searched, setSearched] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);
   const [form, setForm] = useState({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ClipboardList,
   Plus,
@@ -23,7 +23,7 @@ import { formatDate } from "@/lib/dateUtils";
 import { hasPermission } from "@/lib/school/permissionUtils";
 
 export default function ExamSetupPage() {
-  const { schoolUser, sessionList, classData, subjectData, setLoading } = useSchool();
+  const { schoolUser, sessionList, classData, subjectData, setLoading, currentSession } = useSchool();
   const { branch, branchInfo } = useBranch();
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const canManage = hasPermission(schoolUser, "exam.setup.manage", false, currentPlan);
@@ -32,7 +32,19 @@ export default function ExamSetupPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [setups, setSetups] = useState([]);
   const [terms, setTerms] = useState([]);
-  const [selectedSession, setSelectedSession] = useState("");
+  const [selectedSession, setSelectedSession] = useState(currentSession || "");
+
+  useEffect(() => {
+    if (currentSession) {
+      setSelectedSession(currentSession);
+    }
+  }, [currentSession]);
+
+  useEffect(() => {
+    if (schoolUser?.schoolId && branch && selectedSession) {
+      fetchTerms(selectedSession);
+    }
+  }, [schoolUser?.schoolId, branch, selectedSession]);
   const [selectedTerm, setSelectedTerm] = useState("");
   const [searched, setSearched] = useState(false);
   const [openAdd, setOpenAdd] = useState(false);

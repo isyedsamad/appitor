@@ -68,13 +68,13 @@ export default function AdmitCardsPage() {
     const editable = canManage(schoolUser, "exam.admitcard.manage", currentPlan);
 
     useEffect(() => {
-        if (session) {
+        if (schoolUser?.schoolId && branch && session) {
             fetchTerms(session);
         } else {
             setTerms([]);
             setTermId("");
         }
-    }, [session]);
+    }, [schoolUser?.schoolId, branch, session]);
 
     useEffect(() => {
         if (selectedTerm) {

@@ -39,7 +39,7 @@ const GRADE_POINTS = {
 };
 
 export default function ExamReportsPage() {
-    const { schoolUser, sessionList, classData, setLoading, subjectData } = useSchool();
+    const { schoolUser, sessionList, classData, setLoading, subjectData, currentSession } = useSchool();
     const { branch, branchInfo } = useBranch();
     const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
     const canView = hasPermission(schoolUser, "exam.marks.view", false, currentPlan);
@@ -49,11 +49,24 @@ export default function ExamReportsPage() {
     const [students, setStudents] = useState([]);
     const [reports, setReports] = useState([]);
     const [filters, setFilters] = useState({
-        session: "",
+        session: currentSession || "",
         termId: "",
         classId: "",
         sectionId: ""
     });
+
+    useEffect(() => {
+        if (currentSession) {
+            setFilters(prev => ({ ...prev, session: currentSession, termId: "" }));
+        }
+    }, [currentSession]);
+
+    useEffect(() => {
+        if (schoolUser?.schoolId && branch && filters.session) {
+            fetchTerms(filters.session);
+        }
+    }, [schoolUser?.schoolId, branch, filters.session]);
+
     const [searched, setSearched] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'rank', direction: 'asc' });
 
