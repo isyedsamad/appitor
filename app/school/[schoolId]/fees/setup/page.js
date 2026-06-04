@@ -68,7 +68,7 @@ export default function QuickFeeSetupPage() {
 
   const recommendedHeads = [
     { name: "Tuition Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false },
-    { name: "Exam Fee", category: "academic", frequency: "yearly", type: "fixed", refundable: false },
+    { name: "Exam Fee", category: "academic", frequency: "occasional", type: "fixed", refundable: false },
     { name: "Admission Fee", category: "academic", frequency: "one-time", type: "fixed", refundable: false },
     { name: "Transport Fee", category: "transport", frequency: "monthly", type: "fixed", refundable: false },
     { name: "Computer Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false }
@@ -712,7 +712,7 @@ export default function QuickFeeSetupPage() {
                       >
                         <option value="monthly">Monthly</option>
                         <option value="one-time">One Time</option>
-                        <option value="yearly">Yearly</option>
+                        <option value="occasional">Occasional</option>
                       </select>
                     </div>
                     <div>

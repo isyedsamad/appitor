@@ -39,9 +39,17 @@ export default function FeeHeadsPage() {
   const [newHeadFrequency, setNewHeadFrequency] = useState("monthly");
   const [newHeadType, setNewHeadType] = useState("fixed");
 
+  const [editingHead, setEditingHead] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    category: "academic",
+    frequency: "monthly",
+    type: "fixed"
+  });
+
   const recommendedHeads = [
     { name: "Tuition Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false },
-    { name: "Exam Fee", category: "academic", frequency: "yearly", type: "fixed", refundable: false },
+    { name: "Exam Fee", category: "academic", frequency: "occasional", type: "fixed", refundable: false },
     { name: "Admission Fee", category: "academic", frequency: "one-time", type: "fixed", refundable: false },
     { name: "Transport Fee", category: "transport", frequency: "monthly", type: "fixed", refundable: false },
     { name: "Computer Fee", category: "academic", frequency: "monthly", type: "fixed", refundable: false }
@@ -128,6 +136,43 @@ export default function FeeHeadsPage() {
       await fetchHeads();
     } catch (err) {
       toast.error(`Failed to add ${rec.name}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEdit = (h) => {
+    setEditingHead(h);
+    setEditForm({
+      name: h.name,
+      category: h.category,
+      frequency: h.frequency,
+      type: h.type
+    });
+  };
+
+  const saveEditHead = async () => {
+    if (!editForm.name.trim()) {
+      toast.error("Please enter a fee head name");
+      return;
+    }
+    try {
+      setLoading(true);
+      await secureAxios.patch("/api/school/fees/heads", {
+        branch,
+        headId: editingHead.id,
+        updates: {
+          name: editForm.name.trim(),
+          category: editForm.category,
+          frequency: editForm.frequency,
+          type: editForm.type
+        }
+      });
+      toast.success("Fee head updated successfully");
+      setEditingHead(null);
+      await fetchHeads();
+    } catch (err) {
+      toast.error("Failed to update fee head");
     } finally {
       setLoading(false);
     }
@@ -285,15 +330,23 @@ export default function FeeHeadsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => toggleHeadStatus(h.id, h.status)}
-                            className={`p-1 px-2.5 rounded text-xs font-bold ${h.status === "active"
-                              ? "bg-(--danger-soft) text-(--danger) hover:opacity-85"
-                              : "bg-(--status-p-bg) text-(--status-p-text) hover:opacity-85"
-                              }`}
-                          >
-                            {h.status === "active" ? "Disable" : "Enable"}
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => startEdit(h)}
+                              className="p-1 px-2.5 rounded text-xs font-bold bg-(--bg-soft) text-(--text) hover:bg-(--border)"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => toggleHeadStatus(h.id, h.status)}
+                              className={`p-1 px-2.5 rounded text-xs font-bold ${h.status === "active"
+                                ? "bg-(--danger-soft) text-(--danger) hover:opacity-85"
+                                : "bg-(--status-p-bg) text-(--status-p-text) hover:opacity-85"
+                                }`}
+                            >
+                              {h.status === "active" ? "Disable" : "Enable"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -348,7 +401,7 @@ export default function FeeHeadsPage() {
                   >
                     <option value="monthly">Monthly</option>
                     <option value="one-time">One Time</option>
-                    <option value="yearly">Yearly</option>
+                    <option value="occasional">Occasional</option>
                   </select>
                 </div>
                 <div>
@@ -373,6 +426,72 @@ export default function FeeHeadsPage() {
           </div>
         </div>
       </div>
+
+      {editingHead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-(--bg-card) border border-(--border) w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="py-4 px-6 border-b border-(--border) flex justify-between items-center bg-(--bg-soft)/50">
+              <h3 className="font-bold text-base text-(--text)">Edit Fee Head</h3>
+              <button onClick={() => setEditingHead(null)} className="p-2 hover:bg-(--bg-soft) rounded-xl">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 text-sm">
+              <div>
+                <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Fee Head Name</label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  value={editForm.name}
+                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Category</label>
+                <select
+                  className="input w-full"
+                  value={editForm.category}
+                  onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                >
+                  <option value="academic">Academic</option>
+                  <option value="transport">Transport</option>
+                  <option value="hostel">Hostel</option>
+                  <option value="misc">Miscellaneous</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Frequency</label>
+                  <select
+                    className="input w-full"
+                    value={editForm.frequency}
+                    onChange={e => setEditForm({ ...editForm, frequency: e.target.value })}
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="one-time">One Time</option>
+                    <option value="occasional">Occasional</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-(--text-muted) uppercase block mb-1">Type</label>
+                  <select
+                    className="input w-full"
+                    value={editForm.type}
+                    onChange={e => setEditForm({ ...editForm, type: e.target.value })}
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="flexible">Flexible</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t border-(--border) bg-(--bg-soft)/30 flex justify-end gap-3">
+              <button onClick={() => setEditingHead(null)} className="btn-outline px-4 py-2 font-semibold">Cancel</button>
+              <button onClick={saveEditHead} className="btn-primary px-5 py-2 font-bold shadow-md">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </RequirePermission>
   );
 }

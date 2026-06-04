@@ -210,7 +210,6 @@ export default function FeeCollectionPage() {
       const applicable = template.items.filter(i => {
         if (i.frequency === "monthly") return true;
         if (i.frequency === "quarterly") return m.q;
-        if (i.frequency === "yearly") return m.y;
         return false;
       });
       const total = applicable.reduce((s, i) => s + Number(i.amount), 0);
@@ -231,6 +230,34 @@ export default function FeeCollectionPage() {
       .filter(i => i.frequency === "one-time")
       .map(item => {
         const periodKey = `one-time-${item.headId}`;
+        const dueEntry = dues.find(d => d.period === periodKey);
+        if (dueEntry) {
+          return {
+            ...item,
+            periodKey,
+            total: Number(dueEntry.total || 0),
+            paid: Number(dueEntry.paid || 0),
+            due: Number(dueEntry.total || 0) - Number(dueEntry.paid || 0),
+            status: dueEntry.status,
+          };
+        }
+        return {
+          ...item,
+          periodKey,
+          total: Number(item.amount),
+          paid: 0,
+          due: Number(item.amount),
+          status: "due",
+        };
+      });
+  }, [template, dues]);
+
+  const occasionalRows = useMemo(() => {
+    if (!template) return [];
+    return template.items
+      .filter(i => i.frequency === "occasional" || i.frequency === "yearly")
+      .map(item => {
+        const periodKey = `occasional-${item.headId}`;
         const dueEntry = dues.find(d => d.period === periodKey);
         if (dueEntry) {
           return {
@@ -286,8 +313,25 @@ export default function FeeCollectionPage() {
         ]
       }));
 
-    return [...monthItems, ...oneTimeItems, ...flexibleItems];
-  }, [selectedMonths, oneTimeRows, selectedOneTimeIds, flexibleItems]);
+    const occasionalItemsMapped = occasionalRows
+      .filter(r => selectedOneTimeIds.includes(r.periodKey) && r.due > 0)
+      .map(r => ({
+        id: r.periodKey,
+        key: r.periodKey,
+        label: r.headName,
+        amount: r.due,
+        type: "month",
+        headsSnapshot: [
+          {
+            headId: r.headId,
+            headName: r.headName,
+            amount: r.total,
+          }
+        ]
+      }));
+
+    return [...monthItems, ...oneTimeItems, ...occasionalItemsMapped, ...flexibleItems];
+  }, [selectedMonths, oneTimeRows, occasionalRows, selectedOneTimeIds, flexibleItems]);
 
   const payable = step2Items.reduce((s, i) => s + i.amount, 0);
 
@@ -402,7 +446,7 @@ export default function FeeCollectionPage() {
 
   const removeItem = (item) => {
     if (item.type === "month") {
-      if (item.key.startsWith("one-time-")) {
+      if (item.key.startsWith("one-time-") || item.key.startsWith("occasional-")) {
         setSelectedOneTimeIds(prev => prev.filter(id => id !== item.key));
       } else {
         setSelectedMonths(prev => prev.filter(m => m.key !== item.key));
@@ -638,40 +682,78 @@ export default function FeeCollectionPage() {
                     </div>
                   </div>
 
-                  {oneTimeRows.length > 0 && (
-                    <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-2">
+                  {((oneTimeRows && oneTimeRows.length > 0) || (occasionalRows && occasionalRows.length > 0)) && (
+                    <div className="bg-(--bg-card) border border-(--border) rounded-xl p-5 space-y-4">
                       <div className="flex items-center gap-1 text-sm font-bold text-(--primary) uppercase">
-                        Add One-time Fees
+                        Add One-time & Occasional Fees
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {oneTimeRows.map(r => {
                           const isChecked = selectedOneTimeIds.includes(r.periodKey);
                           const isFullyPaid = r.due === 0;
                           return (
-                            <div key={r.periodKey} className={`flex justify-between items-center p-3 rounded-lg border border-(--border) transition ${isFullyPaid ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                              <div>
-                                <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
-                                <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
-                                  {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
-                                </p>
+                            <div key={r.periodKey} className="flex flex-col justify-between p-3 rounded-lg border border-(--border) transition bg-(--bg-soft)/25">
+                              <div className="flex justify-between items-center w-full mb-1">
+                                <div>
+                                  <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
+                                  <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
+                                    {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
+                                  </p>
+                                </div>
+                                {!isFullyPaid && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOneTimeIds(prev =>
+                                        prev.includes(r.periodKey)
+                                          ? prev.filter(id => id !== r.periodKey)
+                                          : [...prev, r.periodKey]
+                                      );
+                                    }}
+                                    className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isChecked
+                                      ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                      : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                                      }`}
+                                  >
+                                    {isChecked ? "Selected" : "Select"}
+                                  </button>
+                                )}
                               </div>
-                              {!isFullyPaid && (
-                                <button
-                                  onClick={() => {
-                                    setSelectedOneTimeIds(prev =>
-                                      prev.includes(r.periodKey)
-                                        ? prev.filter(id => id !== r.periodKey)
-                                        : [...prev, r.periodKey]
-                                    );
-                                  }}
-                                  className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isChecked
-                                    ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
-                                    : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
-                                    }`}
-                                >
-                                  {isChecked ? "Selected" : "Select"}
-                                </button>
-                              )}
+                              <div className="text-[10px] text-(--text-muted) font-semibold uppercase">One-time Fee</div>
+                            </div>
+                          );
+                        })}
+
+                        {occasionalRows.map(r => {
+                          const isChecked = selectedOneTimeIds.includes(r.periodKey);
+                          const isFullyPaid = r.due === 0;
+                          return (
+                            <div key={r.periodKey} className="flex flex-col justify-between p-3 rounded-lg border border-(--border) transition bg-(--bg-soft)/25">
+                              <div className="flex justify-between items-center w-full mb-1">
+                                <div>
+                                  <p className="text-sm font-semibold text-(--text)">{r.headName}</p>
+                                  <p className={`text-[10px] ${isFullyPaid ? "text-emerald-600" : "text-red-500"} capitalize font-bold`}>
+                                    {isFullyPaid ? `PAID: ₹${r.paid}` : `Due: ₹${r.due} (Paid: ₹${r.paid})`}
+                                  </p>
+                                </div>
+                                {!isFullyPaid && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOneTimeIds(prev =>
+                                        prev.includes(r.periodKey)
+                                          ? prev.filter(id => id !== r.periodKey)
+                                          : [...prev, r.periodKey]
+                                      );
+                                    }}
+                                    className={`p-1.5 px-3 rounded-md text-xs font-bold transition ${isChecked
+                                      ? "bg-(--status-p-bg) text-(--status-p-text) border border-(--status-p-border)"
+                                      : "bg-(--primary-soft) text-(--primary) hover:bg-(--primary) hover:text-white"
+                                      }`}
+                                  >
+                                    {isChecked ? "Selected" : "Select"}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-(--text-muted) font-semibold uppercase">Occasional Fee</div>
                             </div>
                           );
                         })}

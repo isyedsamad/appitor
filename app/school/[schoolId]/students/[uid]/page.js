@@ -254,11 +254,14 @@ export default function StudentProfilePage() {
 
   const monthRows = useMemo(() => {
     if (!MONTHS?.length) return [];
-    return MONTHS.map(m => {
+    
+    const mRows = MONTHS.map(m => {
       const monthData = feeSummary?.months?.[m.key];
       if (monthData) {
         return {
-          ...m,
+          key: m.key,
+          label: m.label,
+          type: "month",
           ...monthData,
         };
       }
@@ -267,13 +270,92 @@ export default function StudentProfilePage() {
       ) || [];
       const sum = activeHeads.reduce((s, h) => s + h.amount, 0);
       return {
-        ...m,
+        key: m.key,
+        label: m.label,
+        type: "month",
         headsSnapshot: activeHeads,
         total: sum,
         paid: 0,
         status: activeHeads.length > 0 ? "due" : "pending",
       };
     });
+
+    const oRows = [];
+    if (template) {
+      const oneTimeItems = template.items.filter(item => item.frequency === "one-time");
+      oneTimeItems.forEach(item => {
+        const periodKey = `one-time-${item.headId}`;
+        const monthData = feeSummary?.months?.[periodKey];
+        if (monthData) {
+          oRows.push({
+            key: periodKey,
+            label: `${item.headName} (One-time)`,
+            type: "one-time",
+            ...monthData,
+          });
+        } else {
+          oRows.push({
+            key: periodKey,
+            label: `${item.headName} (One-time)`,
+            type: "one-time",
+            headsSnapshot: [{ headId: item.headId, headName: item.headName, amount: item.amount }],
+            total: item.amount,
+            paid: 0,
+            status: "due",
+          });
+        }
+      });
+    }
+
+    const occRows = [];
+    if (template) {
+      const occasionalItems = template.items.filter(item => item.frequency === "occasional" || item.frequency === "yearly");
+      occasionalItems.forEach(item => {
+        const periodKey = `occasional-${item.headId}`;
+        const monthData = feeSummary?.months?.[periodKey];
+        if (monthData) {
+          occRows.push({
+            key: periodKey,
+            label: `${item.headName} (Occasional)`,
+            type: "occasional",
+            ...monthData,
+          });
+        } else {
+          occRows.push({
+            key: periodKey,
+            label: `${item.headName} (Occasional)`,
+            type: "occasional",
+            headsSnapshot: [{ headId: item.headId, headName: item.headName, amount: item.amount }],
+            total: item.amount,
+            paid: 0,
+            status: "due",
+          });
+        }
+      });
+    }
+
+    if (feeSummary?.months) {
+      Object.entries(feeSummary.months).forEach(([periodKey, data]) => {
+        if (periodKey.startsWith("occasional-")) {
+          if (occRows.some(x => x.key === periodKey)) return;
+          const parts = periodKey.split("-");
+          const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`) || periodKey === `occasional-${item.headId}`);
+          const headName = matchingItem ? matchingItem.headName : "Occasional Fee";
+          const hasMonth = parts.length > 2;
+          const monthKey = hasMonth ? (matchingItem ? periodKey.replace(`occasional-${matchingItem.headId}-`, "") : parts[2]) : null;
+          const monthLabel = monthKey ? (MONTHS.find(m => m.key === monthKey)?.label || monthKey) : "";
+          const label = monthLabel ? `${headName} (${monthLabel})` : `${headName} (Occasional)`;
+          occRows.push({
+            key: periodKey,
+            label,
+            type: "occasional",
+            ...data,
+          });
+        }
+      });
+    }
+
+    return [...mRows, ...oRows, ...occRows];
   }, [feeSummary, template, MONTHS]);
   const update = (k, v) =>
     setForm(p => ({ ...p, [k]: v }));
