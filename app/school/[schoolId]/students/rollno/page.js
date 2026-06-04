@@ -33,6 +33,9 @@ export default function AssignRollPage() {
   const [students, setStudents] = useState([]);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkOrder, setBulkOrder] = useState("appId");
+  const [bulkRunning, setBulkRunning] = useState(false);
 
   const selectedClass = classData?.find(c => c.id === className);
   const getClassName = id => classData.find(c => c.id === id)?.name;
@@ -159,6 +162,30 @@ export default function AssignRollPage() {
     }
   }
 
+  async function runBulkAssign() {
+    setBulkRunning(true);
+    setLoading(true);
+    try {
+      const res = await secureAxios.post("/api/school/students/assign-roll/bulk", {
+        branch,
+        session: schoolUser.currentSession,
+        order: bulkOrder,
+      });
+      if (res.data.success) {
+        toast.success(res.data.message || "Roll numbers assigned successfully!");
+        setShowBulkModal(false);
+        if (className && section) {
+          loadStudents();
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to run bulk assignment.");
+    } finally {
+      setBulkRunning(false);
+      setLoading(false);
+    }
+  }
+
   const currentPlan = branchInfo?.plan || schoolUser?.plan || "trial";
   const editable = canManage(schoolUser, "student.rollno.manage", currentPlan);
 
@@ -177,6 +204,15 @@ export default function AssignRollPage() {
               </p>
             </div>
           </div>
+          {editable && (
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="btn-primary flex items-center gap-2"
+            >
+              <RefreshCcw size={16} />
+              Quick Assign All
+            </button>
+          )}
         </div>
 
         <div>
@@ -365,7 +401,7 @@ export default function AssignRollPage() {
                 <button
                   onClick={saveRolls}
                   disabled={saving || duplicates.size > 0}
-                  className="btn-primary flex items-center gap-2 text-sm py-3 px-8 shadow-lg shadow-orange-500/20"
+                  className="btn-primary w-full mt-2 flex items-center gap-2 text-sm py-3 px-8 rounded-t-none"
                 >
                   {saving ? <RefreshCcw size={15} className="animate-spin" /> : <Save size={18} />}
                   <span className="font-semibold">Save All Changes</span>
@@ -384,6 +420,85 @@ export default function AssignRollPage() {
             <p className="text-sm text-(--text-muted) max-w-sm text-center mt-2 font-medium">
               Select a class and section from the filters above to load the student roster and start assigning roll numbers.
             </p>
+          </div>
+        )}
+
+        {showBulkModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-(--bg-card) border border-(--border) w-full max-w-md p-6 rounded-lg shadow-xl space-y-4 animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center border-b border-(--border) pb-3">
+                <h3 className="text-base font-bold text-(--text)">Quick Assign Roll Numbers</h3>
+                <button
+                  onClick={() => setShowBulkModal(false)}
+                  className="text-(--text-muted) hover:text-(--text)"
+                  disabled={bulkRunning}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4 py-2">
+                <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-md text-amber-600 space-y-2">
+                  <div className="font-bold text-xs flex items-center gap-1.5">
+                    <AlertCircle size={14} />
+                    Safety Warning
+                  </div>
+                  <p className="text-xs leading-relaxed text-amber-700">
+                    This will automatically overwrite existing roll numbers across every class-section in the active session ({schoolUser.currentSession}). This action is irreversible.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-(--text-muted)">
+                    Select Sorting Order
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBulkOrder("appId")}
+                      className={`flex flex-col items-center justify-center p-4 border rounded-md transition-all gap-2 ${bulkOrder === "appId"
+                        ? "border-(--primary) bg-(--primary-soft)/10 text-(--primary)"
+                        : "border-(--border) hover:bg-(--bg-soft)"
+                        }`}
+                    >
+                      <ArrowDown10 size={24} />
+                      <span className="text-xs font-bold">App ID / Admission</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBulkOrder("alphabetical")}
+                      className={`flex flex-col items-center justify-center p-4 border rounded-md transition-all gap-2 ${bulkOrder === "alphabetical"
+                        ? "border-(--primary) bg-(--primary-soft)/10 text-(--primary)"
+                        : "border-(--border) hover:bg-(--bg-soft)"
+                        }`}
+                    >
+                      <ArrowDownAZ size={24} />
+                      <span className="text-xs font-bold">Alphabetical</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-(--border)">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkModal(false)}
+                  className="btn-outline px-4 py-2"
+                  disabled={bulkRunning}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={runBulkAssign}
+                  className="btn-primary bg-red-500 border-red-500 hover:bg-red-600 hover:border-red-600 px-5 py-2 flex items-center gap-1.5"
+                  disabled={bulkRunning}
+                >
+                  {bulkRunning ? <RefreshCcw size={14} className="animate-spin" /> : null}
+                  Run Assignment
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
