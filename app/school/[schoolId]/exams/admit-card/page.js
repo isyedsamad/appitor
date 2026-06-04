@@ -471,21 +471,19 @@ function DesignStep({
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Start Date</label>
                                 <input
-                                    type="text"
+                                    type="date"
                                     value={examDate}
                                     onChange={e => setExamDate(e.target.value)}
                                     className="input w-full bg-(--bg-soft)"
-                                    placeholder="20th March"
                                 />
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Time Slot</label>
                                 <input
-                                    type="text"
+                                    type="time"
                                     value={examTime}
                                     onChange={e => setExamTime(e.target.value)}
                                     className="input w-full bg-(--bg-soft)"
-                                    placeholder="9 AM - 12 PM"
                                 />
                             </div>
                         </div>
@@ -549,6 +547,50 @@ function DesignStep({
     );
 }
 
+const generateBarcode = (text) => {
+    const code39 = {
+        '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+        '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+        '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+        'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+        'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+        'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+        'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+        'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+        'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+        '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100'
+    };
+    const cleanText = `*${(text || "").toUpperCase().replace(/[^0-9A-Z\-.\s]/g, "")}*`;
+    let x = 0;
+    const bars = [];
+    for (let i = 0; i < cleanText.length; i++) {
+        const char = cleanText[i];
+        const pattern = code39[char] || code39[' '];
+        for (let j = 0; j < 9; j++) {
+            const isWide = pattern[j] === '1';
+            const width = isWide ? 3 : 1;
+            const isBar = j % 2 === 0;
+            if (isBar) {
+                bars.push({ x, width });
+            }
+            x += width;
+        }
+        x += 1;
+    }
+    return { bars, totalWidth: x };
+};
+
+const renderBarcode = (text) => {
+    const { bars, totalWidth } = generateBarcode(text);
+    return (
+        <svg viewBox={`0 0 ${totalWidth} 20`} className="w-16 h-4">
+            {bars.map((bar, idx) => (
+                <rect key={idx} x={bar.x} y="0" width={bar.width} height="20" fill="black" />
+            ))}
+        </svg>
+    );
+};
+
 function AdmitCard({
     student, schoolName, branchInfo, session, classNameId, sectionName,
     examTitle, examDate, examTime, instructions, layoutType, className = ""
@@ -559,58 +601,193 @@ function AdmitCard({
     const branchName = branchInfo?.name || "";
     const city = branchInfo?.city || "";
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "TBA";
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString("en-US", { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch {
+            return dateStr;
+        }
+    };
+
+    const formatTime = (timeStr) => {
+        if (!timeStr) return "TBA";
+        try {
+            const parts = timeStr.split(":");
+            if (parts.length < 2) return timeStr;
+            const h = parseInt(parts[0], 10);
+            const m = parts[1];
+            if (isNaN(h)) return timeStr;
+            const ampm = h >= 12 ? "PM" : "AM";
+            const displayHour = h % 12 || 12;
+            return `${displayHour}:${m} ${ampm}`;
+        } catch {
+            return timeStr;
+        }
+    };
+
     return (
-        <div className={`admit-card-base ${className} flex flex-col p-3 border-2 border-slate-200 relative`}>
-            <div className="text-center border-b border-slate-100 pb-1 mb-2">
-                <h3 className="text-[10px] font-black uppercase text-slate-900 tracking-tight leading-none mb-1">{schoolName}</h3>
-                <p className="text-[7px] font-bold text-slate-500 uppercase tracking-widest leading-none">{branchName} {city && `| ${city}`}</p>
-                <div className="mt-1.5 inline-block px-3 py-0.5 bg-slate-900 rounded-full max-w-[90%] truncate">
-                    <p className="text-[8px] font-bold text-white uppercase tracking-wider leading-none whitespace-nowrap overflow-hidden text-ellipsis">{examTitle || 'ADMIT CARD'}</p>
-                </div>
-            </div>
-
-            <div className={`flex gap-4 items-start ${isSmall ? '' : 'flex-1'}`}>
-                <div className="flex-1 space-y-1">
-                    <InfoRow label="Student Name" value={student.name} highlight />
-                    <InfoRow label="Admission No" value={student.appId} />
-                    <div className="grid grid-cols-2 gap-2">
-                        <InfoRow label="Class / Sec" value={`${classNameId} - ${sectionName}`} />
-                        <InfoRow label="Roll No" value={student.rollNo ? student.rollNo.toString().padStart(2, "0") : '-'} />
+        <div className={`admit-card-base ${className}`}>
+            <div className="admit-card-inner-border" />
+            <div className="admit-card-content">
+                <div className="text-center border-b border-black pb-1 mb-2 relative">
+                    <h3 className="text-[11px] font-bold uppercase text-black tracking-normal leading-none">{schoolName}</h3>
+                    <p className="text-[7px] font-bold text-gray-500 uppercase tracking-wide leading-none">{branchName} {city && `| ${city}`}</p>
+                    <div className="mt-1.5 inline-block px-3 py-0.5 bg-black border border-black rounded-sm max-w-[90%] truncate">
+                        <p className="text-[7px] font-bold text-white uppercase tracking-widest leading-none whitespace-nowrap overflow-hidden text-ellipsis">{examTitle || 'EXAMINATION HALL TICKET'}</p>
                     </div>
-                    {(examDate || examTime) && (
-                        <div className="grid grid-cols-2 gap-2 mt-0.5">
-                            <InfoRow label="Exam Date" value={examDate} icon={Calendar} />
-                            <InfoRow label="Time Slot" value={examTime} icon={Clock} />
+                </div>
+
+                {isSmall ? (
+                    <div className="grid grid-cols-12 gap-2 items-center flex-1">
+                        <div className="col-span-8 space-y-1">
+                            <div className="flex flex-col border-b border-gray-100 pb-0.5">
+                                <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Student Name</span>
+                                <span className="text-[13px] font-bold text-black uppercase truncate">{student.name}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="flex flex-col">
+                                    <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Admission No</span>
+                                    <span className="text-[8px] font-bold text-black uppercase truncate">{student.appId}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Class & Section</span>
+                                    <span className="text-[8px] font-bold text-black uppercase truncate">{classNameId} - {sectionName}</span>
+                                </div>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Schedule Time & Date</span>
+                                <span className="text-[7.5px] font-bold text-black truncate">{formatDate(examDate)} | {formatTime(examTime)}</span>
+                            </div>
                         </div>
-                    )}
-                </div>
-                <div className="w-14 h-16 admit-photo-placeholder flex-shrink-0 border border-slate-200 rounded">
-                    <User size={20} className="text-slate-200" />
-                </div>
-            </div>
 
-            {!isSmall && (
-                <div className="mt-4 pt-3 border-t border-slate-100 flex-1 overflow-hidden">
-                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1.5 leading-none">Important Instructions</p>
-                    <p className="text-[8px] text-slate-600 leading-snug italic whitespace-pre-line overflow-hidden max-h-[60px]">
-                        {instructions || "No instructions provided."}
-                    </p>
-                </div>
-            )}
+                        <div className="col-span-4 flex flex-col items-center justify-center">
+                            <div className="p-1.5 border border-black rounded-sm bg-gray-50 w-full text-center">
+                                <span className="block font-bold text-[6px] text-gray-500 tracking-wider">ROLL NO</span>
+                                <span className="block text-[16px] font-bold text-black leading-none">{student.rollNo ? student.rollNo.toString().padStart(2, "0") : '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <div className="grid grid-cols-3 gap-3 border-b border-gray-200 pb-2">
+                            <div className="space-y-1.5">
+                                <div className="flex flex-col">
+                                    <span className="text-[6px] font-bold text-gray-500 uppercase tracking-wider">Student Name</span>
+                                    <span className="text-[12px] font-bold text-black uppercase truncate">{student.name}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[6px] font-bold text-gray-500 uppercase tracking-wider">Admission Number</span>
+                                    <span className="text-[8px] font-bold text-black uppercase truncate">{student.appId}</span>
+                                </div>
+                            </div>
 
-            <div className="mt-auto pt-2 flex justify-between items-end border-t border-slate-50">
-                <div className="text-[7px] font-bold text-slate-400">
-                    <p>Session: {session}</p>
-                    <p>ID: {student.uid.slice(-6).toUpperCase()}</p>
-                </div>
-                <div className="text-center">
-                    <div className="w-16 border-t border-slate-400 mb-0.5"></div>
-                    <p className="text-[6px] font-bold text-slate-900 uppercase">Principle Signature</p>
-                </div>
-            </div>
+                            <div className="space-y-1.5">
+                                <div className="flex flex-col">
+                                    <span className="text-[6px] font-bold text-gray-500 uppercase tracking-wider">Class / Section</span>
+                                    <span className="text-[8px] font-bold text-black uppercase truncate">{classNameId} - {sectionName}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[6px] font-bold text-gray-500 uppercase tracking-wider">Academic Session</span>
+                                    <span className="text-[8px] font-bold text-black uppercase truncate">{session}</span>
+                                </div>
+                            </div>
 
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] rotate-[-25deg] pointer-events-none select-none">
-                <GraduationCap size={100} />
+                            <div className="flex flex-col items-center justify-between">
+                                <div className="border border-black rounded-sm p-1.5 w-full text-center bg-gray-50">
+                                    <span className="block font-black text-[6px] text-gray-500 tracking-wider leading-none">ROLL NUMBER</span>
+                                    <span className="block text-[13px] font-extrabold text-black leading-none mt-1">{student.rollNo ? student.rollNo.toString().padStart(2, "0") : '-'}</span>
+                                </div>
+                                <div className="text-right w-full mt-1">
+                                    <span className="text-[5.5px] font-bold text-gray-500 uppercase block tracking-wider leading-none">Exam Center</span>
+                                    <span className="text-[7px] font-bold text-black block truncate leading-tight uppercase">School Exam Hall</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-1">
+                            <table className="admit-schedule-table">
+                                <thead>
+                                    <tr>
+                                        <th className="w-1/3">Subject / Paper</th>
+                                        <th>Exam Date</th>
+                                        <th>Time / Session</th>
+                                        <th>Reporting</th>
+                                        <th>Room</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td className="font-bold text-black uppercase truncate max-w-[120px]">{examTitle || 'Term Exam'}</td>
+                                        <td>{formatDate(examDate)}</td>
+                                        <td className="truncate max-w-[80px]">{formatTime(examTime)}</td>
+                                        <td>8:45 AM</td>
+                                        <td>Exam Hall</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="text-gray-400">Next Scheduled Paper</td>
+                                        <td className="text-gray-400">As per date sheet</td>
+                                        <td className="text-gray-400">As per date sheet</td>
+                                        <td className="text-gray-400">8:45 AM</td>
+                                        <td className="text-gray-400">Exam Hall</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-1.5 border-t border-gray-200 pt-1">
+                            <p className="text-[5.5px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">Instructions to Candidate</p>
+                            <p className="text-[6.5px] text-gray-700 leading-tight italic line-clamp-2">
+                                {instructions || "1. Bring this card. 2. No electronic devices. 3. Arrive 15m early."}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-auto pt-1 flex justify-between items-end border-t border-gray-300 relative">
+                    <div className="absolute bottom-1 right-28 pointer-events-none opacity-[0.08]">
+                        <svg width="45" height="45" viewBox="0 0 100 100" className="text-black">
+                            <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2" />
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
+                            <path id="stamp-text-path" fill="none" d="M 15 50 A 35 35 0 1 1 85 50" />
+                            <text className="font-bold text-[8px]" fill="currentColor">
+                                <textPath href="#stamp-text-path" startOffset="50%" textAnchor="middle">
+                                    APPTOR SCHOOL
+                                </textPath>
+                            </text>
+                            <path id="stamp-text-path-bottom" fill="none" d="M 85 50 A 35 35 0 1 1 15 50" />
+                            <text className="font-bold text-[8px]" fill="currentColor">
+                                <textPath href="#stamp-text-path-bottom" startOffset="50%" textAnchor="middle">
+                                    OFFICIAL SEAL
+                                </textPath>
+                            </text>
+                            <polygon points="50,32 53,40 62,40 55,45 57,53 50,48 43,53 45,45 38,40 47,40" fill="currentColor" />
+                        </svg>
+                    </div>
+
+                    <div className="text-[6px] font-bold text-gray-400 flex items-center gap-2">
+                        <div>
+                            <p>Session: {session}</p>
+                            <p>ID: {student.uid.slice(-6).toUpperCase()}</p>
+                        </div>
+                        <div className="border-l border-gray-200 pl-2">
+                            {renderBarcode(student.appId)}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 items-end">
+                        <div className="text-center flex flex-col items-center relative">
+                            <div className="w-12 border-t border-gray-400 mb-0.5"></div>
+                            <p className="text-[5.5px] font-bold text-black uppercase">Principal Sign</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] rotate-[-25deg] pointer-events-none select-none text-black">
+                    <GraduationCap size={90} />
+                </div>
             </div>
         </div>
     );
