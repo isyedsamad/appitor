@@ -131,6 +131,18 @@ export function SchoolProvider({ schoolId, children }) {
   }, [schoolUser?.schoolId, currentBranch]);
 
   useEffect(() => {
+    if (schoolUser && currentSession && schoolUser.currentSession !== currentSession) {
+      setSchoolUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          currentSession
+        };
+      });
+    }
+  }, [currentSession]);
+
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       setLoading(true);
       setIsLoaded(false);

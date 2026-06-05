@@ -69,7 +69,6 @@ export async function PUT(req) {
     }
 
     if (branch) {
-      // Save to branch-level
       const branchRef = adminDb
         .collection("schools")
         .doc(user.schoolId)
@@ -90,14 +89,18 @@ export async function PUT(req) {
         { merge: true }
       );
 
-      // Also update branch main doc for quick access
       await branchRef.update({
         currentSession,
         sessions,
         updatedAt: FieldValue.serverTimestamp(),
       });
+
+      const schoolRef = adminDb.collection("schools").doc(user.schoolId);
+      await schoolRef.update({
+        currentSession,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
     } else {
-      // Default school-level update
       const schoolRef = adminDb.collection("schools").doc(user.schoolId);
       const academicRef = schoolRef
         .collection("settings")

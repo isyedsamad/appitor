@@ -175,6 +175,27 @@ export async function POST(req) {
       }
     }
 
+    if (processedCount > 0) {
+      const academicSettingRef = branchRef.collection("settings").doc("academic");
+      await adminDb.runTransaction(async (tx) => {
+        tx.set(academicSettingRef, {
+          currentSession: toSession,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: user.uid
+        }, { merge: true });
+
+        tx.update(branchRef, {
+          currentSession: toSession,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+
+        tx.update(schoolRef, {
+          currentSession: toSession,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      });
+    }
+
     if (errors.length > 0 && processedCount === 0) {
       return NextResponse.json(
         { message: "Rollover failed entirely.", errors },
