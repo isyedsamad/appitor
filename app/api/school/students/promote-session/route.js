@@ -50,9 +50,10 @@ export async function POST(req) {
 
           const isPassedOut = toClassId === "passed_out";
           let resolvedSectionId = toSectionId;
+          let newClassData = null;
+          const classesRef = branchRef.collection("classes").doc("data");
 
           if (!isPassedOut && !resolvedSectionId && toSectionName) {
-            const classesRef = branchRef.collection("classes").doc("data");
             const classesSnap = await tx.get(classesRef);
             if (!classesSnap.exists) {
               throw new Error("Class configuration document not found.");
@@ -67,9 +68,9 @@ export async function POST(req) {
             if (match) {
               resolvedSectionId = match.id;
             } else {
-              const newId = randomUUID();
+              resolvedSectionId = randomUUID();
               sections.push({
-                id: newId,
+                id: resolvedSectionId,
                 name: toSectionName.toUpperCase(),
                 capacity: 40,
                 isActive: true
@@ -78,8 +79,7 @@ export async function POST(req) {
                 ...classData[classIndex],
                 sections
               };
-              tx.set(classesRef, { classData, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-              resolvedSectionId = newId;
+              newClassData = classData;
             }
           }
 
@@ -96,15 +96,21 @@ export async function POST(req) {
             }
           }
 
-          const updatesToProcess = [];
-
+          // Read Phase: Fetch all student profiles first before doing any database writes
+          const studentSnaps = [];
           for (const s of studentsToPromote) {
             const userRef = adminDb.collection("schoolUsers").doc(s.uid);
-            const branchStudentRef = branchRef.collection("students").doc(s.uid);
             const studentSnap = await tx.get(userRef);
+            studentSnaps.push({ s, userRef, studentSnap });
+          }
 
+          // Memory Phase: Compute updates
+          const updatesToProcess = [];
+
+          for (const { s, userRef, studentSnap } of studentSnaps) {
             if (!studentSnap.exists) continue;
             const studentData = studentSnap.data();
+            const branchStudentRef = branchRef.collection("students").doc(s.uid);
 
             const historyEntry = {
               session: fromSession,
@@ -139,6 +145,11 @@ export async function POST(req) {
             }
           }
 
+          // Write Phase: Perform all database writes
+          if (newClassData) {
+            tx.set(classesRef, { classData: newClassData, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+          }
+
           for (const { userRef, branchStudentRef, updates } of updatesToProcess) {
             tx.update(userRef, updates);
             tx.update(branchStudentRef, updates);
@@ -166,9 +177,8 @@ export async function POST(req) {
               tx.update(targetRosterRef, targetPayload);
             }
           }
-
-          processedCount += studentsToPromote.length;
         });
+        processedCount += studentsToPromote.length;
       } catch (err) {
         console.error(`Transaction failed for mapping from class ${fromClassId} section ${fromSectionId}:`, err);
         errors.push(`Failed to promote from class ${fromClassId} section ${fromSectionId}: ${err.message}`);
