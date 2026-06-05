@@ -31,6 +31,7 @@ export async function POST(req) {
         continue;
       }
 
+      let countForThisMapping = 0;
       try {
         await adminDb.runTransaction(async (tx) => {
           const srcRosterId = `${fromClassId}_${fromSectionId}_${fromSession}`;
@@ -47,6 +48,7 @@ export async function POST(req) {
           if (studentsToPromote.length === 0) {
             return;
           }
+          countForThisMapping = studentsToPromote.length;
 
           const isPassedOut = toClassId === "passed_out";
           let resolvedSectionId = toSectionId;
@@ -178,7 +180,7 @@ export async function POST(req) {
             }
           }
         });
-        processedCount += studentsToPromote.length;
+        processedCount += countForThisMapping;
       } catch (err) {
         console.error(`Transaction failed for mapping from class ${fromClassId} section ${fromSectionId}:`, err);
         errors.push(`Failed to promote from class ${fromClassId} section ${fromSectionId}: ${err.message}`);
