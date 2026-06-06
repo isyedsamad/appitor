@@ -40,7 +40,7 @@ export default function Sidebar() {
           {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </button>
       </div>
-      <nav className="p-2 space-y-2">
+      <nav className="">
         {MENU.map(main => {
           const isMainGranted = !main.permission || hasPermission(schoolUser, main.permission, main.isForAll ?? false, currentPlan);
           const hasAccessibleChild = main.children?.some(sub => {
@@ -62,7 +62,7 @@ export default function Sidebar() {
               {mainHref && !isMainLocked ? (
                 <Link
                   href={mainHref}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-(--primary-soft) transition"
+                  className="flex items-center justify-between px-5 py-3 hover:bg-(--primary-soft) transition"
                 >
                   {!collapsed && <span className="text-sm font-semibold">{main.label}</span>}
                   <div className="flex items-center gap-2 ml-auto">
@@ -89,8 +89,9 @@ export default function Sidebar() {
                     if (isMainLocked) return;
                     if (hasMainChildren) setOpenMenu(isMainOpen ? null : main.label);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition
-                    ${isMainLocked ? "opacity-50 cursor-not-allowed grayscale" : "hover:bg-(--primary-soft)"}`}
+                  className={`w-full rounded-none flex items-center justify-between px-5 py-3 transition
+                    ${isMainLocked ? "opacity-50 cursor-not-allowed grayscale" : "hover:bg-(--primary-soft)"}
+                    ${isMainOpen ? "bg-(--primary-soft)" : ""}`}
                 >
                   {!collapsed && (
                     <span className="text-sm font-semibold flex items-center gap-2">
@@ -107,7 +108,7 @@ export default function Sidebar() {
                 </button>
               )}
               {!collapsed && isMainOpen && hasMainChildren && !isMainLocked && (
-                <div className="ml-3 pl-1 mt-1 space-y-1 border-l-2 border-(--border)/70">
+                <div className="ml-4 border-l-2 border-(--border)/50">
                   {main.children.map(sub => {
                     const subKey = `${main.label}__${sub.label}`;
                     const isSubOpen = openSubMenu === subKey;
@@ -120,7 +121,7 @@ export default function Sidebar() {
                         return (
                           <div
                             key={sub.href ?? sub.label}
-                            className="flex font-medium items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
+                            className="flex font-medium items-center justify-between px-3 py-2 rounded-none text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
                           >
                             <span className="flex items-center gap-2">
                               {sub.label}
@@ -134,7 +135,7 @@ export default function Sidebar() {
                         <Link
                           key={sub.href ?? sub.label}
                           href={subHref}
-                          className="flex font-medium items-center justify-between px-3 py-1.5 mt-1 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
+                          className="flex font-medium items-center justify-between px-3 py-2 rounded-none text-sm text-(--text-muted) hover:bg-(--primary-soft)"
                         >
                           <span>{sub.label}</span>
                         </Link>
@@ -146,9 +147,9 @@ export default function Sidebar() {
                     const subHref = sub.href && !isGroupLocked ? `${basePath}/${sub.href}` : "#";
 
                     return (
-                      <div key={sub.label} className="mt-1">
+                      <div key={sub.label}>
                         {isGroupLocked ? (
-                          <div className="flex items-center justify-between rounded px-3 py-1.5 text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale">
+                          <div className="flex items-center justify-between rounded px-3 py-2 text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale">
                             <span className="flex font-medium items-center gap-2">
                               {sub.label} <Lock size={10} />
                             </span>
@@ -157,9 +158,10 @@ export default function Sidebar() {
                           <Link
                             href={subHref}
                             onClick={e => setOpenSubMenu(prev => prev === subKey ? null : subKey)}
-                            className="flex font-medium items-center justify-between rounded hover:bg-(--primary-soft)"
+                            className={`flex font-medium items-center justify-between rounded-none hover:bg-(--primary-soft)
+                              ${isSubOpen ? "bg-(--primary-soft)" : ""}`}
                           >
-                            <span className="flex-1 px-3 py-1.5 text-sm text-(--text)">
+                            <span className="flex-1 px-3 py-2 text-sm text-(--text)">
                               {sub.label}
                             </span>
                             <div className="p-1 mr-2">
@@ -168,7 +170,7 @@ export default function Sidebar() {
                           </Link>
                         )}
                         {isSubOpen && !isGroupLocked && (
-                          <div className="ml-3 pl-1 mt-1 space-y-1 border-l-2 border-(--border)/70">
+                          <div className="ml-3 border-l-2 border-(--border)/70">
                             {sub.children.map(page => {
                               const isPageLocked = page.permission && !hasPermission(schoolUser, page.permission, false, currentPlan);
 
@@ -176,7 +178,7 @@ export default function Sidebar() {
                                 return (
                                   <div
                                     key={page.href}
-                                    className="flex font-medium items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
+                                    className="flex font-medium items-center justify-between px-3 py-1.5 rounded-none text-sm text-(--text-muted) opacity-50 cursor-not-allowed grayscale"
                                   >
                                     <span className="flex items-center gap-2">
                                       {page.label} <Lock size={10} />
@@ -189,7 +191,7 @@ export default function Sidebar() {
                                 <Link
                                   key={page.href}
                                   href={`${basePath}/${page.href}`}
-                                  className="flex font-medium items-center justify-between px-3 py-1.5 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft)"
+                                  className="flex font-medium items-center justify-between px-3 py-1.5 rounded-none text-sm text-(--text-muted) hover:bg-(--primary-soft)"
                                 >
                                   <span>{page.label}</span>
                                 </Link>
