@@ -93,7 +93,7 @@ export default function Navbar() {
                             )}
                             <Link
                                 href="/school/"
-                                className="text-sm px-3 py-2 font-semibold text-(--text) hover:text-(--primary) hover:bg-(--primary-soft)/50 rounded-xl backdrop-blur-sm transition-all"
+                                className="text-sm px-3 py-2 font-semibold text-(--primary) bg-(--primary-soft) rounded-xl border border-(--primary)/20 backdrop-blur-sm transition-all"
                             >
                                 Portal Login
                             </Link>

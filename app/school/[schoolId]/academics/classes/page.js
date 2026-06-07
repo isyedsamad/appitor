@@ -173,7 +173,7 @@ export default function ClassesPage() {
                 <span className="text-(--border)/50">|</span>
                 <button
                   onClick={() => setOpenBulkModal(true)}
-                  className="text-(--primary) text-xs font-semibold uppercase tracking-wider hover:underline flex items-center gap-1"
+                  className="text-(--primary) text-xs font-bold uppercase tracking-wider hover:underline flex items-center gap-1"
                 >
                   <Sparkles size={12} className="text-(--primary) animate-pulse" />
                   Quick Setup School Classes

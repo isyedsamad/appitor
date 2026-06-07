@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { School, Mail, Lock, LogIn, Shield, Link, ChevronRight } from "lucide-react";
+import { School, Mail, Lock, LogIn, Shield, ChevronRight } from "lucide-react";
 import Loading from "@/components/ui/Loading";
 import { fetchSchools, loginSchoolUser } from "@/lib/school/authSchool";
 import { toast } from "react-toastify";
@@ -9,6 +9,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function SchoolLoginPage() {
   const router = useRouter();
@@ -72,21 +73,21 @@ export default function SchoolLoginPage() {
       <div className="min-h-[100dvh] flex items-center justify-center bg-(--bg)">
         <div className="flex-1/2 hidden lg:flex h-dvh bg-(--primary) shadow-md flex-col items-center justify-center">
           <div>
-            <div className="flex w-fit items-center gap-1 bg-white rounded-full p-3">
+            <Link href="/"><div className="flex w-fit items-center gap-1 bg-white rounded-full p-3">
               <Image src="/logo.png" alt="Logo" width={35} height={35} />
               {/* <span className="font-bold text-xl tracking-tight text-(--primary)">Appitor</span> */}
-            </div>
+            </div></Link>
             <p className="text-white/75 font-bold text-4xl mt-8">WHERE</p>
             <p className="text-white font-bold text-6xl">INNOVATION</p>
             <p className="text-white/75 font-bold text-4xl">MEETS EDUCATION..</p>
             <div className="mt-10 flex flex-col gap-1 items-start">
               <div className="divide-x-2 divide-white/50 flex ">
-                <div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">About us</div>
-                <div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Privacy Policy</div>
-                <div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Terms & Conditions</div>
-                <div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Help & Support</div>
+                <Link href="/features"><div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">About us</div></Link>
+                <Link href="/privacy"><div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Privacy Policy</div></Link>
+                <Link href="/terms"><div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Terms & Conditions</div></Link>
+                <Link href="/contact"><div className="text-white/90 uppercase px-2 font-medium text-xs cursor-pointer hover:underline hover:text-white transition">Help & Support</div></Link>
               </div>
-              <p className="text-white px-2 text-xs text-center font-medium mt-2">Copyright &copy; 2026 Appitor. All Rights Reserved.</p>
+              <p className="text-white px-2 text-xs text-center font-medium mt-2">Copyright &copy; {new Date().getFullYear()} Appitor. All Rights Reserved.</p>
             </div>
           </div>
         </div>

@@ -132,10 +132,13 @@ export async function PATCH(req) {
       .collection("classes")
       .doc("data");
 
-    await metaRef.update({
-      classData,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    await metaRef.set(
+      {
+        classData,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {
