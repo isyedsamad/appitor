@@ -161,16 +161,16 @@ export default function BulkEmployeeImportPage() {
             <p className="text-sm text-(--text-muted)">
               Individual credentials have been generated based on the Employee ID and Mobile number pattern.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pr-2">
               {importResults.employees.map((emp, i) => (
-                <div key={i} className="p-4 bg-(--bg) border border-(--border) rounded-xl space-y-2">
+                <div key={i} className="px-4 py-3 bg-(--bg) border border-(--border) rounded-xl space-y-1">
                   <p className="font-bold text-sm truncate">{emp.name}</p>
-                  <div className="flex justify-between text-[11px] font-mono bg-(--bg-soft) p-2 rounded">
-                    <span className="text-(--text-muted)">ID:</span>
+                  <div className="flex justify-between text-xs font-mono font-semibold">
+                    <span className="text-(--text-muted)">App ID:</span>
                     <span className="font-bold text-(--primary)">{emp.employeeId}</span>
                   </div>
-                  <div className="flex justify-between text-[11px] font-mono bg-(--bg-soft) p-2 rounded">
-                    <span className="text-(--text-muted)">Pass:</span>
+                  <div className="flex justify-between text-xs font-mono font-semibold">
+                    <span className="text-(--text-muted)">Password:</span>
                     <span className="font-bold">{emp.password}</span>
                   </div>
                 </div>

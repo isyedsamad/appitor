@@ -434,7 +434,7 @@ export default function ImportExportAdmissions() {
                     {rows.map((r, i) => (
                       <tr key={i} className={r._status !== 'valid' ? 'bg-red-500/5' : ''}>
                         <td className="px-4 py-3 font-bold text-(--text-muted)">{r.row}</td>
-                        <td className="px-4 py-3 font-semibold">{r.admissionId || ''}</td>
+                        <td className="px-4 py-3 font-semibold text-(--primary)">{r.admissionId || ''}</td>
                         <td className="px-4 py-3 font-semibold">{r.name || ''}</td>
                         <td className="px-4 py-3 uppercase font-semibold text-[10px]">{r.gender || ''}</td>
                         <td className="px-4 py-3">{r.dob || ''}</td>
