@@ -58,7 +58,6 @@ export default function AdmitCardsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [layoutType, setLayoutType] = useState("10");
     const [examTitle, setExamTitle] = useState("");
-    const [examDate, setExamDate] = useState("");
     const [examTime, setExamTime] = useState("");
     const [instructions, setInstructions] = useState("1. Bring this admit card to the exam hall.\n2. Arrive 15 minutes before the exam.");
     const [searched, setSearched] = useState(false);
@@ -223,7 +222,6 @@ export default function AdmitCardsPage() {
                         onPrint={handlePrint}
                         layoutType={layoutType} setLayoutType={setLayoutType}
                         examTitle={examTitle} setExamTitle={setExamTitle}
-                        examDate={examDate} setExamDate={setExamDate}
                         examTime={examTime} setExamTime={setExamTime}
                         instructions={instructions} setInstructions={setInstructions}
                         selectedIds={selectedIds}
@@ -250,7 +248,6 @@ export default function AdmitCardsPage() {
                                     classNameId={classData.find(c => c.id === className)?.name}
                                     sectionName={selectedClass?.sections.find(s => s.id === section)?.name}
                                     examTitle={examTitle}
-                                    examDate={examDate}
                                     examTime={examTime}
                                     instructions={instructions}
                                     layoutType={layoutType}
@@ -446,7 +443,7 @@ function SelectionStep({
 }
 
 function DesignStep({
-    onBack, onPrint, layoutType, setLayoutType, examTitle, setExamTitle, examDate, setExamDate, examTime, setExamTime, instructions, setInstructions,
+    onBack, onPrint, layoutType, setLayoutType, examTitle, setExamTitle, examTime, setExamTime, instructions, setInstructions,
     selectedIds, students, getStudentByUid, branchInfo, schoolUser, classNameId, sectionName, currentSession, selectedTerm
 }) {
     return (
@@ -494,25 +491,14 @@ function DesignStep({
                                 placeholder="e.g. Annual Exam 2025"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Start Date</label>
-                                <input
-                                    type="date"
-                                    value={examDate}
-                                    onChange={e => setExamDate(e.target.value)}
-                                    className="input w-full bg-(--bg-soft)"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Time Slot</label>
-                                <input
-                                    type="time"
-                                    value={examTime}
-                                    onChange={e => setExamTime(e.target.value)}
-                                    className="input w-full bg-(--bg-soft)"
-                                />
-                            </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Time Slot</label>
+                            <input
+                                type="time"
+                                value={examTime}
+                                onChange={e => setExamTime(e.target.value)}
+                                className="input w-full bg-(--bg-soft)"
+                            />
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-(--text-muted) uppercase ml-1">Instructions</label>
@@ -547,7 +533,6 @@ function DesignStep({
                             classNameId={classNameId}
                             sectionName={sectionName}
                             examTitle={examTitle}
-                            examDate={examDate}
                             examTime={examTime}
                             instructions={instructions}
                             layoutType={layoutType}
@@ -620,7 +605,7 @@ const renderBarcode = (text) => {
 
 function AdmitCard({
     student, schoolName, branchInfo, session, classNameId, sectionName,
-    examTitle, examDate, examTime, instructions, layoutType, className = ""
+    examTitle, examTime, instructions, layoutType, className = ""
 }) {
     if (!student) return null;
 
@@ -685,8 +670,8 @@ function AdmitCard({
                                 </div>
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Schedule Time & Date</span>
-                                <span className="text-[7.5px] font-bold text-black truncate">{formatDate(examDate)} | {formatTime(examTime)}</span>
+                                <span className="text-[5.5px] font-bold text-gray-500 uppercase tracking-wider">Schedule Time</span>
+                                <span className="text-[7.5px] font-bold text-black truncate">{formatTime(examTime)}</span>
                             </div>
                         </div>
 
@@ -739,7 +724,6 @@ function AdmitCard({
                                 <thead>
                                     <tr>
                                         <th className="w-1/3">Subject / Paper</th>
-                                        <th>Exam Date</th>
                                         <th>Time / Session</th>
                                         <th>Reporting</th>
                                         <th>Room</th>
@@ -748,15 +732,13 @@ function AdmitCard({
                                 <tbody>
                                     <tr>
                                         <td className="font-bold text-black uppercase truncate max-w-[120px]">{examTitle || 'Term Exam'}</td>
-                                        <td>{formatDate(examDate)}</td>
                                         <td className="truncate max-w-[80px]">{formatTime(examTime)}</td>
                                         <td>8:45 AM</td>
                                         <td>Exam Hall</td>
                                     </tr>
                                     <tr>
                                         <td className="text-gray-400">Next Scheduled Paper</td>
-                                        <td className="text-gray-400">As per date sheet</td>
-                                        <td className="text-gray-400">As per date sheet</td>
+                                        <td className="text-gray-400">{formatTime(examTime)}</td>
                                         <td className="text-gray-400">8:45 AM</td>
                                         <td className="text-gray-400">Exam Hall</td>
                                     </tr>

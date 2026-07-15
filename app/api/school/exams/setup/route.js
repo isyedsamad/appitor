@@ -32,8 +32,8 @@ export async function POST(req) {
     const batch = adminDb.batch();
     const now = FieldValue.serverTimestamp();
     for (const row of rows) {
-      const { subjectId, examDate, markingType, maxMarks } = row;
-      if (!subjectId || !examDate || !markingType) continue;
+      const { subjectId, markingType, maxMarks } = row;
+      if (!subjectId || !markingType) continue;
       if (!["grades", "marks"].includes(markingType)) continue;
       if (markingType === "marks" && (!maxMarks || Number(maxMarks) <= 0)) continue;
       const docId = `${session}::${termId}::${classId}::${sectionId}::${subjectId}`;
@@ -46,7 +46,6 @@ export async function POST(req) {
           classId,
           sectionId,
           subjectId,
-          examDate,
           markingType,
           maxMarks: markingType === "marks" ? Number(maxMarks) : null,
           updatedAt: now,
@@ -83,7 +82,7 @@ export async function PUT(req) {
       );
     }
     const body = await req.json();
-    const { id, branch, session, termId, classId, sectionId, subjectId, examDate, markingType, maxMarks } = body;
+    const { id, branch, session, termId, classId, sectionId, subjectId, markingType, maxMarks } = body;
     if (!id || !branch) {
       return NextResponse.json(
         { message: "Setup id and branch are required" },
@@ -118,7 +117,6 @@ export async function PUT(req) {
       classId,
       sectionId,
       subjectId,
-      examDate,
       markingType,
       maxMarks: markingType === "marks" ? Number(maxMarks) : null,
       updatedAt: FieldValue.serverTimestamp(),

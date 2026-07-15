@@ -7,7 +7,7 @@ export async function POST(req) {
   try {
     const user = await verifyUser(req, "timetable.settings.manage");
     const body = await req.json();
-    const { branch, startTime, periodDuration, totalPeriods, workingDays, breaks } = body;
+    const { branch, startTime, periodDuration, totalPeriods, workingDays, breaks, status } = body;
     if (!branch) {
       return NextResponse.json(
         { error: "Branch is required" },
@@ -33,6 +33,7 @@ export async function POST(req) {
         totalPeriods: Number(totalPeriods) || "",
         workingDays: workingDays || [],
         breaks: breaks || [],
+        status: status || "inactive",
         branch,
         schoolId: user.schoolId,
         updatedBy: user.uid,

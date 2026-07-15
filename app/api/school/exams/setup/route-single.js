@@ -15,8 +15,8 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { branch, session, termId, classId, sectionId, subjectId, examDate, markingType, maxMarks } = body;
-    if (!branch || !session || !termId || !classId || !sectionId || !subjectId || !examDate || !markingType) {
+    const { branch, session, termId, classId, sectionId, subjectId, markingType, maxMarks } = body;
+    if (!branch || !session || !termId || !classId || !sectionId || !subjectId || !markingType) {
       return NextResponse.json(
         { message: "All fields are required" },
         { status: 400 }
@@ -67,7 +67,6 @@ export async function POST(req) {
       classId,
       sectionId,
       subjectId,
-      examDate,
       markingType,
       maxMarks: markingType === "marks" ? Number(maxMarks) : null,
       createdAt: FieldValue.serverTimestamp(),
@@ -97,7 +96,7 @@ export async function PUT(req) {
       );
     }
     const body = await req.json();
-    const { id, branch, session, termId, classId, sectionId, subjectId, examDate, markingType, maxMarks } = body;
+    const { id, branch, session, termId, classId, sectionId, subjectId, markingType, maxMarks } = body;
     if (!id || !branch) {
       return NextResponse.json(
         { message: "Setup id and branch are required" },
@@ -132,7 +131,6 @@ export async function PUT(req) {
       classId,
       sectionId,
       subjectId,
-      examDate,
       markingType,
       maxMarks: markingType === "marks" ? Number(maxMarks) : null,
       updatedAt: FieldValue.serverTimestamp(),
