@@ -80,8 +80,10 @@ export async function POST(req) {
     for (const s of students) {
       const appId = branchCode.toUpperCase() + s.admissionId;
       const email = `${appId}@${user.schoolCode.toLowerCase()}.appitor`;
-      const [y, m, d] = s.dob.split("-");
-      const password = `${y}${m}${d}`;
+      const dobParts = s.dob.split("-");
+      const password = dobParts.length === 3 && dobParts[0].length === 4
+        ? `${dobParts[2]}${dobParts[1]}${dobParts[0]}`
+        : `${dobParts[0]}${dobParts[1]}${dobParts[2]}`;
 
       const authUser = await adminAuth.createUser({
         email,

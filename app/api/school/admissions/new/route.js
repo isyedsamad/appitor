@@ -43,7 +43,9 @@ export async function POST(req) {
     const schoolData = schoolSnap.data();
     const appId = `${branchData.appitorCode.toUpperCase()}${admissionId.toUpperCase()}`;
     const dobSplit = dob.split("-");
-    const generatedPassword = `${dobSplit[0]}${dobSplit[1]}${dobSplit[2]}`;
+    const generatedPassword = dobSplit.length === 3 && dobSplit[0].length === 4
+      ? `${dobSplit[2]}${dobSplit[1]}${dobSplit[0]}`
+      : `${dobSplit[0]}${dobSplit[1]}${dobSplit[2]}`;
     const email = `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
 
     const authUser = await adminAuth.createUser({

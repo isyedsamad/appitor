@@ -254,7 +254,7 @@ export default function StudentProfilePage() {
 
   const monthRows = useMemo(() => {
     if (!MONTHS?.length) return [];
-    
+
     const mRows = MONTHS.map(m => {
       const monthData = feeSummary?.months?.[m.key];
       let breakdown = [];
@@ -344,7 +344,7 @@ export default function StudentProfilePage() {
         if (periodKey.startsWith("occasional-")) {
           const isMerged = MONTHS.some(m => periodKey.endsWith(`-${m.key}`));
           if (isMerged) return;
-          
+
           if (occRows.some(x => x.key === periodKey)) return;
           const parts = periodKey.split("-");
           const matchingItem = template?.items?.find(item => periodKey.startsWith(`occasional-${item.headId}-`) || periodKey === `occasional-${item.headId}`);
@@ -370,12 +370,19 @@ export default function StudentProfilePage() {
   const selectedClass = classData && classData.find(
     c => c.name === form.className
   );
-  const password = form.dob
-    ? (() => {
-      const [d, m, y] = form.dob.split("-");
-      return `${d}${m}${y}`;
-    })()
-    : "";
+  const getDobPassword = (dobStr) => {
+    if (!dobStr) return "";
+    const parts = dobStr.split("-");
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[2]}${parts[1]}${parts[0]}`;
+      }
+      return `${parts[0]}${parts[1]}${parts[2]}`;
+    }
+    return dobStr;
+  };
+
+  const password = getDobPassword(form.dob);
   const isActive = student?.status === "active";
   async function saveProfile() {
     setSaving(true);
@@ -403,8 +410,7 @@ export default function StudentProfilePage() {
     }
   }
   async function updatePassword() {
-    const [d, m, y] = form.dob.split("-");
-    const password = `${d}${m}${y}`;
+    const password = getDobPassword(form.dob);
     setLoading(true);
     try {
       await secureAxios.put("/api/school/students/password", {
