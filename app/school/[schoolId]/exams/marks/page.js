@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { ClipboardCheck, Search, Save, Calendar, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trophy } from "lucide-react";
+import { ClipboardCheck, Search, Save, Calendar, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Trophy, Filter, Check, X } from "lucide-react";
 import RequirePermission from "@/components/school/RequirePermission";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
@@ -54,6 +54,24 @@ export default function MarksEntryPage() {
 
   const [searched, setSearched] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState([]);
+
+  const toggleSubjectFilter = (subId) => {
+    setSelectedSubjectIds(prev => {
+      if (prev.includes(subId)) {
+        return prev.filter(id => id !== subId);
+      } else {
+        return [...prev, subId];
+      }
+    });
+  };
+
+  const visibleSetups = useMemo(() => {
+    if (!selectedSubjectIds || selectedSubjectIds.length === 0) {
+      return setups;
+    }
+    return setups.filter(s => selectedSubjectIds.includes(s.subjectId) || selectedSubjectIds.includes(s.id));
+  }, [setups, selectedSubjectIds]);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -175,6 +193,7 @@ export default function MarksEntryPage() {
       setStudents(stuData);
       const existingMarks = await loadExistingMarks(stuData, termId);
       setMarks(existingMarks);
+      setSelectedSubjectIds([]);
       setSearched(true);
     } catch (err) {
       toast.error('Failed: ' + err);
@@ -298,6 +317,62 @@ export default function MarksEntryPage() {
             Search
           </button>
         </div>
+        {searched && students.length > 0 && setups.length > 0 && (
+          <div className="p-3 bg-(--bg-card) border border-(--border) rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-(--text-muted) uppercase mr-1 select-none">
+                <Filter size={14} className="text-(--primary)" />
+                <span>Filter Subjects:</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedSubjectIds([])}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${selectedSubjectIds.length === 0
+                  ? "bg-(--primary) text-white border-(--primary) shadow-2xs"
+                  : "bg-(--bg-soft) text-(--text-muted) border-(--border) hover:border-(--text)"
+                  }`}
+              >
+                All Subjects ({setups.length})
+              </button>
+
+              {setups.map(s => {
+                const subName = getSubjectName(s.subjectId) || "Subject";
+                const isSelected = selectedSubjectIds.includes(s.subjectId) || selectedSubjectIds.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => toggleSubjectFilter(s.subjectId)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${isSelected
+                      ? "bg-(--primary-soft) text-(--primary) border-(--primary) font-bold shadow-2xs"
+                      : "bg-(--bg-soft) text-(--text-muted) border-(--border) hover:border-(--text)"
+                      }`}
+                  >
+                    {isSelected && <Check size={12} />}
+                    <span>{subName}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedSubjectIds.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-(--text-muted) font-medium">
+                  Showing {visibleSetups.length} of {setups.length} subjects
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSubjectIds([])}
+                  className="text-xs text-red-500 hover:text-red-600 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                >
+                  <X size={12} /> Clear Filter
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {searched && students.length > 0 ? (
           <div className="rounded-xl border border-(--border) bg-(--bg-card) overflow-hidden">
             <div className="overflow-auto max-h-[70vh]">
@@ -314,7 +389,7 @@ export default function MarksEntryPage() {
                         Student {getSortIcon('name')}
                       </div>
                     </th>
-                    {setups.map(s => (
+                    {visibleSetups.map(s => (
                       <th
                         key={s.id}
                         className="px-2 py-2 text-center font-semibold min-w-[90px]"
@@ -404,7 +479,7 @@ export default function MarksEntryPage() {
                             </span>
                           </div>
                         </td>
-                        {setups.map(s => {
+                        {visibleSetups.map(s => {
                           const key = `${stu.uid}_${s.id}`;
                           return (
                             <td key={s.id} className="px-2 py-2 text-center">
