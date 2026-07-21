@@ -663,12 +663,12 @@ export default function ExamReportsPage() {
                                 <p className="text-[11px] font-bold text-(--text-muted) uppercase">Layout Size</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
-                                        { id: 'a4', label: 'Full A4' },
-                                        { id: '1/2', label: '1/2 A4' },
+                                        { id: '1/2', label: '2 Copies Side-by-Side (Landscape)' },
+                                        { id: 'a4', label: 'Full A4 (Portrait)' },
                                     ].map(sz => (
                                         <button
                                             key={sz.id}
-                                            onClick={() => setPdfOptions({ ...pdfOptions, size: sz.id, copies: 1 })}
+                                            onClick={() => setPdfOptions({ ...pdfOptions, size: sz.id, copies: sz.id === '1/2' ? 2 : 1 })}
                                             className={`p-3 rounded-xl border text-sm font-semibold transition-all
                                                 ${pdfOptions.size === sz.id ? "border-(--primary) bg-(--primary-soft) text-(--primary)" : "border-(--border) hover:border-(--text-muted)"}`}
                                         >
