@@ -4,22 +4,25 @@ import { useSchool } from "@/context/SchoolContext";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import MobileSidebar from "./MobileSidebar";
+import ChangePasswordModal from "./ChangePasswordModal";
 import { useState } from "react";
 
 export default function SchoolShell({ children }) {
   const { schoolUser } = useSchool();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   if (!schoolUser) return null;
 
   return (
     <div className="flex h-dvh bg-(--bg) overflow-y-auto overflow-x-hidden">
       <div className="hidden md:block">
-        <Sidebar />
+        <Sidebar onChangePassword={() => setChangePasswordOpen(true)} />
       </div>
       <MobileSidebar
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
+        onChangePassword={() => setChangePasswordOpen(true)}
       />
       <div className="flex flex-col flex-1 min-w-0">
         <div><Navbar onMenu={() => setMobileOpen(true)} /></div>
@@ -27,6 +30,11 @@ export default function SchoolShell({ children }) {
           {children}
         </main>
       </div>
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { hasPermission } from "@/lib/school/permissionUtils";
 import { useSchool } from "@/context/SchoolContext";
 import { useBranch } from "@/context/BranchContext";
 
-export default function MobileSidebar({ open, onClose }) {
+export default function MobileSidebar({ open, onClose, onChangePassword }) {
   const { schoolUser } = useSchool();
   const { branchInfo } = useBranch();
   const [openMenu, setOpenMenu] = useState(null);
@@ -110,6 +110,21 @@ export default function MobileSidebar({ open, onClose }) {
                       const hasSubChildren = Array.isArray(sub.children);
 
                       if (!hasSubChildren) {
+                        if (sub.actionKey === "changePassword") {
+                          return (
+                            <button
+                              key={sub.label}
+                              type="button"
+                              onClick={() => {
+                                onClose();
+                                onChangePassword?.();
+                              }}
+                              className="w-full text-left block px-3 py-1.5 rounded text-sm text-(--text-muted) hover:bg-(--primary-soft) cursor-pointer"
+                            >
+                              {sub.label}
+                            </button>
+                          );
+                        }
                         const isSubLocked = sub.permission && !hasPermission(schoolUser, sub.permission, false, currentPlan);
                         const subHref = sub.href ? `${basePath}/${sub.href}` : "#";
 

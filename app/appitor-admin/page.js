@@ -14,14 +14,22 @@ import { fetchDashboardStats } from "@/lib/admin/dashboardService";
 import Link from "next/link";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    totalSchools: "00",
+    activeSchools: "00",
+    totalUsers: "00",
+    adminUsers: "00",
+    totalRoles: "00",
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadStats() {
       try {
         const data = await fetchDashboardStats();
-        setStats(data);
+        if (data) {
+          setStats(data);
+        }
       } catch (err) {
         console.error("Dashboard load failed:", err);
       } finally {

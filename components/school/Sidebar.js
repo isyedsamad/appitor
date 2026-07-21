@@ -8,7 +8,7 @@ import { useBranch } from "@/context/BranchContext";
 import { MENU } from "@/lib/school/schoolNav";
 import { hasPermission } from "@/lib/school/permissionUtils";
 
-export default function Sidebar() {
+export default function Sidebar({ onChangePassword }) {
   const { schoolUser } = useSchool();
   const { branchInfo } = useBranch();
   const [collapsed, setCollapsed] = useState(false);
@@ -114,6 +114,18 @@ export default function Sidebar() {
                     const isSubOpen = openSubMenu === subKey;
                     const hasSubChildren = Array.isArray(sub.children);
                     if (!hasSubChildren) {
+                      if (sub.actionKey === "changePassword") {
+                        return (
+                          <button
+                            key={sub.label}
+                            type="button"
+                            onClick={onChangePassword}
+                            className="w-full text-left flex font-medium items-center justify-between px-3 py-2 rounded-none text-sm text-(--text-muted) hover:bg-(--primary-soft) cursor-pointer"
+                          >
+                            <span>{sub.label}</span>
+                          </button>
+                        );
+                      }
                       const isSubLocked = sub.permission && !hasPermission(schoolUser, sub.permission, false, currentPlan);
                       const subHref = sub.href ? `${basePath}/${sub.href}` : "#";
 

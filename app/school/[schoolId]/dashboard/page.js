@@ -181,7 +181,7 @@ export default function SchoolDashboard() {
               <div className="flex items-center gap-1 mt-1 flex">
                 <span className="text-[9px] font-bold text-(--primary) uppercase tracking-widest">{branchInfo?.name || "Global HQ"}</span>
                 <span className="w-1 h-1 rounded-full bg-(--border)" />
-                <span className="text-[9px] font-bold text-(--text-muted) uppercase tracking-widest">Session 2024-25</span>
+                <span className="text-[9px] font-bold text-(--text-muted) uppercase tracking-widest">Session {schoolUser?.currentSession || "2024-25"}</span>
               </div>
             </div>
           </div>
