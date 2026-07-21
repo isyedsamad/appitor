@@ -4,6 +4,28 @@ import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
 import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 
+function parseDobAndPassword(dobStr) {
+  if (!dobStr) return { dob: "", password: "" };
+  const cleanStr = String(dobStr).trim().replace(/\//g, "-");
+  const parts = cleanStr.split("-");
+  if (parts.length === 3) {
+    let day, month, year;
+    if (parts[0].length === 4) {
+      year = parts[0];
+      month = parts[1].padStart(2, "0");
+      day = parts[2].padStart(2, "0");
+    } else {
+      day = parts[0].padStart(2, "0");
+      month = parts[1].padStart(2, "0");
+      year = parts[2];
+    }
+    const normalizedDob = `${day}-${month}-${year}`;
+    const password = `${day}${month}${year}`;
+    return { dob: normalizedDob, password };
+  }
+  return { dob: cleanStr, password: cleanStr.replace(/\D/g, "") };
+}
+
 export async function POST(req) {
   const createdUids = [];
   try {
@@ -23,13 +45,6 @@ export async function POST(req) {
       if (!s.admissionId || !s.name || !s.dob) {
         return NextResponse.json(
           { message: "admissionId, name and dob are required for all students" },
-          { status: 400 }
-        );
-      }
-
-      if (s.dob.includes("/")) {
-        return NextResponse.json(
-          { message: `Invalid DOB format for ${s.admissionId}` },
           { status: 400 }
         );
       }
@@ -80,10 +95,7 @@ export async function POST(req) {
     for (const s of students) {
       const appId = branchCode.toUpperCase() + s.admissionId;
       const email = `${appId}@${user.schoolCode.toLowerCase()}.appitor`;
-      const dobParts = s.dob.split("-");
-      const password = dobParts.length === 3 && dobParts[0].length === 4
-        ? `${dobParts[2]}${dobParts[1]}${dobParts[0]}`
-        : `${dobParts[0]}${dobParts[1]}${dobParts[2]}`;
+      const { dob: normalizedDob, password } = parseDobAndPassword(s.dob);
 
       const authUser = await adminAuth.createUser({
         email,
@@ -98,6 +110,7 @@ export async function POST(req) {
         appId,
         rollNo: nextRoll++,
         ...s,
+        dob: normalizedDob,
         admissionId: s.admissionId.toString().trim(),
         name: s.name.trim(),
         fatherName: s.fatherName?.toString().trim() || "",

@@ -4,6 +4,28 @@ import { verifyUser } from "@/lib/verifyUser";
 import { FieldValue } from "firebase-admin/firestore";
 import { incrementStudentCount } from "@/lib/school/analyticsUtils";
 
+function parseDobAndPassword(dobStr) {
+  if (!dobStr) return { dob: "", password: "" };
+  const cleanStr = String(dobStr).trim().replace(/\//g, "-");
+  const parts = cleanStr.split("-");
+  if (parts.length === 3) {
+    let day, month, year;
+    if (parts[0].length === 4) {
+      year = parts[0];
+      month = parts[1].padStart(2, "0");
+      day = parts[2].padStart(2, "0");
+    } else {
+      day = parts[0].padStart(2, "0");
+      month = parts[1].padStart(2, "0");
+      year = parts[2];
+    }
+    const normalizedDob = `${day}-${month}-${year}`;
+    const password = `${day}${month}${year}`;
+    return { dob: normalizedDob, password };
+  }
+  return { dob: cleanStr, password: cleanStr.replace(/\D/g, "") };
+}
+
 export async function POST(req) {
   let createdUid = null;
   try {
@@ -42,10 +64,7 @@ export async function POST(req) {
     const branchData = branchSnap.data();
     const schoolData = schoolSnap.data();
     const appId = `${branchData.appitorCode.toUpperCase()}${admissionId.toUpperCase()}`;
-    const dobSplit = dob.split("-");
-    const generatedPassword = dobSplit.length === 3 && dobSplit[0].length === 4
-      ? `${dobSplit[2]}${dobSplit[1]}${dobSplit[0]}`
-      : `${dobSplit[0]}${dobSplit[1]}${dobSplit[2]}`;
+    const { dob: normalizedDob, password: generatedPassword } = parseDobAndPassword(dob);
     const email = `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
 
     const authUser = await adminAuth.createUser({
@@ -107,7 +126,7 @@ export async function POST(req) {
         name,
         mobile: mobile || null,
         gender,
-        dob,
+        dob: normalizedDob,
         className,
         section,
         email,
@@ -159,7 +178,7 @@ export async function POST(req) {
         appId,
         rollNo: nextRoll,
         status: "active",
-        dob,
+        dob: normalizedDob,
         gender,
       };
 
