@@ -59,6 +59,9 @@ export async function POST(req) {
       admissionSet.add(s.admissionId);
     }
 
+    const branchSnap = await adminDb.collection("branches").doc(branch).get();
+    const branchName = branchSnap.exists ? (branchSnap.data().name || "Main Campus") : "Main Campus";
+
     const headsSnap = await adminDb
       .collection("schools")
       .doc(user.schoolId)
@@ -176,6 +179,7 @@ export async function POST(req) {
           branchId: branch,
           branchIds: [branch],
           currentBranch: branch,
+          branchNames: [branchName],
           status: "active",
           currentSession: sessionId,
           createdAt: FieldValue.serverTimestamp(),

@@ -64,6 +64,7 @@ export async function POST(req) {
     const branchData = branchSnap.data();
     const schoolData = schoolSnap.data();
     const appId = `${branchData.appitorCode.toUpperCase()}${admissionId.toUpperCase()}`;
+    const primaryBranchName = (Array.isArray(branchNames) && branchNames[0]) || branchData?.name || "Main Campus";
     const { dob: normalizedDob, password: generatedPassword } = parseDobAndPassword(dob);
     const email = `${appId.toLowerCase()}@${schoolData.code.toLowerCase()}.appitor`;
 
@@ -135,7 +136,7 @@ export async function POST(req) {
         branchId: branch,
         branchIds: [branch],
         currentBranch: branch,
-        branchNames,
+        branchNames: [primaryBranchName],
         status: "active",
         rollNo: nextRoll,
         rollAssignedAt: nextRoll ? FieldValue.serverTimestamp() : null,
